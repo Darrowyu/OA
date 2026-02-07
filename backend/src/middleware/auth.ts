@@ -3,13 +3,30 @@ import { UserRole } from '@prisma/client';
 import { verifyAccessToken, extractTokenFromHeader, JwtPayload } from '../utils/jwt';
 import { prisma } from '../lib/prisma';
 
+// 文件类型定义
+interface UploadedFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer?: Buffer;
+}
+
+interface UploadedFiles {
+  [fieldname: string]: UploadedFile[];
+}
+
 // 扩展Express Request类型
 declare global {
   namespace Express {
     interface Request {
       user?: JwtPayload & { id: string; isActive: boolean };
-      file?: any;
-      files?: any;
+      file?: UploadedFile;
+      files?: UploadedFile[] | UploadedFiles;
     }
   }
 }
@@ -231,8 +248,9 @@ export async function optionalAuthMiddleware(
     }
 
     next();
-  } catch {
-    // 可选认证，错误不影响请求继续
+  } catch (error) {
+    // 可选认证，错误不影响请求继续，但记录日志
+    console.warn('可选认证失败:', error instanceof Error ? error.message : '未知错误');
     next();
   }
 }

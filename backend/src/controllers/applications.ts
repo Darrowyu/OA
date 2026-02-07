@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ApplicationStatus, Priority, Prisma } from '@prisma/client';
+import { ApplicationStatus, Priority, Prisma, UserRole } from '@prisma/client';
 import {
   generateApplicationNo,
   parseAmount,
@@ -7,8 +7,40 @@ import {
   getPriorityText,
   isApplicationFinal,
 } from '../utils/application';
+import { prisma as prismaInstance } from '../lib/prisma';
+import logger from '../lib/logger';
 
-const prisma = new PrismaClient();
+// 用户类型定义
+interface RequestUser {
+  id: string;
+  userId: string;
+  username: string;
+  role: UserRole;
+  employeeId?: string;
+  name?: string;
+  department?: string;
+  isActive: boolean;
+}
+
+// 审批记录类型
+interface ApprovalRecord {
+  approverId: string;
+}
+
+// 申请类型定义
+interface ApplicationWithRelations {
+  id: string;
+  applicantId: string;
+  status: ApplicationStatus;
+  factoryManagerIds: string[];
+  managerIds: string[];
+  factoryApprovals: ApprovalRecord[];
+  directorApprovals: ApprovalRecord[];
+  managerApprovals: ApprovalRecord[];
+  ceoApprovals: ApprovalRecord[];
+}
+
+const prisma = prismaInstance;
 
 /**
  * 获取申请列表（带权限过滤）
@@ -171,7 +203,7 @@ export async function getApplications(req: Request, res: Response): Promise<void
       },
     });
   } catch (error) {
-    console.error('获取申请列表失败:', error);
+    logger.error('获取申请列表失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '获取申请列表失败' });
   }
 }
@@ -247,7 +279,7 @@ export async function getApplication(req: Request, res: Response): Promise<void>
       },
     });
   } catch (error) {
-    console.error('获取申请详情失败:', error);
+    logger.error('获取申请详情失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '获取申请详情失败' });
   }
 }
@@ -328,7 +360,7 @@ export async function createApplication(req: Request, res: Response): Promise<vo
       },
     });
   } catch (error) {
-    console.error('创建申请失败:', error);
+    logger.error('创建申请失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '创建申请失败' });
   }
 }
@@ -404,7 +436,7 @@ export async function updateApplication(req: Request, res: Response): Promise<vo
       },
     });
   } catch (error) {
-    console.error('更新申请失败:', error);
+    logger.error('更新申请失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '更新申请失败' });
   }
 }
@@ -448,7 +480,7 @@ export async function deleteApplication(req: Request, res: Response): Promise<vo
 
     res.json({ success: true, message: '申请删除成功' });
   } catch (error) {
-    console.error('删除申请失败:', error);
+    logger.error('删除申请失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '删除申请失败' });
   }
 }
@@ -511,7 +543,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
 
     res.json({ success: true, message: '申请提交成功' });
   } catch (error) {
-    console.error('提交申请失败:', error);
+    logger.error('提交申请失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '提交申请失败' });
   }
 }
@@ -519,7 +551,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
 /**
  * 检查用户是否有权限查看申请
  */
-async function checkViewPermission(user: any, application: any): Promise<boolean> {
+async function checkViewPermission(user: RequestUser, application: ApplicationWithRelations): Promise<boolean> {
   // 申请人自己可以看
   if (application.applicantId === user.id) return true;
 
@@ -533,26 +565,26 @@ async function checkViewPermission(user: any, application: any): Promise<boolean
 
   // 厂长可以看分配给自己的
   if (user.role === 'FACTORY_MANAGER') {
-    if (application.factoryManagerIds.includes(user.employeeId)) return true;
-    if (application.factoryApprovals.some((a: any) => a.approverId === user.id)) return true;
+    if (application.factoryManagerIds.includes(user.employeeId || '')) return true;
+    if (application.factoryApprovals.some((a: ApprovalRecord) => a.approverId === user.id)) return true;
   }
 
   // 总监可以看所有待审批和已审批的
   if (user.role === 'DIRECTOR') {
     if (application.status === ApplicationStatus.PENDING_DIRECTOR) return true;
-    if (application.directorApprovals.some((a: any) => a.approverId === user.id)) return true;
+    if (application.directorApprovals.some((a: ApprovalRecord) => a.approverId === user.id)) return true;
   }
 
   // 经理可以看分配给自己的
   if (user.role === 'MANAGER') {
-    if (application.managerIds.includes(user.employeeId)) return true;
-    if (application.managerApprovals.some((a: any) => a.approverId === user.id)) return true;
+    if (application.managerIds.includes(user.employeeId || '')) return true;
+    if (application.managerApprovals.some((a: ApprovalRecord) => a.approverId === user.id)) return true;
   }
 
   // CEO可以看待审批和已审批的
   if (user.role === 'CEO') {
     if (application.status === ApplicationStatus.PENDING_CEO) return true;
-    if (application.ceoApprovals.some((a: any) => a.approverId === user.id)) return true;
+    if (application.ceoApprovals.some((a: ApprovalRecord) => a.approverId === user.id)) return true;
   }
 
   return false;

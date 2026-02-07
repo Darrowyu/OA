@@ -1,8 +1,7 @@
-import { PrismaClient, ApplicationStatus, Priority } from '@prisma/client';
+import { ApplicationStatus, Priority } from '@prisma/client';
 import { sendEmailNotification, generateEmailTemplate } from './email';
 import { config } from '../config';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // 默认提醒设置
 export const defaultReminderSettings = {

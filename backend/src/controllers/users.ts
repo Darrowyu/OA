@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { UserRole, Prisma } from '@prisma/client';
+import logger from '../lib/logger';
 
 // 查询参数类型
 interface UserQueryParams {
@@ -47,21 +48,8 @@ interface ImportUserRequest {
   }>;
 }
 
-// 响应辅助函数
-const successResponse = <T>(data: T, meta?: Record<string, unknown>) => ({
-  success: true,
-  data,
-  ...(meta && { meta }),
-});
-
-const errorResponse = (code: string, message: string, details?: unknown) => ({
-  success: false,
-  error: {
-    code,
-    message,
-    details,
-  },
-});
+const success = <T>(data: T, meta?: Record<string, unknown>) => ({ success: true, data, ...(meta && { meta }) });
+const fail = (code: string, message: string, details?: unknown) => ({ success: false, error: { code, message, details } });
 
 /**
  * 获取用户列表
@@ -130,7 +118,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
 
     const totalPages = Math.ceil(total / size);
 
-    res.json(successResponse(users, {
+    res.json(success(users, {
       pagination: {
         page: pageNum,
         pageSize: size,
@@ -141,8 +129,8 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
       },
     }));
   } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取用户列表时发生错误'));
+    logger.error('获取用户列表失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户列表时发生错误'));
   }
 }
 
@@ -170,14 +158,14 @@ export async function getUser(req: Request, res: Response): Promise<void> {
     });
 
     if (!user) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
-    res.json(successResponse(user));
+    res.json(success(user));
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取用户信息时发生错误'));
+    logger.error('获取用户信息失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户信息时发生错误'));
   }
 }
 
@@ -199,46 +187,46 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 
     // 验证必填字段
     if (!username || !password || !name || !email || !role || !department || !employeeId) {
-      res.status(400).json(errorResponse('MISSING_FIELDS', '请填写所有必填字段'));
+      res.status(400).json(fail('MISSING_FIELDS', '请填写所有必填字段'));
       return;
     }
 
     // 验证用户名格式
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      res.status(400).json(errorResponse('INVALID_USERNAME', '用户名只能包含字母、数字和下划线，长度3-20位'));
+      res.status(400).json(fail('INVALID_USERNAME', '用户名只能包含字母、数字和下划线，长度3-20位'));
       return;
     }
 
     // 验证密码强度
     if (password.length < 6) {
-      res.status(400).json(errorResponse('WEAK_PASSWORD', '密码长度至少为6位'));
+      res.status(400).json(fail('WEAK_PASSWORD', '密码长度至少为6位'));
       return;
     }
 
     // 验证邮箱格式
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json(errorResponse('INVALID_EMAIL', '邮箱格式不正确'));
+      res.status(400).json(fail('INVALID_EMAIL', '邮箱格式不正确'));
       return;
     }
 
     // 检查用户名是否已存在
     const existingUsername = await prisma.user.findUnique({ where: { username } });
     if (existingUsername) {
-      res.status(409).json(errorResponse('USERNAME_EXISTS', '用户名已被使用'));
+      res.status(409).json(fail('USERNAME_EXISTS', '用户名已被使用'));
       return;
     }
 
     // 检查邮箱是否已存在
     const existingEmail = await prisma.user.findUnique({ where: { email } });
     if (existingEmail) {
-      res.status(409).json(errorResponse('EMAIL_EXISTS', '邮箱已被注册'));
+      res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被注册'));
       return;
     }
 
     // 检查工号是否已存在
     const existingEmployeeId = await prisma.user.findUnique({ where: { employeeId } });
     if (existingEmployeeId) {
-      res.status(409).json(errorResponse('EMPLOYEE_ID_EXISTS', '工号已被使用'));
+      res.status(409).json(fail('EMPLOYEE_ID_EXISTS', '工号已被使用'));
       return;
     }
 
@@ -271,10 +259,10 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       },
     });
 
-    res.status(201).json(successResponse(user));
+    res.status(201).json(success(user));
   } catch (error) {
-    console.error('Create user error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '创建用户时发生错误'));
+    logger.error('创建用户失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '创建用户时发生错误'));
   }
 }
 
@@ -289,7 +277,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     // 检查用户是否存在
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
@@ -297,7 +285,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     if (email && email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({ where: { email } });
       if (emailExists) {
-        res.status(409).json(errorResponse('EMAIL_EXISTS', '邮箱已被其他用户使用'));
+        res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被其他用户使用'));
         return;
       }
     }
@@ -327,10 +315,10 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       },
     });
 
-    res.json(successResponse(user));
+    res.json(success(user));
   } catch (error) {
-    console.error('Update user error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '更新用户时发生错误'));
+    logger.error('更新用户失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '更新用户时发生错误'));
   }
 }
 
@@ -344,7 +332,7 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
     // 检查用户是否存在
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
@@ -359,16 +347,16 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
         where: { id },
         data: { isActive: false },
       });
-      res.json(successResponse({ message: '用户已禁用（存在关联申请记录）' }));
+      res.json(success({ message: '用户已禁用（存在关联申请记录）' }));
       return;
     }
 
     // 物理删除
     await prisma.user.delete({ where: { id } });
-    res.json(successResponse({ message: '用户已删除' }));
+    res.json(success({ message: '用户已删除' }));
   } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '删除用户时发生错误'));
+    logger.error('删除用户失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '删除用户时发生错误'));
   }
 }
 
@@ -381,14 +369,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     const { newPassword } = req.body as { newPassword?: string };
 
     if (!newPassword || newPassword.length < 6) {
-      res.status(400).json(errorResponse('WEAK_PASSWORD', '新密码长度至少为6位'));
+      res.status(400).json(fail('WEAK_PASSWORD', '新密码长度至少为6位'));
       return;
     }
 
     // 检查用户是否存在
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
@@ -401,11 +389,105 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       data: { password: hashedPassword },
     });
 
-    res.json(successResponse({ message: '密码重置成功' }));
+    res.json(success({ message: '密码重置成功' }));
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '重置密码时发生错误'));
+    logger.error('重置密码失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '重置密码时发生错误'));
   }
+}
+
+// 导入结果类型
+interface ImportResult {
+  success: number;
+  failed: number;
+  errors: Array<{ index: number; field: string; message: string }>;
+}
+
+// 单个导入用户类型
+interface ImportUserData {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  employeeId: string;
+}
+
+/**
+ * 验证用户数据格式
+ */
+function validateUserData(userData: ImportUserData, index: number): { valid: boolean; error?: { index: number; field: string; message: string } } {
+  // 验证必填字段
+  if (!userData.username || !userData.password || !userData.name ||
+      !userData.email || !userData.role || !userData.department || !userData.employeeId) {
+    return { valid: false, error: { index, field: 'multiple', message: '缺少必填字段' } };
+  }
+
+  // 验证用户名格式
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(userData.username)) {
+    return { valid: false, error: { index, field: 'username', message: '用户名格式不正确' } };
+  }
+
+  // 验证密码强度
+  if (userData.password.length < 6) {
+    return { valid: false, error: { index, field: 'password', message: '密码长度不足' } };
+  }
+
+  // 验证邮箱格式
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+    return { valid: false, error: { index, field: 'email', message: '邮箱格式不正确' } };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * 检查用户是否已存在
+ */
+async function checkUserExists(userData: ImportUserData): Promise<{ exists: boolean; field?: string }> {
+  const existingUsername = await prisma.user.findUnique({ where: { username: userData.username } });
+  if (existingUsername) return { exists: true, field: 'username' };
+
+  const existingEmail = await prisma.user.findUnique({ where: { email: userData.email } });
+  if (existingEmail) return { exists: true, field: 'email' };
+
+  const existingEmployeeId = await prisma.user.findUnique({ where: { employeeId: userData.employeeId } });
+  if (existingEmployeeId) return { exists: true, field: 'employeeId' };
+
+  return { exists: false };
+}
+
+/**
+ * 创建单个用户
+ */
+async function createSingleUser(userData: ImportUserData) {
+  const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+  return prisma.user.create({
+    data: {
+      username: userData.username,
+      password: hashedPassword,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      department: userData.department,
+      employeeId: userData.employeeId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      email: true,
+      role: true,
+      department: true,
+      employeeId: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 }
 
 /**
@@ -416,143 +498,44 @@ export async function importUsers(req: Request, res: Response): Promise<void> {
     const { users } = req.body as ImportUserRequest;
 
     if (!Array.isArray(users) || users.length === 0) {
-      res.status(400).json(errorResponse('INVALID_DATA', '请提供有效的用户数据数组'));
+      res.status(400).json(fail('INVALID_DATA', '请提供有效的用户数据数组'));
       return;
     }
 
     if (users.length > 100) {
-      res.status(400).json(errorResponse('TOO_MANY_USERS', '单次导入用户数量不能超过100'));
+      res.status(400).json(fail('TOO_MANY_USERS', '单次导入用户数量不能超过100'));
       return;
     }
 
-    const results = {
-      success: 0,
-      failed: 0,
-      errors: [] as Array<{ index: number; field: string; message: string }>,
-    };
-
+    const results: ImportResult = { success: 0, failed: 0, errors: [] };
     const createdUsers = [];
 
     for (let i = 0; i < users.length; i++) {
       const userData = users[i];
 
-      // 验证必填字段
-      if (!userData.username || !userData.password || !userData.name ||
-          !userData.email || !userData.role || !userData.department || !userData.employeeId) {
+      // 验证数据格式
+      const validation = validateUserData(userData, i);
+      if (!validation.valid) {
         results.failed++;
-        results.errors.push({
-          index: i,
-          field: 'multiple',
-          message: '缺少必填字段',
-        });
-        continue;
-      }
-
-      // 验证用户名格式
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(userData.username)) {
-        results.failed++;
-        results.errors.push({
-          index: i,
-          field: 'username',
-          message: '用户名格式不正确',
-        });
-        continue;
-      }
-
-      // 验证密码强度
-      if (userData.password.length < 6) {
-        results.failed++;
-        results.errors.push({
-          index: i,
-          field: 'password',
-          message: '密码长度不足',
-        });
-        continue;
-      }
-
-      // 验证邮箱格式
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
-        results.failed++;
-        results.errors.push({
-          index: i,
-          field: 'email',
-          message: '邮箱格式不正确',
-        });
+        if (validation.error) results.errors.push(validation.error);
         continue;
       }
 
       try {
-        // 检查用户名是否已存在
-        const existingUsername = await prisma.user.findUnique({
-          where: { username: userData.username },
-        });
-        if (existingUsername) {
+        // 检查用户是否已存在
+        const existsCheck = await checkUserExists(userData);
+        if (existsCheck.exists) {
           results.failed++;
           results.errors.push({
             index: i,
-            field: 'username',
-            message: '用户名已存在',
+            field: existsCheck.field || 'unknown',
+            message: `${existsCheck.field === 'username' ? '用户名' : existsCheck.field === 'email' ? '邮箱' : '工号'}已存在`,
           });
           continue;
         }
-
-        // 检查邮箱是否已存在
-        const existingEmail = await prisma.user.findUnique({
-          where: { email: userData.email },
-        });
-        if (existingEmail) {
-          results.failed++;
-          results.errors.push({
-            index: i,
-            field: 'email',
-            message: '邮箱已存在',
-          });
-          continue;
-        }
-
-        // 检查工号是否已存在
-        const existingEmployeeId = await prisma.user.findUnique({
-          where: { employeeId: userData.employeeId },
-        });
-        if (existingEmployeeId) {
-          results.failed++;
-          results.errors.push({
-            index: i,
-            field: 'employeeId',
-            message: '工号已存在',
-          });
-          continue;
-        }
-
-        // 加密密码
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
 
         // 创建用户
-        const user = await prisma.user.create({
-          data: {
-            username: userData.username,
-            password: hashedPassword,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            department: userData.department,
-            employeeId: userData.employeeId,
-            isActive: true,
-          },
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            email: true,
-            role: true,
-            department: true,
-            employeeId: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
-
+        const user = await createSingleUser(userData);
         createdUsers.push(user);
         results.success++;
       } catch (error) {
@@ -565,18 +548,14 @@ export async function importUsers(req: Request, res: Response): Promise<void> {
       }
     }
 
-    res.status(201).json(successResponse({
+    res.status(201).json(success({
       imported: createdUsers,
-      summary: {
-        total: users.length,
-        success: results.success,
-        failed: results.failed,
-      },
+      summary: { total: users.length, success: results.success, failed: results.failed },
       errors: results.errors,
     }));
   } catch (error) {
-    console.error('Import users error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '导入用户时发生错误'));
+    logger.error('导入用户失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '导入用户时发生错误'));
   }
 }
 
@@ -608,10 +587,10 @@ export async function getFactoryManagers(req: Request, res: Response): Promise<v
       orderBy: { name: 'asc' },
     });
 
-    res.json(successResponse(managers));
+    res.json(success(managers));
   } catch (error) {
-    console.error('Get factory managers error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取厂长列表失败'));
+    logger.error('获取厂长列表失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取厂长列表失败'));
   }
 }
 
@@ -643,9 +622,9 @@ export async function getManagers(req: Request, res: Response): Promise<void> {
       orderBy: { name: 'asc' },
     });
 
-    res.json(successResponse(managers));
+    res.json(success(managers));
   } catch (error) {
-    console.error('Get managers error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取经理列表失败'));
+    logger.error('获取经理列表失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取经理列表失败'));
   }
 }

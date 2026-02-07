@@ -42,8 +42,9 @@ export function Login() {
       login(user, accessToken)
 
       navigate("/applications")
-    } catch (err: any) {
-      setError(err.error?.message || err.message || "登录失败")
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : '登录失败';
+      setError(errorMessage);
     } finally {
       setIsLoading(false)
     }

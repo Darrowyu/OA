@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { UserRole } from '@prisma/client';
+import logger from '../lib/logger';
 
 // 请求类型定义
 interface LoginRequest {
@@ -29,20 +30,9 @@ interface ChangePasswordRequest {
   newPassword: string;
 }
 
-// 响应辅助函数
-const successResponse = <T>(data: T) => ({
-  success: true,
-  data,
-});
-
-const errorResponse = (code: string, message: string, details?: unknown) => ({
-  success: false,
-  error: {
-    code,
-    message,
-    details,
-  },
-});
+const ok = <T>(data: T) => ({ success: true, data });
+const fail = (code: string, message: string, details?: unknown) =>
+  ({ success: false, error: { code, message, details } });
 
 /**
  * 用户登录
@@ -53,7 +43,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     // 验证必填字段
     if (!username || !password) {
-      res.status(400).json(errorResponse('MISSING_FIELDS', '用户名和密码不能为空'));
+      res.status(400).json(fail('MISSING_FIELDS', '用户名和密码不能为空'));
       return;
     }
 
@@ -63,13 +53,13 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
 
     if (!user) {
-      res.status(401).json(errorResponse('INVALID_CREDENTIALS', '用户名或密码错误'));
+      res.status(401).json(fail('INVALID_CREDENTIALS', '用户名或密码错误'));
       return;
     }
 
     // 检查用户状态
     if (!user.isActive) {
-      res.status(403).json(errorResponse('USER_INACTIVE', '用户已被禁用，请联系管理员'));
+      res.status(403).json(fail('USER_INACTIVE', '用户已被禁用，请联系管理员'));
       return;
     }
 
@@ -77,7 +67,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      res.status(401).json(errorResponse('INVALID_CREDENTIALS', '用户名或密码错误'));
+      res.status(401).json(fail('INVALID_CREDENTIALS', '用户名或密码错误'));
       return;
     }
 
@@ -90,7 +80,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       data: { updatedAt: new Date() },
     });
 
-    res.json(successResponse({
+    res.json(ok({
       user: {
         id: user.id,
         username: user.username,
@@ -103,8 +93,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       ...tokens,
     }));
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '登录过程中发生错误'));
+    logger.error('登录失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '登录过程中发生错误'));
   }
 }
 
@@ -125,25 +115,25 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     // 验证必填字段
     if (!username || !password || !name || !email || !department || !employeeId) {
-      res.status(400).json(errorResponse('MISSING_FIELDS', '请填写所有必填字段'));
+      res.status(400).json(fail('MISSING_FIELDS', '请填写所有必填字段'));
       return;
     }
 
     // 验证用户名格式
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      res.status(400).json(errorResponse('INVALID_USERNAME', '用户名只能包含字母、数字和下划线，长度3-20位'));
+      res.status(400).json(fail('INVALID_USERNAME', '用户名只能包含字母、数字和下划线，长度3-20位'));
       return;
     }
 
     // 验证密码强度
     if (password.length < 6) {
-      res.status(400).json(errorResponse('WEAK_PASSWORD', '密码长度至少为6位'));
+      res.status(400).json(fail('WEAK_PASSWORD', '密码长度至少为6位'));
       return;
     }
 
     // 验证邮箱格式
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json(errorResponse('INVALID_EMAIL', '邮箱格式不正确'));
+      res.status(400).json(fail('INVALID_EMAIL', '邮箱格式不正确'));
       return;
     }
 
@@ -153,7 +143,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
 
     if (existingUsername) {
-      res.status(409).json(errorResponse('USERNAME_EXISTS', '用户名已被使用'));
+      res.status(409).json(fail('USERNAME_EXISTS', '用户名已被使用'));
       return;
     }
 
@@ -163,7 +153,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
 
     if (existingEmail) {
-      res.status(409).json(errorResponse('EMAIL_EXISTS', '邮箱已被注册'));
+      res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被注册'));
       return;
     }
 
@@ -173,7 +163,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
 
     if (existingEmployeeId) {
-      res.status(409).json(errorResponse('EMPLOYEE_ID_EXISTS', '工号已被使用'));
+      res.status(409).json(fail('EMPLOYEE_ID_EXISTS', '工号已被使用'));
       return;
     }
 
@@ -197,7 +187,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     // 生成令牌
     const tokens = generateTokenPair(user.id, user.username, user.role);
 
-    res.status(201).json(successResponse({
+    res.status(201).json(ok({
       user: {
         id: user.id,
         username: user.username,
@@ -210,8 +200,8 @@ export async function register(req: Request, res: Response): Promise<void> {
       ...tokens,
     }));
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '注册过程中发生错误'));
+    logger.error('注册失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '注册过程中发生错误'));
   }
 }
 
@@ -223,7 +213,7 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
     const { refreshToken } = req.body as RefreshTokenRequest;
 
     if (!refreshToken) {
-      res.status(400).json(errorResponse('MISSING_TOKEN', '请提供刷新令牌'));
+      res.status(400).json(fail('MISSING_TOKEN', '请提供刷新令牌'));
       return;
     }
 
@@ -236,27 +226,27 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
     });
 
     if (!user || !user.isActive) {
-      res.status(401).json(errorResponse('INVALID_TOKEN', '无效的刷新令牌'));
+      res.status(401).json(fail('INVALID_TOKEN', '无效的刷新令牌'));
       return;
     }
 
     // 生成新的令牌对
     const tokens = generateTokenPair(user.id, user.username, user.role);
 
-    res.json(successResponse(tokens));
+    res.json(ok(tokens));
   } catch (error) {
     if (error instanceof Error && error.name === 'TokenExpiredError') {
-      res.status(401).json(errorResponse('TOKEN_EXPIRED', '刷新令牌已过期，请重新登录'));
+      res.status(401).json(fail('TOKEN_EXPIRED', '刷新令牌已过期，请重新登录'));
       return;
     }
 
     if (error instanceof Error && error.name === 'JsonWebTokenError') {
-      res.status(401).json(errorResponse('INVALID_TOKEN', '无效的刷新令牌'));
+      res.status(401).json(fail('INVALID_TOKEN', '无效的刷新令牌'));
       return;
     }
 
-    console.error('Refresh token error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '刷新令牌过程中发生错误'));
+    logger.error('刷新令牌失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '刷新令牌过程中发生错误'));
   }
 }
 
@@ -266,7 +256,7 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
 export async function getCurrentUser(req: Request, res: Response): Promise<void> {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('UNAUTHORIZED', '请先登录'));
+      res.status(401).json(fail('UNAUTHORIZED', '请先登录'));
       return;
     }
 
@@ -287,14 +277,14 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
     });
 
     if (!user) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
-    res.json(successResponse(user));
+    res.json(ok(user));
   } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取用户信息时发生错误'));
+    logger.error('获取当前用户失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户信息时发生错误'));
   }
 }
 
@@ -304,19 +294,19 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
 export async function changePassword(req: Request, res: Response): Promise<void> {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('UNAUTHORIZED', '请先登录'));
+      res.status(401).json(fail('UNAUTHORIZED', '请先登录'));
       return;
     }
 
     const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
 
     if (!oldPassword || !newPassword) {
-      res.status(400).json(errorResponse('MISSING_FIELDS', '请提供旧密码和新密码'));
+      res.status(400).json(fail('MISSING_FIELDS', '请提供旧密码和新密码'));
       return;
     }
 
     if (newPassword.length < 6) {
-      res.status(400).json(errorResponse('WEAK_PASSWORD', '新密码长度至少为6位'));
+      res.status(400).json(fail('WEAK_PASSWORD', '新密码长度至少为6位'));
       return;
     }
 
@@ -326,7 +316,7 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     });
 
     if (!user) {
-      res.status(404).json(errorResponse('USER_NOT_FOUND', '用户不存在'));
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
       return;
     }
 
@@ -334,7 +324,7 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
 
     if (!isOldPasswordValid) {
-      res.status(400).json(errorResponse('INVALID_OLD_PASSWORD', '旧密码不正确'));
+      res.status(400).json(fail('INVALID_OLD_PASSWORD', '旧密码不正确'));
       return;
     }
 
@@ -347,10 +337,10 @@ export async function changePassword(req: Request, res: Response): Promise<void>
       data: { password: hashedNewPassword },
     });
 
-    res.json(successResponse({ message: '密码修改成功' }));
+    res.json(ok({ message: '密码修改成功' }));
   } catch (error) {
-    console.error('Change password error:', error);
-    res.status(500).json(errorResponse('INTERNAL_ERROR', '修改密码时发生错误'));
+    logger.error('修改密码失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '修改密码时发生错误'));
   }
 }
 
@@ -360,5 +350,5 @@ export async function changePassword(req: Request, res: Response): Promise<void>
 export async function logout(_req: Request, res: Response): Promise<void> {
   // 由于使用JWT无状态认证，服务端无需特殊处理
   // 客户端需要删除本地存储的令牌
-  res.json(successResponse({ message: '登出成功' }));
+  res.json(ok({ message: '登出成功' }));
 }

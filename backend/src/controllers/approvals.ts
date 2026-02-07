@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ApplicationStatus, ApprovalAction } from '@prisma/client';
+import { ApplicationStatus, ApprovalAction, UserRole } from '@prisma/client';
 import {
   getNextStatus,
   isSpecialManager,
@@ -7,8 +7,8 @@ import {
   getStatusText,
 } from '../utils/application';
 import { archiveApplication } from '../services/archive';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 
 /**
  * 厂长审批
@@ -114,7 +114,7 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
       },
     });
   } catch (error) {
-    console.error('厂长审批失败:', error);
+    logger.error('厂长审批失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '审批失败' });
   }
 }
@@ -230,7 +230,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       },
     });
   } catch (error) {
-    console.error('总监审批失败:', error);
+    logger.error('总监审批失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '审批失败' });
   }
 }
@@ -365,7 +365,7 @@ export async function managerApprove(req: Request, res: Response): Promise<void>
       },
     });
   } catch (error) {
-    console.error('经理审批失败:', error);
+    logger.error('经理审批失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '审批失败' });
   }
 }
@@ -479,7 +479,7 @@ export async function ceoApprove(req: Request, res: Response): Promise<void> {
       },
     });
   } catch (error) {
-    console.error('CEO审批失败:', error);
+    logger.error('CEO审批失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '审批失败' });
   }
 }
@@ -507,9 +507,9 @@ async function handleReadonlyNotification(applicationId: string, amount: number 
       });
     }
 
-    console.log(`已通知 ${readonlyUsers.length} 位只读用户关于大额申请 ${applicationId}`);
+    logger.info(`已通知 ${readonlyUsers.length} 位只读用户关于大额申请`, { applicationId });
   } catch (error) {
-    console.error('通知只读用户失败:', error);
+    logger.error('通知只读用户失败', { error: error instanceof Error ? error.message : '未知错误', applicationId });
   }
 }
 
@@ -554,14 +554,21 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
       return;
     }
 
+    // 审批记录类型
+    interface ApprovalWithApprover {
+      approver: { id: string; name: string; employeeId: string; role: UserRole };
+      createdAt: Date;
+      [key: string]: unknown;
+    }
+
     // 权限检查
     const canView =
       application.applicantId === user.id ||
       user.role === 'ADMIN' ||
-      application.factoryApprovals.some((a: any) => a.approverId === user.id) ||
-      application.directorApprovals.some((a: any) => a.approverId === user.id) ||
-      application.managerApprovals.some((a: any) => a.approverId === user.id) ||
-      application.ceoApprovals.some((a: any) => a.approverId === user.id);
+      application.factoryApprovals.some((a: ApprovalWithApprover) => a.approver.id === user.id) ||
+      application.directorApprovals.some((a: ApprovalWithApprover) => a.approver.id === user.id) ||
+      application.managerApprovals.some((a: ApprovalWithApprover) => a.approver.id === user.id) ||
+      application.ceoApprovals.some((a: ApprovalWithApprover) => a.approver.id === user.id);
 
     if (!canView) {
       res.status(403).json({ error: '无权查看审批历史' });
@@ -570,18 +577,18 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
 
     // 合并所有审批记录并按时间排序
     const allApprovals = [
-      ...application.factoryApprovals.map((a: any) => ({ ...a, level: 'FACTORY' })),
-      ...application.directorApprovals.map((a: any) => ({ ...a, level: 'DIRECTOR' })),
-      ...application.managerApprovals.map((a: any) => ({ ...a, level: 'MANAGER' })),
-      ...application.ceoApprovals.map((a: any) => ({ ...a, level: 'CEO' })),
-    ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      ...application.factoryApprovals.map((a: ApprovalWithApprover) => ({ ...a, level: 'FACTORY' as const })),
+      ...application.directorApprovals.map((a: ApprovalWithApprover) => ({ ...a, level: 'DIRECTOR' as const })),
+      ...application.managerApprovals.map((a: ApprovalWithApprover) => ({ ...a, level: 'MANAGER' as const })),
+      ...application.ceoApprovals.map((a: ApprovalWithApprover) => ({ ...a, level: 'CEO' as const })),
+    ].sort((a: ApprovalWithApprover, b: ApprovalWithApprover) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     res.json({
       success: true,
       data: allApprovals,
     });
   } catch (error) {
-    console.error('获取审批历史失败:', error);
+    logger.error('获取审批历史失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '获取审批历史失败' });
   }
 }
@@ -746,7 +753,7 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
       },
     });
   } catch (error) {
-    console.error('撤回审批失败:', error);
+    logger.error('撤回审批失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json({ error: '撤回审批失败' });
   }
 }

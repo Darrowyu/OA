@@ -32,7 +32,7 @@ export function generateAccessToken(
   return jwt.sign(
     { userId, username, role, employeeId, name, department },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn as any }
+    { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] }
   );
 }
 
@@ -43,7 +43,7 @@ export function generateRefreshToken(userId: string): string {
   return jwt.sign(
     { userId },
     config.jwt.refreshSecret,
-    { expiresIn: config.jwt.refreshExpiresIn as any }
+    { expiresIn: config.jwt.refreshExpiresIn as jwt.SignOptions['expiresIn'] }
   );
 }
 
