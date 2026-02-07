@@ -9,6 +9,13 @@ import userRoutes from './routes/users';
 import applicationsRoutes from './routes/applications';
 import approvalsRoutes from './routes/approvals';
 import uploadsRoutes from './routes/uploads';
+import signatureRoutes from './routes/signatures';
+import statisticsRoutes from './routes/statistics';
+import exportRoutes from './routes/export';
+import emailRoutes from './routes/email';
+import reminderRoutes from './routes/reminders';
+import adminRoutes from './routes/admin';
+import { startReminderScheduler } from './services/reminder';
 
 // 创建Express应用
 const app = express();
@@ -53,6 +60,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/applications', applicationsRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/signatures', signatureRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/settings/reminders', reminderRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404处理
 app.use((_req: Request, res: Response) => {
@@ -133,6 +146,9 @@ const server = app.listen(config.port, () => {
   时间: ${new Date().toLocaleString()}
 ========================================
   `);
+
+  // 启动提醒定时任务
+  startReminderScheduler();
 });
 
 // 优雅关闭处理

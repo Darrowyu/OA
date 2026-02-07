@@ -7,6 +7,8 @@ import {
   deleteUser,
   resetPassword,
   importUsers,
+  getFactoryManagers,
+  getManagers,
 } from '../controllers/users';
 import { authMiddleware, requireRole, requireMinRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
@@ -15,6 +17,20 @@ const router = Router();
 
 // 所有用户路由都需要认证
 router.use(authMiddleware);
+
+/**
+ * @route   GET /api/users/factory-managers
+ * @desc    获取厂长列表
+ * @access  Private
+ */
+router.get('/factory-managers', getFactoryManagers);
+
+/**
+ * @route   GET /api/users/managers
+ * @desc    获取经理列表
+ * @access  Private
+ */
+router.get('/managers', getManagers);
 
 /**
  * @route   GET /api/users

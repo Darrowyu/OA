@@ -5,6 +5,7 @@ import {
   managerApprove,
   ceoApprove,
   getApprovalHistory,
+  withdrawApproval,
 } from '../controllers/approvals';
 import { authenticate } from '../middleware/auth';
 
@@ -27,5 +28,8 @@ router.post('/ceo/:applicationId', ceoApprove);
 
 // 获取审批历史
 router.get('/:applicationId/history', getApprovalHistory);
+
+// 撤回审批
+router.post('/:applicationId/withdraw', withdrawApproval);
 
 export default router;

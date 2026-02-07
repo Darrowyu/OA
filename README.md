@@ -34,7 +34,7 @@ OA-runningVersion-v1.0.1/
 │   │   └── utils/        # 工具函数
 │   ├── prisma/           # Prisma schema和迁移
 │   └── scripts/          # 脚本文件
-├── frontend-new/         # 前端应用
+├── frontend/             # 前端应用
 │   ├── src/
 │   │   ├── components/   # 组件
 │   │   ├── pages/        # 页面
@@ -45,6 +45,19 @@ OA-runningVersion-v1.0.1/
 ├── docker-compose.yml    # Docker配置
 └── package.json          # 根目录工作区配置
 ```
+
+## 端口配置
+
+| 服务 | 端口 | 配置文件 | 说明 |
+|------|------|----------|------|
+| 前端开发服务器 | 5173 | `frontend/.env` | Vite开发服务器 |
+| 后端API服务 | 3001 | `backend/.env` | Express服务器 |
+| PostgreSQL | 5432 | `docker-compose.yml` | 数据库服务 |
+
+### 配置文件
+
+- **后端配置**: `backend/.env` (复制 `backend/.env.example`)
+- **前端配置**: `frontend/.env` (复制 `frontend/.env.example`)
 
 ## 快速开始
 
@@ -62,9 +75,18 @@ npm run install:all
 
 ### 3. 配置环境变量
 
+**后端配置:**
 ```bash
+cd backend
 cp .env.example .env
 # 编辑 .env 文件，配置数据库和JWT密钥
+```
+
+**前端配置:**
+```bash
+cd frontend
+cp .env.example .env
+# 编辑 .env 文件（通常不需要修改，使用默认配置即可）
 ```
 
 ### 4. 启动数据库 (使用Docker)
@@ -82,13 +104,27 @@ npm run db:seed  # 可选：填充测试数据
 
 ### 6. 启动开发服务器
 
+**一键启动（推荐）:**
 ```bash
 # 同时启动前后端
+npm start
+# 或
 npm run dev
+```
 
-# 或分别启动
+服务启动后:
+- 前端: http://localhost:5173
+- 后端API: http://localhost:3001
+
+**分别启动:**
+```bash
 npm run dev:backend   # http://localhost:3001
 npm run dev:frontend  # http://localhost:5173
+```
+
+**完整初始化（包含数据库）:**
+```bash
+npm run setup  # 安装依赖 + 启动数据库 + 迁移 + 填充数据
 ```
 
 ## 默认账号
@@ -113,22 +149,33 @@ npm run dev:frontend  # http://localhost:5173
 ## 开发命令
 
 ```bash
-# 代码检查
-npm run lint
+# 启动开发服务器
+npm start              # 一键启动前后端
+npm run dev            # 同上
+npm run dev:backend    # 仅启动后端
+npm run dev:frontend   # 仅启动前端
 
-# 类型检查
-npm run type-check
+# 项目初始化
+npm run setup          # 完整初始化（安装依赖 + 数据库 + 迁移 + 种子数据）
+npm run install:all    # 安装所有依赖
+
+# 代码质量
+npm run lint           # 代码检查
+npm run type-check     # 类型检查
 
 # 数据库管理
-npm run db:studio    # Prisma Studio GUI
-npm run db:migrate   # 执行迁移
-npm run db:seed      # 填充种子数据
+npm run db:up          # 启动PostgreSQL容器
+npm run db:down        # 停止PostgreSQL容器
+npm run db:migrate     # 执行数据库迁移
+npm run db:seed        # 填充种子数据
+npm run db:studio      # Prisma Studio GUI
+npm run db:reset       # 重置数据库
 
-# 构建生产版本
-npm run build
-
-# 启动生产服务
-npm start
+# 构建与部署
+npm run build          # 构建前后端
+npm run build:backend  # 仅构建后端
+npm run build:frontend # 仅构建前端
+npm run serve          # 启动生产服务（仅后端）
 ```
 
 ## 数据库架构

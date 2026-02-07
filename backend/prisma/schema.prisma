@@ -60,6 +60,7 @@ model User {
   department   String
   employeeId   String     @unique
   isActive     Boolean    @default(true)
+  signature    String?    // 签名图片 Base64
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 

@@ -579,3 +579,73 @@ export async function importUsers(req: Request, res: Response): Promise<void> {
     res.status(500).json(errorResponse('INTERNAL_ERROR', '导入用户时发生错误'));
   }
 }
+
+/**
+ * 获取厂长列表
+ * GET /api/users/factory-managers
+ */
+export async function getFactoryManagers(req: Request, res: Response): Promise<void> {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ error: '未登录' });
+      return;
+    }
+
+    const managers = await prisma.user.findMany({
+      where: {
+        role: 'FACTORY_MANAGER',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        employeeId: true,
+        department: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    res.json(successResponse(managers));
+  } catch (error) {
+    console.error('Get factory managers error:', error);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取厂长列表失败'));
+  }
+}
+
+/**
+ * 获取经理列表
+ * GET /api/users/managers
+ */
+export async function getManagers(req: Request, res: Response): Promise<void> {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ error: '未登录' });
+      return;
+    }
+
+    const managers = await prisma.user.findMany({
+      where: {
+        role: 'MANAGER',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        employeeId: true,
+        department: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    res.json(successResponse(managers));
+  } catch (error) {
+    console.error('Get managers error:', error);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '获取经理列表失败'));
+  }
+}

@@ -159,12 +159,15 @@ export async function getApplications(req: Request, res: Response): Promise<void
     }));
 
     res.json({
-      data: formattedApps,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
+      success: true,
+      data: {
+        items: formattedApps,
+        pagination: {
+          page: pageNum,
+          pageSize: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
       },
     });
   } catch (error) {
@@ -236,9 +239,12 @@ export async function getApplication(req: Request, res: Response): Promise<void>
     }
 
     res.json({
-      ...application,
-      statusText: getStatusText(application.status),
-      priorityText: getPriorityText(application.priority),
+      success: true,
+      data: {
+        ...application,
+        statusText: getStatusText(application.status),
+        priorityText: getPriorityText(application.priority),
+      },
     });
   } catch (error) {
     console.error('获取申请详情失败:', error);
@@ -313,6 +319,7 @@ export async function createApplication(req: Request, res: Response): Promise<vo
     }
 
     res.status(201).json({
+      success: true,
       message: '申请创建成功',
       data: {
         ...application,
@@ -388,6 +395,7 @@ export async function updateApplication(req: Request, res: Response): Promise<vo
     }
 
     res.json({
+      success: true,
       message: '申请更新成功',
       data: {
         ...updatedApp,
@@ -438,7 +446,7 @@ export async function deleteApplication(req: Request, res: Response): Promise<vo
     // 删除申请（级联删除关联数据）
     await prisma.application.delete({ where: { id } });
 
-    res.json({ message: '申请删除成功' });
+    res.json({ success: true, message: '申请删除成功' });
   } catch (error) {
     console.error('删除申请失败:', error);
     res.status(500).json({ error: '删除申请失败' });
@@ -501,7 +509,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
       }
     });
 
-    res.json({ message: '申请提交成功' });
+    res.json({ success: true, message: '申请提交成功' });
   } catch (error) {
     console.error('提交申请失败:', error);
     res.status(500).json({ error: '提交申请失败' });

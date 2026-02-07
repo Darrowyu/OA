@@ -32,6 +32,12 @@ export const config = {
       },
     },
     from: process.env.EMAIL_FROM || 'OA System <oa@example.com>',
+    retryDelay: parseInt(process.env.EMAIL_RETRY_DELAY || '3000', 10),
+  },
+
+  // 服务器配置
+  server: {
+    url: process.env.SERVER_URL || `http://localhost:${parseInt(process.env.PORT || '3001', 10)}`,
   },
 
   // 上传配置

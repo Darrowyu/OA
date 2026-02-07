@@ -106,9 +106,12 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
     });
 
     res.json({
+      success: true,
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      status: newStatus,
-      statusText: getStatusText(newStatus),
+      data: {
+        status: newStatus,
+        statusText: getStatusText(newStatus),
+      },
     });
   } catch (error) {
     console.error('厂长审批失败:', error);
@@ -218,10 +221,13 @@ export async function directorApprove(req: Request, res: Response): Promise<void
     });
 
     res.json({
+      success: true,
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      status: newStatus,
-      statusText: getStatusText(newStatus),
-      skipManager,
+      data: {
+        status: newStatus,
+        statusText: getStatusText(newStatus),
+        skipManager,
+      },
     });
   } catch (error) {
     console.error('总监审批失败:', error);
@@ -350,10 +356,13 @@ export async function managerApprove(req: Request, res: Response): Promise<void>
     });
 
     res.json({
+      success: true,
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      status: newStatus,
-      statusText: getStatusText(newStatus),
-      isSpecialManager: isSpecial,
+      data: {
+        status: newStatus,
+        statusText: getStatusText(newStatus),
+        isSpecialManager: isSpecial,
+      },
     });
   } catch (error) {
     console.error('经理审批失败:', error);
@@ -462,9 +471,12 @@ export async function ceoApprove(req: Request, res: Response): Promise<void> {
     });
 
     res.json({
+      success: true,
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      status: newStatus,
-      statusText: getStatusText(newStatus),
+      data: {
+        status: newStatus,
+        statusText: getStatusText(newStatus),
+      },
     });
   } catch (error) {
     console.error('CEO审批失败:', error);
@@ -565,10 +577,176 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
     ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     res.json({
+      success: true,
       data: allApprovals,
     });
   } catch (error) {
     console.error('获取审批历史失败:', error);
     res.status(500).json({ error: '获取审批历史失败' });
+  }
+}
+
+/**
+ * 撤回审批
+ * POST /api/approvals/:applicationId/withdraw
+ * 允许审批人撤回自己的审批
+ */
+export async function withdrawApproval(req: Request, res: Response): Promise<void> {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ error: '未登录' });
+      return;
+    }
+
+    const { applicationId } = req.params;
+    const { level } = req.body; // 'FACTORY', 'DIRECTOR', 'MANAGER', 'CEO'
+
+    if (!level || !['FACTORY', 'DIRECTOR', 'MANAGER', 'CEO'].includes(level)) {
+      res.status(400).json({ error: '无效的审批级别' });
+      return;
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        factoryApprovals: { where: { approverId: user.id } },
+        directorApprovals: { where: { approverId: user.id } },
+        managerApprovals: { where: { approverId: user.id } },
+        ceoApprovals: { where: { approverId: user.id } },
+      },
+    });
+
+    if (!application) {
+      res.status(404).json({ error: '申请不存在' });
+      return;
+    }
+
+    // 检查用户是否有该级别的审批记录
+    let hasApproved = false;
+    let approvalRecord: any = null;
+
+    switch (level) {
+      case 'FACTORY':
+        if (user.role !== 'FACTORY_MANAGER') {
+          res.status(403).json({ error: '无权撤回厂长审批' });
+          return;
+        }
+        approvalRecord = application.factoryApprovals[0];
+        hasApproved = !!approvalRecord;
+        break;
+      case 'DIRECTOR':
+        if (user.role !== 'DIRECTOR') {
+          res.status(403).json({ error: '无权撤回总监审批' });
+          return;
+        }
+        approvalRecord = application.directorApprovals[0];
+        hasApproved = !!approvalRecord;
+        break;
+      case 'MANAGER':
+        if (user.role !== 'MANAGER') {
+          res.status(403).json({ error: '无权撤回经理审批' });
+          return;
+        }
+        approvalRecord = application.managerApprovals[0];
+        hasApproved = !!approvalRecord;
+        break;
+      case 'CEO':
+        if (user.role !== 'CEO') {
+          res.status(403).json({ error: '无权撤回CEO审批' });
+          return;
+        }
+        approvalRecord = application.ceoApprovals[0];
+        hasApproved = !!approvalRecord;
+        break;
+    }
+
+    if (!hasApproved) {
+      res.status(400).json({ error: '您没有该申请的审批记录，无法撤回' });
+      return;
+    }
+
+    // 检查申请状态是否允许撤回
+    // 只允许撤回已通过或待下一级审批的申请
+    const currentStatus = application.status;
+    const allowedStatuses: Record<string, ApplicationStatus[]> = {
+      'FACTORY': [ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+      'DIRECTOR': [ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+      'MANAGER': [ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+      'CEO': [ApplicationStatus.APPROVED],
+    };
+
+    if (!allowedStatuses[level]?.includes(currentStatus)) {
+      res.status(400).json({ error: '当前申请状态不允许撤回审批' });
+      return;
+    }
+
+    // 撤回审批
+    await prisma.$transaction(async (tx) => {
+      // 删除审批记录
+      switch (level) {
+        case 'FACTORY':
+          await tx.factoryApproval.deleteMany({
+            where: { applicationId, approverId: user.id },
+          });
+          break;
+        case 'DIRECTOR':
+          await tx.directorApproval.deleteMany({
+            where: { applicationId, approverId: user.id },
+          });
+          break;
+        case 'MANAGER':
+          await tx.managerApproval.deleteMany({
+            where: { applicationId, approverId: user.id },
+          });
+          break;
+        case 'CEO':
+          await tx.ceoApproval.deleteMany({
+            where: { applicationId, approverId: user.id },
+          });
+          break;
+      }
+
+      // 回退申请状态
+      let newStatus: ApplicationStatus;
+      switch (level) {
+        case 'FACTORY':
+          newStatus = ApplicationStatus.PENDING_FACTORY;
+          break;
+        case 'DIRECTOR':
+          newStatus = ApplicationStatus.PENDING_DIRECTOR;
+          break;
+        case 'MANAGER':
+          newStatus = ApplicationStatus.PENDING_MANAGER;
+          break;
+        case 'CEO':
+          newStatus = ApplicationStatus.PENDING_CEO;
+          break;
+        default:
+          newStatus = currentStatus;
+      }
+
+      await tx.application.update({
+        where: { id: applicationId },
+        data: {
+          status: newStatus,
+          completedAt: null, // 清除完成时间
+        },
+      });
+    });
+
+    res.json({
+      success: true,
+      message: '审批已撤回',
+      data: {
+        status: level === 'FACTORY' ? ApplicationStatus.PENDING_FACTORY :
+                level === 'DIRECTOR' ? ApplicationStatus.PENDING_DIRECTOR :
+                level === 'MANAGER' ? ApplicationStatus.PENDING_MANAGER :
+                ApplicationStatus.PENDING_CEO,
+      },
+    });
+  } catch (error) {
+    console.error('撤回审批失败:', error);
+    res.status(500).json({ error: '撤回审批失败' });
   }
 }

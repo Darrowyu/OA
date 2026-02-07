@@ -5,26 +5,31 @@
   "private": true,
   "workspaces": [
     "backend",
-    "frontend-new"
+    "frontend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start": "npm run dev",
+    "dev": "concurrently --raw \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:pretty": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend-new && npm run dev",
+    "dev:frontend": "cd frontend && npx vite --clearScreen false",
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend-new && npm run build",
-    "start": "cd backend && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "serve": "cd backend && npm start",
+    "setup": "npm run install:all && npm run db:up && npm run db:migrate && npm run db:seed",
     "db:up": "docker-compose up -d postgres",
     "db:down": "docker-compose down",
     "db:migrate": "cd backend && npm run db:migrate",
     "db:seed": "cd backend && npm run db:seed",
     "db:studio": "cd backend && npm run db:studio",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend-new && npm install",
-    "lint": "cd backend && npm run lint && cd ../frontend-new && npm run lint",
-    "type-check": "cd backend && npm run type-check && cd ../frontend-new && tsc --noEmit"
+    "db:reset": "cd backend && npm run db:migrate reset",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "type-check": "cd backend && npm run type-check && cd ../frontend && npm run type-check"
   },
   "devDependencies": {
+    "@types/nodemailer": "^7.0.9",
     "concurrently": "^8.2.2"
   },
   "engines": {
