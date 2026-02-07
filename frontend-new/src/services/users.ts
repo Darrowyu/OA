@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api';
-import { User, UserRole } from '@/types';
+import { UserRole } from '@/types';
 
 export interface CreateUserRequest {
   username: string;
@@ -36,4 +36,6 @@ export const usersApi = {
   deleteUser: (id: string) => apiClient.delete(`/users/${id}`),
   resetPassword: (id: string, newPassword: string) =>
     apiClient.post(`/users/${id}/reset-password`, { newPassword }),
+  getFactoryManagers: () => apiClient.get('/users/factory-managers'),
+  getManagers: () => apiClient.get('/users/managers'),
 };

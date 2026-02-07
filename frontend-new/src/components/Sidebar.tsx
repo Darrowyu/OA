@@ -27,7 +27,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   }
 
   const isAdmin = user?.role === "ADMIN"
-  const isApprover = user?.role === "APPROVER" || user?.role === "ADMIN"
+  const isApprover = user?.role === "FACTORY_MANAGER" || user?.role === "DIRECTOR" || user?.role === "MANAGER" || user?.role === "CEO" || user?.role === "ADMIN"
 
   const navItems = [
     { path: "/applications/new", label: "新建申请", icon: FilePlus, show: true },
@@ -84,8 +84,14 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
             <p className="text-xs text-gray-500 truncate">
               {user?.role === "ADMIN"
                 ? "管理员"
-                : user?.role === "APPROVER"
-                ? "审批员"
+                : user?.role === "FACTORY_MANAGER"
+                ? "厂长"
+                : user?.role === "DIRECTOR"
+                ? "总监"
+                : user?.role === "MANAGER"
+                ? "经理"
+                : user?.role === "CEO"
+                ? "CEO"
                 : "普通用户"}
             </p>
           </div>

@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api';
-import { Application, ApplicationStatus, Priority } from '@/types';
+import { ApplicationStatus, Priority } from '@/types';
 
 export interface CreateApplicationRequest {
   title: string;
@@ -17,17 +17,15 @@ export interface UpdateApplicationRequest {
   factoryManagerIds?: string[];
 }
 
-export interface ApplicationsQueryParams {
+export interface GetApplicationsParams {
   page?: number;
-  limit?: number;
+  pageSize?: number;
   status?: ApplicationStatus;
-  priority?: Priority;
   keyword?: string;
-  myApplications?: boolean;
 }
 
 export const applicationsApi = {
-  getApplications: (params?: ApplicationsQueryParams) =>
+  getApplications: (params?: GetApplicationsParams) =>
     apiClient.get('/applications', { params }),
   getApplication: (id: string) => apiClient.get(`/applications/${id}`),
   createApplication: (data: CreateApplicationRequest) => apiClient.post('/applications', data),

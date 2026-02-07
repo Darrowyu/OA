@@ -1,5 +1,15 @@
 import apiClient from '@/lib/api';
 
+export interface UploadResponse {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  path: string;
+  uploadedAt: string;
+}
+
 export const uploadsApi = {
   uploadFile: (file: File, applicationId?: string, isApprovalAttachment?: boolean) => {
     const formData = new FormData();

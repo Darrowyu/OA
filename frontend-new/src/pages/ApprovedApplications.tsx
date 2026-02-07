@@ -85,35 +85,6 @@ const actionMap: Record<string, { label: string; color: string; icon: React.Reac
   REJECT: { label: "拒绝", color: "text-red-600", icon: <XCircle className="h-4 w-4" /> },
 }
 
-// 获取时间范围
-const getTimeRange = (filter: TimeFilter): { startDate?: string; endDate?: string } => {
-  const now = new Date()
-  const endDate = now.toISOString()
-  let startDate: string
-
-  switch (filter) {
-    case "week":
-      const weekAgo = new Date(now)
-      weekAgo.setDate(now.getDate() - 7)
-      startDate = weekAgo.toISOString()
-      break
-    case "month":
-      const monthAgo = new Date(now)
-      monthAgo.setMonth(now.getMonth() - 1)
-      startDate = monthAgo.toISOString()
-      break
-    case "year":
-      const yearAgo = new Date(now)
-      yearAgo.setFullYear(now.getFullYear() - 1)
-      startDate = yearAgo.toISOString()
-      break
-    default:
-      return {}
-  }
-
-  return { startDate, endDate }
-}
-
 // 统计卡片组件
 interface StatCardProps {
   title: string
@@ -212,8 +183,6 @@ export const ApprovedApplications: React.FC = () => {
 
     setLoading(true)
     try {
-      const timeRange = getTimeRange(timeFilter)
-
       // 根据状态筛选构建查询参数
       let status: ApplicationStatus | undefined
       if (statusFilter === "approved") {
@@ -226,8 +195,7 @@ export const ApprovedApplications: React.FC = () => {
         status,
         keyword: keyword || undefined,
         page,
-        limit: pageSize,
-        ...timeRange,
+        pageSize,
       })
 
       const items = response.data.data || []

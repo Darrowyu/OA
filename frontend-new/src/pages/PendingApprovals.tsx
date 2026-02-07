@@ -123,7 +123,7 @@ export const PendingApprovals: React.FC = () => {
       const response = await applicationsApi.getApplications({
         status: status || undefined,
         page: 1,
-        limit: 100,
+        pageSize: 100,
       })
       setApplications(response.data.data || [])
     } catch (error) {

@@ -1,196 +1,348 @@
 import * as React from "react"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { NativeSelect as Select, SelectOption } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { CreateApplicationRequest, Priority, User } from "@/types"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { NativeSelect as Select } from "@/components/ui/select"
+import { FileUpload } from "./FileUpload"
+import { CreateApplicationRequest, User, Priority, Currency } from "@/types"
+import { UploadResponse } from "@/services/uploads"
+import { Upload } from "lucide-react"
 
 interface ApplicationFormProps {
-  users: User[]
+  factoryManagers: User[]
+  managers: User[]
   onSubmit: (data: CreateApplicationRequest) => void
   onCancel: () => void
   loading?: boolean
 }
 
+// 优先级选项
+const priorityOptions = [
+  { value: Priority.LOW, label: "普通" },
+  { value: Priority.NORMAL, label: "中等" },
+  { value: Priority.HIGH, label: "高" },
+  { value: Priority.URGENT, label: "紧急" },
+]
+
+// 货币选项
+const currencyOptions = [
+  { value: Currency.CNY, label: "人民币 (CNY)" },
+  { value: Currency.USD, label: "美元 (USD)" },
+]
+
 export const ApplicationForm: React.FC<ApplicationFormProps> = ({
-  users,
+  factoryManagers,
+  managers,
   onSubmit,
   onCancel,
   loading = false,
 }) => {
-  const [formData, setFormData] = React.useState<CreateApplicationRequest>({
-    title: "",
-    content: "",
-    amount: undefined,
-    priority: Priority.NORMAL,
-    factoryManagerIds: [],
-    managerIds: [],
-    skipManager: false,
-  })
-
+  const [title, setTitle] = React.useState("")
+  const [content, setContent] = React.useState("")
+  const [amount, setAmount] = React.useState<string>("")
+  const [currency, setCurrency] = React.useState<Currency>(Currency.CNY)
+  const [priority, setPriority] = React.useState<Priority>(Priority.NORMAL)
+  const [selectedFactoryManagers, setSelectedFactoryManagers] = React.useState<string[]>([])
+  const [selectedManagers, setSelectedManagers] = React.useState<string[]>([])
+  const [skipManager, setSkipManager] = React.useState(false)
+  const [attachments, setAttachments] = React.useState<UploadResponse[]>([])
   const [errors, setErrors] = React.useState<Record<string, string>>({})
 
-  // 优先级选项
-  const priorityOptions: SelectOption[] = [
-    { value: Priority.LOW, label: "低" },
-    { value: Priority.NORMAL, label: "普通" },
-    { value: Priority.HIGH, label: "高" },
-    { value: Priority.URGENT, label: "紧急" },
-  ]
-
-  // 厂长选项
-  const factoryManagerOptions: SelectOption[] = users
-    .filter((u) => u.role === "FACTORY_MANAGER")
-    .map((u) => ({ value: u.id, label: `${u.name} (${u.department})` }))
-
-  // 经理选项
-  const managerOptions: SelectOption[] = users
-    .filter((u) => u.role === "MANAGER")
-    .map((u) => ({ value: u.id, label: `${u.name} (${u.department})` }))
-
+  // 表单验证
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.title.trim()) {
+    if (!title.trim()) {
       newErrors.title = "请输入申请标题"
+    } else if (title.length > 200) {
+      newErrors.title = "标题不能超过200个字符"
     }
-    if (!formData.content.trim()) {
+
+    if (!content.trim()) {
       newErrors.content = "请输入申请内容"
+    } else if (content.length > 5000) {
+      newErrors.content = "内容不能超过5000个字符"
     }
-    if (formData.factoryManagerIds.length === 0) {
-      newErrors.factoryManagerIds = "请选择至少一位厂长"
+
+    if (amount && isNaN(Number(amount))) {
+      newErrors.amount = "请输入有效的金额"
+    } else if (amount && Number(amount) < 0) {
+      newErrors.amount = "金额不能为负数"
     }
-    if (!formData.skipManager && formData.managerIds.length === 0) {
-      newErrors.managerIds = "请选择至少一位经理，或勾选跳过经理审批"
+
+    if (selectedFactoryManagers.length === 0) {
+      newErrors.factoryManagers = "请至少选择一位审批厂长"
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
+  // 提交表单
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validate()) {
-      onSubmit(formData)
+
+    if (!validate()) return
+
+    const data: CreateApplicationRequest = {
+      title: title.trim(),
+      content: content.trim(),
+      priority,
+      factoryManagerIds: selectedFactoryManagers,
+      managerIds: skipManager ? [] : selectedManagers,
+      skipManager,
+      attachmentIds: attachments.map((att) => att.id),
+    }
+
+    // 如果有金额，添加到请求中
+    if (amount && Number(amount) > 0) {
+      data.amount = Number(amount)
+      data.currency = currency
+    }
+
+    onSubmit(data)
+  }
+
+  // 处理厂长选择
+  const handleFactoryManagerToggle = (managerId: string) => {
+    setSelectedFactoryManagers((prev) =>
+      prev.includes(managerId)
+        ? prev.filter((id) => id !== managerId)
+        : [...prev, managerId]
+    )
+    if (errors.factoryManagers) {
+      setErrors((prev) => ({ ...prev, factoryManagers: "" }))
     }
   }
 
-  const handleChange = (field: keyof CreateApplicationRequest, value: unknown) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
-    }
+  // 处理经理选择
+  const handleManagerToggle = (managerId: string) => {
+    setSelectedManagers((prev) =>
+      prev.includes(managerId)
+        ? prev.filter((id) => id !== managerId)
+        : [...prev, managerId]
+    )
+  }
+
+  // 处理文件上传完成
+  const handleUploadComplete = (uploadedFiles: UploadResponse[]) => {
+    setAttachments((prev) => [...prev, ...uploadedFiles])
+  }
+
+  // 删除附件
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Input
-        label="申请标题"
-        placeholder="请输入申请标题"
-        value={formData.title}
-        onChange={(e) => handleChange("title", e.target.value)}
-        error={errors.title}
-        required
-      />
-
-      <Textarea
-        label="申请内容"
-        placeholder="请详细描述您的申请内容..."
-        value={formData.content}
-        onChange={(e) => handleChange("content", e.target.value)}
-        error={errors.content}
-        required
-        rows={4}
-      />
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 标题 */}
+      <div>
+        <Label htmlFor="title">
+          申请标题 <span className="text-red-500">*</span>
+        </Label>
         <Input
-          label="申请金额"
-          type="number"
-          placeholder="请输入金额（可选）"
-          value={formData.amount || ""}
-          onChange={(e) => handleChange("amount", e.target.value ? parseFloat(e.target.value) : undefined)}
-        />
-
-        <Select
-          label="优先级"
-          options={priorityOptions}
-          value={formData.priority}
-          onChange={(e) => handleChange("priority", e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          厂长审批人<span className="text-red-500 ml-1">*</span>
-        </label>
-        <select
-          multiple
-          className="flex h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          value={formData.factoryManagerIds}
+          id="title"
+          value={title}
           onChange={(e) => {
-            const options = Array.from(e.target.selectedOptions)
-            const values = options.map((o) => o.value)
-            handleChange("factoryManagerIds", values)
+            setTitle(e.target.value)
+            if (errors.title) setErrors((prev) => ({ ...prev, title: "" }))
           }}
-        >
-          {factoryManagerOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        {errors.factoryManagerIds && (
-          <p className="text-sm text-red-500">{errors.factoryManagerIds}</p>
-        )}
-        <p className="text-xs text-gray-500">按住 Ctrl 键可多选</p>
+          placeholder="请输入申请标题"
+          className={errors.title ? "border-red-500" : ""}
+          disabled={loading}
+        />
+        {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
       </div>
 
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="skipManager"
-          checked={formData.skipManager}
-          onChange={(e) => handleChange("skipManager", e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+      {/* 内容 */}
+      <div>
+        <Label htmlFor="content">
+          申请内容 <span className="text-red-500">*</span>
+        </Label>
+        <Textarea
+          id="content"
+          value={content}
+          onChange={(e) => {
+            setContent(e.target.value)
+            if (errors.content) setErrors((prev) => ({ ...prev, content: "" }))
+          }}
+          placeholder="请详细描述您的申请内容..."
+          rows={5}
+          className={errors.content ? "border-red-500" : ""}
+          disabled={loading}
         />
-        <label htmlFor="skipManager" className="text-sm text-gray-700">
+        {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
+        <p className="text-xs text-gray-500 mt-1">{content.length}/5000</p>
+      </div>
+
+      {/* 金额 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="amount">申请金额（可选）</Label>
+          <Input
+            id="amount"
+            type="number"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value)
+              if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }))
+            }}
+            placeholder="请输入金额"
+            className={errors.amount ? "border-red-500" : ""}
+            disabled={loading}
+            min={0}
+            step="0.01"
+          />
+          {errors.amount && <p className="text-sm text-red-500 mt-1">{errors.amount}</p>}
+        </div>
+        <div>
+          <Label htmlFor="currency">货币类型</Label>
+          <Select
+            id="currency"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as Currency)}
+            disabled={loading || !amount}
+            options={currencyOptions}
+          />
+        </div>
+      </div>
+
+      {/* 优先级 */}
+      <div>
+        <Label htmlFor="priority">优先级</Label>
+        <Select
+          id="priority"
+          value={priority}
+          onChange={(e) => setPriority(e.target.value as Priority)}
+          disabled={loading}
+          options={priorityOptions}
+        />
+      </div>
+
+      {/* 审批厂长选择 */}
+      <div>
+        <Label>
+          选择审批厂长 <span className="text-red-500">*</span>
+        </Label>
+        <div className={`mt-2 border rounded-lg p-4 ${errors.factoryManagers ? "border-red-500" : "border-gray-200"}`}>
+          {factoryManagers.length === 0 ? (
+            <p className="text-sm text-gray-500">暂无可用厂长</p>
+          ) : (
+            <div className="space-y-2">
+              {factoryManagers.map((manager) => (
+                <div key={manager.id} className="flex items-center">
+                  <Checkbox
+                    id={`factory-${manager.id}`}
+                    checked={selectedFactoryManagers.includes(manager.id)}
+                    onCheckedChange={() => handleFactoryManagerToggle(manager.id)}
+                    disabled={loading}
+                  />
+                  <label
+                    htmlFor={`factory-${manager.id}`}
+                    className="ml-2 text-sm text-gray-700 cursor-pointer"
+                  >
+                    {manager.name} ({manager.department || "无部门"})
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {errors.factoryManagers && (
+          <p className="text-sm text-red-500 mt-1">{errors.factoryManagers}</p>
+        )}
+      </div>
+
+      {/* 跳过经理审批选项 */}
+      <div className="flex items-center">
+        <Checkbox
+          id="skipManager"
+          checked={skipManager}
+          onCheckedChange={(checked) => setSkipManager(checked as boolean)}
+          disabled={loading}
+        />
+        <label htmlFor="skipManager" className="ml-2 text-sm text-gray-700 cursor-pointer">
           跳过经理审批（直接提交给CEO）
         </label>
       </div>
 
-      {!formData.skipManager && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            经理审批人<span className="text-red-500 ml-1">*</span>
-          </label>
-          <select
-            multiple
-            className="flex h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={formData.managerIds}
-            onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions)
-              const values = options.map((o) => o.value)
-              handleChange("managerIds", values)
-            }}
-          >
-            {managerOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {errors.managerIds && <p className="text-sm text-red-500">{errors.managerIds}</p>}
-          <p className="text-xs text-gray-500">按住 Ctrl 键可多选</p>
+      {/* 经理选择（仅在未跳过时显示） */}
+      {!skipManager && (
+        <div>
+          <Label>选择审批经理</Label>
+          <div className="mt-2 border border-gray-200 rounded-lg p-4">
+            {managers.length === 0 ? (
+              <p className="text-sm text-gray-500">暂无可用经理</p>
+            ) : (
+              <div className="space-y-2">
+                {managers.map((manager) => (
+                  <div key={manager.id} className="flex items-center">
+                    <Checkbox
+                      id={`manager-${manager.id}`}
+                      checked={selectedManagers.includes(manager.id)}
+                      onCheckedChange={() => handleManagerToggle(manager.id)}
+                      disabled={loading}
+                    />
+                    <label
+                      htmlFor={`manager-${manager.id}`}
+                      className="ml-2 text-sm text-gray-700 cursor-pointer"
+                    >
+                      {manager.name} ({manager.department || "无部门"})
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      <div className="flex justify-end gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+      {/* 附件上传 */}
+      <div>
+        <Label>附件</Label>
+        <div className="mt-2">
+          <FileUpload onUploadComplete={handleUploadComplete} disabled={loading} />
+        </div>
+        {attachments.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {attachments.map((file, index) => (
+              <div
+                key={file.id}
+                className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-700 truncate max-w-[200px]">
+                    {file.originalName}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveAttachment(index)}
+                  disabled={loading}
+                >
+                  删除
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 按钮 */}
+      <div className="flex gap-3 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="flex-1">
           取消
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading} className="flex-1">
           {loading ? "提交中..." : "提交申请"}
         </Button>
       </div>

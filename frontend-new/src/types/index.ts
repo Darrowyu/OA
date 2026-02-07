@@ -18,6 +18,12 @@ export enum Priority {
   URGENT = 'URGENT',
 }
 
+// 货币枚举
+export enum Currency {
+  CNY = 'CNY',
+  USD = 'USD',
+}
+
 // 用户角色枚举
 export enum UserRole {
   USER = 'USER',
@@ -65,6 +71,7 @@ export interface Application {
   title: string;
   content: string;
   amount: number | null;
+  currency: Currency;
   priority: Priority;
   status: ApplicationStatus;
   submitterId: string;
@@ -98,10 +105,12 @@ export interface CreateApplicationRequest {
   title: string;
   content: string;
   amount?: number;
+  currency?: Currency;
   priority: Priority;
   factoryManagerIds: string[];
   managerIds: string[];
   skipManager: boolean;
+  attachmentIds?: string[];
 }
 
 // 审批申请请求类型

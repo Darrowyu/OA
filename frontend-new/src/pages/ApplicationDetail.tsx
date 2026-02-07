@@ -9,13 +9,14 @@ import {
   Application,
   ApplicationStatus,
   UserRole,
-  ApprovalAction,
-  ApproveApplicationRequest,
-  User,
-  Attachment,
   ApprovalRecord,
+  Currency,
 } from "@/types"
-import { formatDate, formatAmount, formatFileSize } from "@/lib/utils"
+import { applicationsApi } from "@/services/applications"
+import { approvalsApi } from "@/services/approvals"
+import { uploadsApi } from "@/services/uploads"
+import { useAuth } from "@/contexts/AuthContext"
+import { formatDate, formatFileSize } from "@/lib/utils"
 import {
   ArrowLeft,
   User as UserIcon,
@@ -27,70 +28,9 @@ import {
   XCircle,
   Clock,
   Download,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
-
-// 模拟数据
-const mockUsers: User[] = [
-  { id: "1", username: "factory1", employeeId: "F001", name: "张厂长", role: "FACTORY_MANAGER" as const, department: "一厂", email: "factory1@example.com", canSubmitApplication: false },
-  { id: "2", username: "manager1", employeeId: "M001", name: "李经理", role: "MANAGER" as const, department: "生产部", email: "manager1@example.com", canSubmitApplication: false },
-  { id: "3", username: "ceo1", employeeId: "C001", name: "王总", role: "CEO" as const, department: "总裁办", email: "ceo1@example.com", canSubmitApplication: false },
-]
-
-const mockApplication: Application = {
-  id: "1",
-  applicationNo: "APP2024001",
-  title: "设备采购申请",
-  content: "需要采购5台新的生产设备，用于提升产能。\n\n具体需求：\n1. 设备型号：XYZ-1000\n2. 数量：5台\n3. 预算：每台10万元\n4. 用途：生产线升级\n\n请审批。",
-  amount: 50000,
-  priority: "HIGH" as const,
-  status: "PENDING_FACTORY" as const,
-  submitterId: "user1",
-  submitterName: "张三",
-  submitterDepartment: "生产部",
-  factoryManagerIds: ["1"],
-  managerIds: ["2"],
-  skipManager: false,
-  currentApproverId: "1",
-  createdAt: "2024-01-15T10:00:00Z",
-  updatedAt: "2024-01-15T10:00:00Z",
-  submittedAt: "2024-01-15T10:00:00Z",
-  completedAt: null,
-  attachments: [
-    {
-      id: "1",
-      filename: "equipment_quote.pdf",
-      originalName: "设备报价单.pdf",
-      mimeType: "application/pdf",
-      size: 1024000,
-      path: "/uploads/equipment_quote.pdf",
-      uploadedAt: "2024-01-15T10:00:00Z",
-    },
-    {
-      id: "2",
-      filename: "requirement_doc.docx",
-      originalName: "需求说明.docx",
-      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 512000,
-      path: "/uploads/requirement_doc.docx",
-      uploadedAt: "2024-01-15T10:00:00Z",
-    },
-  ],
-  approvals: [],
-}
-
-// 模拟审批历史
-const mockApprovalHistory: ApprovalRecord[] = [
-  {
-    id: "1",
-    applicationId: "1",
-    approverId: "1",
-    approverName: "张厂长",
-    approverRole: "厂长",
-    action: "APPROVE" as const,
-    comment: "同意采购，请继续审批。",
-    createdAt: "2024-01-15T14:00:00Z",
-  },
-]
 
 // 状态映射配置
 const statusConfig: Record<ApplicationStatus, { label: string; variant: "yellow" | "blue" | "purple" | "orange" | "green" | "red" | "gray" }> = {
@@ -112,114 +52,213 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   URGENT: { label: "紧急", color: "text-red-500" },
 }
 
-// 当前用户角色（模拟）
-const currentUserRole: UserRole = UserRole.FACTORY_MANAGER
-const currentUserId = "1"
-
 export const ApplicationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [application, setApplication] = React.useState<Application>(mockApplication)
-  const [loading, setLoading] = React.useState(false)
+  const { user } = useAuth()
+  const [application, setApplication] = React.useState<Application | null>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [approvalHistory, setApprovalHistory] = React.useState<ApprovalRecord[]>([])
+  const [loadingHistory, setLoadingHistory] = React.useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = React.useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false)
   const [comment, setComment] = React.useState("")
   const [actionLoading, setActionLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+
+  // 获取申请详情
+  const fetchApplication = React.useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await applicationsApi.getApplication(id)
+      setApplication(response.data)
+    } catch (err) {
+      setError("获取申请详情失败")
+      console.error("获取申请详情失败:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  // 获取审批历史
+  const fetchApprovalHistory = React.useCallback(async () => {
+    if (!id) return
+    setLoadingHistory(true)
+    try {
+      const response = await approvalsApi.getApprovalHistory(id)
+      setApprovalHistory(response.data)
+    } catch (err) {
+      console.error("获取审批历史失败:", err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [id])
+
+  React.useEffect(() => {
+    fetchApplication()
+    fetchApprovalHistory()
+  }, [fetchApplication, fetchApprovalHistory])
 
   // 检查当前用户是否可以审批
   const canApprove = React.useMemo(() => {
+    if (!application || !user) return false
     if (application.status === ApplicationStatus.APPROVED ||
-        application.status === ApplicationStatus.REJECTED) {
+        application.status === ApplicationStatus.REJECTED ||
+        application.status === ApplicationStatus.DRAFT) {
       return false
     }
 
     // 检查当前用户是否是当前审批人
-    if (application.currentApproverId !== currentUserId) {
+    if (application.currentApproverId !== user.id) {
       return false
     }
 
     // 检查用户角色是否匹配当前状态
     switch (application.status) {
       case ApplicationStatus.PENDING_FACTORY:
-        return currentUserRole === UserRole.FACTORY_MANAGER
+        return user.role === UserRole.FACTORY_MANAGER
       case ApplicationStatus.PENDING_DIRECTOR:
-        return currentUserRole === UserRole.DIRECTOR
+        return user.role === UserRole.DIRECTOR
       case ApplicationStatus.PENDING_MANAGER:
-        return currentUserRole === UserRole.MANAGER
+        return user.role === UserRole.MANAGER
       case ApplicationStatus.PENDING_CEO:
-        return currentUserRole === UserRole.CEO
+        return user.role === UserRole.CEO
       default:
         return false
     }
-  }, [application, currentUserRole])
-
-  const status = statusConfig[application.status]
-  const priority = priorityConfig[application.priority]
+  }, [application, user])
 
   const handleApprove = async () => {
+    if (!id || !application) return
     setActionLoading(true)
-    // 模拟API调用
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
 
-    // 更新状态（模拟）
-    const newStatus = getNextStatus(application.status)
-    setApplication((prev) => ({
-      ...prev,
-      status: newStatus,
-      currentApproverId: newStatus === ApplicationStatus.APPROVED ? null : getNextApproverId(newStatus),
-    }))
+      const request = {
+        action: "APPROVE" as const,
+        comment: comment || undefined,
+      }
 
-    setApprovalDialogOpen(false)
-    setComment("")
-    setActionLoading(false)
+      // 根据当前状态调用不同的审批API
+      switch (application.status) {
+        case ApplicationStatus.PENDING_FACTORY:
+          await approvalsApi.factoryApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_DIRECTOR:
+          await approvalsApi.directorApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_MANAGER:
+          await approvalsApi.managerApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_CEO:
+          await approvalsApi.ceoApprove(id, request)
+          break
+      }
+
+      setApprovalDialogOpen(false)
+      setComment("")
+      // 刷新数据
+      await Promise.all([fetchApplication(), fetchApprovalHistory()])
+    } catch (err) {
+      console.error("审批失败:", err)
+      setError("审批操作失败，请重试")
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleReject = async () => {
+    if (!id || !application) return
     setActionLoading(true)
-    // 模拟API调用
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const request = {
+        action: "REJECT" as const,
+        comment: comment || undefined,
+      }
 
-    setApplication((prev) => ({
-      ...prev,
-      status: ApplicationStatus.REJECTED,
-      currentApproverId: null,
-      completedAt: new Date().toISOString(),
-    }))
+      // 根据当前状态调用不同的审批API
+      switch (application.status) {
+        case ApplicationStatus.PENDING_FACTORY:
+          await approvalsApi.factoryApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_DIRECTOR:
+          await approvalsApi.directorApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_MANAGER:
+          await approvalsApi.managerApprove(id, request)
+          break
+        case ApplicationStatus.PENDING_CEO:
+          await approvalsApi.ceoApprove(id, request)
+          break
+      }
 
-    setRejectDialogOpen(false)
-    setComment("")
-    setActionLoading(false)
-  }
-
-  const getNextStatus = (currentStatus: ApplicationStatus): ApplicationStatus => {
-    switch (currentStatus) {
-      case ApplicationStatus.PENDING_FACTORY:
-        return ApplicationStatus.PENDING_DIRECTOR
-      case ApplicationStatus.PENDING_DIRECTOR:
-        return ApplicationStatus.PENDING_MANAGER
-      case ApplicationStatus.PENDING_MANAGER:
-        return ApplicationStatus.PENDING_CEO
-      case ApplicationStatus.PENDING_CEO:
-        return ApplicationStatus.APPROVED
-      default:
-        return currentStatus
+      setRejectDialogOpen(false)
+      setComment("")
+      // 刷新数据
+      await Promise.all([fetchApplication(), fetchApprovalHistory()])
+    } catch (err) {
+      console.error("拒绝失败:", err)
+      setError("拒绝操作失败，请重试")
+    } finally {
+      setActionLoading(false)
     }
   }
 
-  const getNextApproverId = (status: ApplicationStatus): string | null => {
-    switch (status) {
-      case ApplicationStatus.PENDING_FACTORY:
-        return application.factoryManagerIds[0] || null
-      case ApplicationStatus.PENDING_DIRECTOR:
-        return "director1"
-      case ApplicationStatus.PENDING_MANAGER:
-        return application.managerIds[0] || null
-      case ApplicationStatus.PENDING_CEO:
-        return "ceo1"
-      default:
-        return null
+  // 下载附件
+  const handleDownload = async (attachmentId: string, filename: string) => {
+    try {
+      const response = await uploadsApi.downloadFile(attachmentId)
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", filename)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("下载失败:", err)
+      setError("下载文件失败")
     }
   }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="animate-spin h-8 w-8 text-primary" />
+            <span className="ml-2 text-gray-500">加载中...</span>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (error || !application) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-gray-600">{error || "申请不存在"}</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate("/applications")}>
+                返回列表
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  const status = statusConfig[application.status]
+  const priority = priorityConfig[application.priority]
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -258,7 +297,11 @@ export const ApplicationDetail: React.FC = () => {
                   <DollarSign className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">金额</p>
-                    <p className="text-sm font-medium">{formatAmount(application.amount)}</p>
+                    <p className="text-sm font-medium">
+                      {application.amount
+                        ? `${application.currency === Currency.USD ? "$" : "¥"}${application.amount.toLocaleString()}`
+                        : "-"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -287,7 +330,7 @@ export const ApplicationDetail: React.FC = () => {
           </div>
 
           {/* 附件列表 */}
-          {application.attachments.length > 0 && (
+          {application.attachments && application.attachments.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
@@ -308,7 +351,11 @@ export const ApplicationDetail: React.FC = () => {
                         <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownload(attachment.id, attachment.originalName)}
+                    >
                       <Download className="h-4 w-4 mr-1" />
                       下载
                     </Button>
@@ -327,12 +374,17 @@ export const ApplicationDetail: React.FC = () => {
               </h3>
             </div>
             <div className="divide-y divide-gray-100">
-              {mockApprovalHistory.length === 0 ? (
+              {loadingHistory ? (
+                <div className="px-6 py-8 text-center">
+                  <Loader2 className="inline-block animate-spin h-6 w-6 text-primary" />
+                  <p className="mt-2 text-gray-500">加载中...</p>
+                </div>
+              ) : approvalHistory.length === 0 ? (
                 <div className="px-6 py-8 text-center text-gray-500">
                   暂无审批记录
                 </div>
               ) : (
-                mockApprovalHistory.map((record) => (
+                approvalHistory.map((record) => (
                   <div key={record.id} className="px-6 py-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -411,6 +463,7 @@ export const ApplicationDetail: React.FC = () => {
                 取消
               </Button>
               <Button onClick={handleApprove} disabled={actionLoading}>
+                {actionLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
                 {actionLoading ? "处理中..." : "确认通过"}
               </Button>
             </DialogFooter>
@@ -441,6 +494,7 @@ export const ApplicationDetail: React.FC = () => {
                 取消
               </Button>
               <Button variant="destructive" onClick={handleReject} disabled={actionLoading}>
+                {actionLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
                 {actionLoading ? "处理中..." : "确认拒绝"}
               </Button>
             </DialogFooter>

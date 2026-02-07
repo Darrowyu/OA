@@ -80,9 +80,9 @@ export function Approved() {
                   ) : (
                     applications.map((app) => (
                       <TableRow key={app.id}>
-                        <TableCell>{app.serialNumber}</TableCell>
-                        <TableCell>{app.type}</TableCell>
-                        <TableCell>{app.applicant?.name || app.applicant?.username}</TableCell>
+                        <TableCell>{app.applicationNo}</TableCell>
+                        <TableCell>{app.title}</TableCell>
+                        <TableCell>{app.submitterName}</TableCell>
                         <TableCell>
                           {app.updatedAt
                             ? new Date(app.updatedAt).toLocaleString()
