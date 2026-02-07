@@ -4,8 +4,8 @@ import { Applications } from "@/pages/Applications"
 import { ApplicationDetail } from "@/pages/ApplicationDetail"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import Users from "@/pages/Users"
-import { Pending } from "@/pages/Pending"
-import { Approved } from "@/pages/Approved"
+import { PendingApprovals } from "@/pages/PendingApprovals"
+import { ApprovedApplications } from "@/pages/ApprovedApplications"
 import Settings from "@/pages/Settings"
 
 function App() {
@@ -40,8 +40,8 @@ function App() {
       <Route
         path="/pending"
         element={
-          <ProtectedRoute requireRoles={["APPROVER", "ADMIN"]}>
-            <Pending />
+          <ProtectedRoute requireRoles={["FACTORY_MANAGER", "DIRECTOR", "MANAGER", "CEO", "ADMIN"]}>
+            <PendingApprovals />
           </ProtectedRoute>
         }
       />
@@ -49,7 +49,7 @@ function App() {
         path="/approved"
         element={
           <ProtectedRoute>
-            <Approved />
+            <ApprovedApplications />
           </ProtectedRoute>
         }
       />
