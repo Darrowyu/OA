@@ -1,0 +1,251 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  FACTORY_MANAGER
+  DIRECTOR
+  MANAGER
+  CEO
+  ADMIN
+  READONLY
+}
+
+enum ApplicationStatus {
+  DRAFT
+  PENDING_FACTORY
+  PENDING_DIRECTOR
+  PENDING_MANAGER
+  PENDING_CEO
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ReminderType {
+  EMAIL
+  SMS
+  SYSTEM
+}
+
+enum ApprovalAction {
+  APPROVE
+  REJECT
+  PENDING
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  password     String
+  name         String
+  email        String     @unique
+  role         UserRole
+  department   String
+  employeeId   String     @unique
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // 关联字段
+  applications Application[]
+  factoryApprovals FactoryApproval[]
+  directorApprovals DirectorApproval[]
+  managerApprovals ManagerApproval[]
+  ceoApprovals CeoApproval[]
+  attachments Attachment[]
+  reminderLogs ReminderLog[]
+
+  @@index([department])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Application {
+  id               String             @id @default(cuid())
+  applicationNo    String             @unique
+  title            String
+  content          String
+  amount           Decimal?           @db.Decimal(15, 2)
+  priority         Priority           @default(NORMAL)
+  status           ApplicationStatus  @default(DRAFT)
+  applicantId      String
+  applicantName    String
+  applicantDept    String
+  factoryManagerIds String[]
+  managerIds       String[]
+  rejectedBy       String?
+  rejectedAt       DateTime?
+  rejectReason     String?
+  submittedAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  // 关联字段
+  applicant        User               @relation(fields: [applicantId], references: [id])
+  factoryApprovals FactoryApproval[]
+  directorApprovals DirectorApproval[]
+  managerApprovals ManagerApproval[]
+  ceoApprovals CeoApproval[]
+  attachments Attachment[]
+  reminderLogs ReminderLog[]
+  archiveRecord ArchiveRecord?
+
+  @@index([status])
+  @@index([priority])
+  @@index([submittedAt])
+  @@index([applicantId])
+}
+
+model FactoryApproval {
+  id            String          @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction  @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // 关联字段
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User            @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model DirectorApproval {
+  id               String          @id @default(cuid())
+  applicationId    String
+  approverId       String
+  action           ApprovalAction   @default(PENDING)
+  comment          String?
+  selectedManagerIds String[]
+  skipManager      Boolean         @default(false)
+  approvedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // 关联字段
+  application      Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver         User            @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model ManagerApproval {
+  id            String          @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction  @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // 关联字段
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User            @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model CeoApproval {
+  id            String          @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction  @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // 关联字段
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User            @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model Attachment {
+  id                  String    @id @default(cuid())
+  filename            String
+  storedName          String    @unique
+  path                String
+  size                Int
+  mimeType            String
+  applicationId       String
+  uploaderId          String
+  isApprovalAttachment Boolean @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // 关联字段
+  application         Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploader            User        @relation(fields: [uploaderId], references: [id])
+
+  @@index([applicationId])
+  @@index([uploaderId])
+  @@index([isApprovalAttachment])
+}
+
+model ReminderLog {
+  id             String        @id @default(cuid())
+  applicationId  String
+  recipientId    String
+  reminderType   ReminderType
+  reminderCount  Int           @default(1)
+  sentAt         DateTime      @default(now())
+
+  // 关联字段
+  application    Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  recipient      User          @relation(fields: [recipientId], references: [id])
+
+  @@index([applicationId])
+  @@index([recipientId])
+  @@index([sentAt])
+}
+
+model ArchiveRecord {
+  id              String    @id @default(cuid())
+  applicationId   String    @unique
+  applicationNo   String
+  archivedAt      DateTime  @default(now())
+  archivePath     String
+  dataSnapshot    Json
+
+  // 关联字段
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([archivedAt])
+  @@index([applicationNo])
+}
