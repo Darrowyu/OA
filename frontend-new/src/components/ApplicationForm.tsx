@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectOption } from "@/components/ui/select"
+import { NativeSelect as Select, SelectOption } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { CreateApplicationRequest, Priority, User } from "@/types"
 
