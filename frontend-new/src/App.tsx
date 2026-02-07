@@ -6,7 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import Users from "@/pages/Users"
 import { Pending } from "@/pages/Pending"
 import { Approved } from "@/pages/Approved"
-import { Settings } from "@/pages/Settings"
+import Settings from "@/pages/Settings"
 
 function App() {
   return (
