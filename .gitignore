@@ -1,1 +1,48 @@
-node_modules
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Claude
+.claude/
+
+# Uploads (keep directory but not files)
+uploads/*
+!uploads/.gitkeep
+
+# Misc
+1.png
+nul
