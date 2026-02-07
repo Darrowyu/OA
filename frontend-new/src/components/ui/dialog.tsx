@@ -1,0 +1,136 @@
+import * as React from "react"
+import { X } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface DialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  children: React.ReactNode
+}
+
+const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/50"
+        onClick={() => onOpenChange(false)}
+      />
+      <div className="relative z-50 w-full max-w-lg mx-4">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "bg-white rounded-lg shadow-lg overflow-hidden",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+DialogContent.displayName = "DialogContent"
+
+interface DialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const DialogHeader = React.forwardRef<HTMLDivElement, DialogHeaderProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center justify-between px-6 py-4 border-b",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <button
+        className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+        onClick={() => {
+          const dialog = document.querySelector('[data-dialog-close]')
+          dialog?.dispatchEvent(new CustomEvent('close'))
+        }}
+      >
+        <X className="h-5 w-5 text-gray-500" />
+      </button>
+    </div>
+  )
+)
+DialogHeader.displayName = "DialogHeader"
+
+interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  children: React.ReactNode
+}
+
+const DialogTitle = React.forwardRef<HTMLHeadingElement, DialogTitleProps>(
+  ({ className, children, ...props }, ref) => (
+    <h2
+      ref={ref}
+      className={cn(
+        "text-lg font-semibold text-gray-900",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </h2>
+  )
+)
+DialogTitle.displayName = "DialogTitle"
+
+interface DialogBodyProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const DialogBody = React.forwardRef<HTMLDivElement, DialogBodyProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "px-6 py-4 max-h-[60vh] overflow-y-auto",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+DialogBody.displayName = "DialogBody"
+
+interface DialogFooterProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode
+}
+
+const DialogFooter = React.forwardRef<HTMLDivElement, DialogFooterProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+DialogFooter.displayName = "DialogFooter"
+
+export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter }
