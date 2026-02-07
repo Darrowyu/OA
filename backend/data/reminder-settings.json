@@ -1,0 +1,34 @@
+{
+  "priority": {
+    "high": {
+      "initialDelay": 4,
+      "normalInterval": 4,
+      "mediumInterval": 2,
+      "urgentInterval": 1
+    },
+    "medium": {
+      "initialDelay": 6,
+      "normalInterval": 6,
+      "mediumInterval": 3,
+      "urgentInterval": 2
+    },
+    "low": {
+      "initialDelay": 8,
+      "normalInterval": 8,
+      "mediumInterval": 4,
+      "urgentInterval": 2
+    }
+  },
+  "timeControl": {
+    "workingDays": {
+      "enabled": true,
+      "days": [],
+      "startTime": "08:00",
+      "endTime": "18:00"
+    },
+    "customDates": {
+      "enabled": false,
+      "skipDates": []
+    }
+  }
+}

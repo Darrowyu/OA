@@ -6,6 +6,7 @@ import {
   shouldNotifyReadonly,
   getStatusText,
 } from '../utils/application';
+import { archiveApplication } from '../services/archive';
 
 const prisma = new PrismaClient();
 
@@ -49,8 +50,8 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
       return;
     }
 
-    # 检查是否为指定厂长
-    if (!application.factoryManagerIds.includes(user.employeeId)) {
+    // 检查是否为指定厂长
+    if (!user.employeeId || !application.factoryManagerIds.includes(user.employeeId)) {
       res.status(403).json({ error: '您不是该申请的指定审批人' });
       return;
     }
@@ -59,7 +60,7 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
     const newStatus = getNextStatus(application.status, action);
 
     await prisma.$transaction(async (tx) => {
-      # 更新或创建审批记录
+      // 更新或创建审批记录
       const existingApproval = await tx.factoryApproval.findFirst({
         where: { applicationId, approverId: user.id },
       });
@@ -85,7 +86,7 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
         });
       }
 
-      # 更新申请状态
+      // 更新申请状态
       if (action === 'REJECT') {
         await tx.application.update({
           where: { id: applicationId },
@@ -155,7 +156,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       return;
     }
 
-    # 如果选择通过且未跳过经理，必须选择经理
+    // 如果选择通过且未跳过经理，必须选择经理
     if (action === 'APPROVE' && !skipManager && (!selectedManagerIds || selectedManagerIds.length === 0)) {
       res.status(400).json({ error: '请选择审批经理' });
       return;
@@ -165,7 +166,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
     const newStatus = getNextStatus(application.status, action, { skipManager });
 
     await prisma.$transaction(async (tx) => {
-      # 创建总监审批记录
+      // 创建总监审批记录
       await tx.directorApproval.create({
         data: {
           applicationId,
@@ -189,7 +190,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
           },
         });
       } else {
-        # 更新申请状态和经理列表
+        // 更新申请状态和经理列表
         await tx.application.update({
           where: { id: applicationId },
           data: {
@@ -198,7 +199,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
           },
         });
 
-        # 如果不跳过经理，创建经理审批记录
+        // 如果不跳过经理，创建经理审批记录
         if (!skipManager && selectedManagerIds) {
           for (const managerId of selectedManagerIds) {
             const manager = await tx.user.findUnique({ where: { employeeId: managerId } });
@@ -268,19 +269,19 @@ export async function managerApprove(req: Request, res: Response): Promise<void>
       return;
     }
 
-    # 检查是否为指定经理
-    if (!application.managerIds.includes(user.employeeId)) {
+    // 检查是否为指定经理
+    if (!user.employeeId || !application.managerIds.includes(user.employeeId)) {
       res.status(403).json({ error: '您不是该申请的指定审批人' });
       return;
     }
 
-    # 检查是否为特殊经理(E10002)
-    const isSpecial = isSpecialManager(user.employeeId);
+    // 检查是否为特殊经理(E10002)
+    const isSpecial = isSpecialManager(user.employeeId || '');
     const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
     const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
 
     await prisma.$transaction(async (tx) => {
-      # 更新或创建审批记录
+      // 更新或创建审批记录
       const existingApproval = await tx.managerApproval.findFirst({
         where: { applicationId, approverId: user.id },
       });
@@ -317,13 +318,13 @@ export async function managerApprove(req: Request, res: Response): Promise<void>
           },
         });
       } else {
-        # 更新申请状态
+        // 更新申请状态
         await tx.application.update({
           where: { id: applicationId },
           data: { status: newStatus },
         });
 
-        # 如果不是特殊经理，创建CEO审批记录
+        // 如果不是特殊经理，创建CEO审批记录
         if (!isSpecial) {
           const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
           if (ceo) {
@@ -336,8 +337,14 @@ export async function managerApprove(req: Request, res: Response): Promise<void>
             });
           }
         } else {
-          # 特殊经理审批通过，检查是否需要通知只读用户
-          await handleReadonlyNotification(applicationId, application.amount);
+          // 特殊经理审批通过，检查是否需要通知只读用户
+          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+
+          // 归档申请数据
+          const archiveResult = await archiveApplication(applicationId, tx);
+          if (!archiveResult.success) {
+            throw new Error(`归档失败: ${archiveResult.error}`);
+          }
         }
       }
     });
@@ -397,7 +404,7 @@ export async function ceoApprove(req: Request, res: Response): Promise<void> {
     const newStatus = getNextStatus(application.status, action);
 
     await prisma.$transaction(async (tx) => {
-      # 更新或创建审批记录
+      // 更新或创建审批记录
       const existingApproval = await tx.ceoApproval.findFirst({
         where: { applicationId, approverId: user.id },
       });
@@ -434,7 +441,7 @@ export async function ceoApprove(req: Request, res: Response): Promise<void> {
           },
         });
       } else {
-        # 审批通过
+        // 审批通过
         await tx.application.update({
           where: { id: applicationId },
           data: {
@@ -443,8 +450,14 @@ export async function ceoApprove(req: Request, res: Response): Promise<void> {
           },
         });
 
-        # 检查是否需要通知只读用户
-        await handleReadonlyNotification(applicationId, application.amount);
+        // 检查是否需要通知只读用户
+        await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+
+        // 归档申请数据
+        const archiveResult = await archiveApplication(applicationId, tx);
+        if (!archiveResult.success) {
+          throw new Error(`归档失败: ${archiveResult.error}`);
+        }
       }
     });
 
@@ -529,7 +542,7 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
       return;
     }
 
-    # 权限检查
+    // 权限检查
     const canView =
       application.applicantId === user.id ||
       user.role === 'ADMIN' ||
@@ -543,7 +556,7 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
       return;
     }
 
-    # 合并所有审批记录并按时间排序
+    // 合并所有审批记录并按时间排序
     const allApprovals = [
       ...application.factoryApprovals.map((a: any) => ({ ...a, level: 'FACTORY' })),
       ...application.directorApprovals.map((a: any) => ({ ...a, level: 'DIRECTOR' })),
