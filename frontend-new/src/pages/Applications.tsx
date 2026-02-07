@@ -1,10 +1,11 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
+import { Sidebar } from "@/components/Sidebar"
 import { ApplicationCard } from "@/components/ApplicationCard"
 import { ApplicationForm } from "@/components/ApplicationForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectOption } from "@/components/ui/select"
+import { NativeSelect as Select, SelectOption } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import {
   Application,
@@ -172,8 +173,9 @@ export const Applications: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 p-8">
         {/* 页面标题 */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">申请管理</h1>
@@ -255,7 +257,7 @@ export const Applications: React.FC = () => {
             </Button>
           </div>
         )}
-      </div>
+      </main>
 
       {/* 新建申请对话框 */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

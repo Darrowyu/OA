@@ -6,15 +6,18 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock } from "lucide-react"
+import { authApi } from "@/services/auth"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface LoginFormData {
-  email: string
+  username: string
   password: string
 }
 
 export function Login() {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" })
+  const { login } = useAuth()
+  const [formData, setFormData] = useState<LoginFormData>({ username: "", password: "" })
   const [error, setError] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -24,23 +27,23 @@ export function Login() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
+      const response = await authApi.login(formData)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "登录失败")
+      if (!response.data.success) {
+        throw new Error("登录失败")
       }
 
-      localStorage.setItem("token", data.token)
-      localStorage.setItem("user", JSON.stringify(data.user))
+      const { user, accessToken, refreshToken } = response.data.data
+
+      localStorage.setItem("accessToken", accessToken)
+      localStorage.setItem("refreshToken", refreshToken)
+      localStorage.setItem("user", JSON.stringify(user))
+
+      login(user, accessToken)
+
       navigate("/applications")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败")
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "登录失败")
     } finally {
       setIsLoading(false)
     }
@@ -52,7 +55,7 @@ export function Login() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">OA系统登录</CardTitle>
           <CardDescription className="text-center">
-            请输入您的邮箱和密码
+            请输入您的用户名和密码
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -63,15 +66,15 @@ export function Login() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
+              <Label htmlFor="username">用户名</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  id="username"
+                  type="text"
+                  placeholder="请输入用户名"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="pl-10"
                   required
                 />
@@ -104,7 +107,7 @@ export function Login() {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-gray-500">
-            <p>默认账号: admin@example.com / admin123</p>
+            <p>默认账号: admin / admin123</p>
           </div>
         </CardContent>
       </Card>

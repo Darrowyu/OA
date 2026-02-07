@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { Sidebar } from "@/components/Sidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
@@ -221,228 +222,231 @@ export const ApplicationDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 返回按钮 */}
-        <button
-          onClick={() => navigate("/applications")}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          返回列表
-        </button>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* 返回按钮 */}
+          <button
+            onClick={() => navigate("/applications")}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            返回列表
+          </button>
 
-        {/* 申请信息卡片 */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{application.title}</h1>
-              <p className="text-sm text-gray-500 mt-1">{application.applicationNo}</p>
+          {/* 申请信息卡片 */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">{application.title}</h1>
+                <p className="text-sm text-gray-500 mt-1">{application.applicationNo}</p>
+              </div>
+              <Badge variant={status.variant}>{status.label}</Badge>
             </div>
-            <Badge variant={status.variant}>{status.label}</Badge>
+
+            <div className="px-6 py-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <UserIcon className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">申请人</p>
+                    <p className="text-sm font-medium">{application.submitterName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">金额</p>
+                    <p className="text-sm font-medium">{formatAmount(application.amount)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Flag className={`h-4 w-4 ${priority.color}`} />
+                  <div>
+                    <p className="text-xs text-gray-500">优先级</p>
+                    <p className={`text-sm font-medium ${priority.color}`}>{priority.label}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">提交时间</p>
+                    <p className="text-sm font-medium">{formatDate(application.submittedAt || application.createdAt)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">申请内容</h3>
+                <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
+                  {application.content}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="px-6 py-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="flex items-center gap-2">
-                <UserIcon className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">申请人</p>
-                  <p className="text-sm font-medium">{application.submitterName}</p>
-                </div>
+          {/* 附件列表 */}
+          {application.attachments.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                  <Paperclip className="h-5 w-5" />
+                  附件 ({application.attachments.length})
+                </h3>
               </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">金额</p>
-                  <p className="text-sm font-medium">{formatAmount(application.amount)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Flag className={`h-4 w-4 ${priority.color}`} />
-                <div>
-                  <p className="text-xs text-gray-500">优先级</p>
-                  <p className={`text-sm font-medium ${priority.color}`}>{priority.label}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">提交时间</p>
-                  <p className="text-sm font-medium">{formatDate(application.submittedAt || application.createdAt)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">申请内容</h3>
-              <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
-                {application.content}
+              <div className="divide-y divide-gray-100">
+                {application.attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="px-6 py-3 flex items-center justify-between hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Paperclip className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{attachment.originalName}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4 mr-1" />
+                      下载
+                    </Button>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* 附件列表 */}
-        {application.attachments.length > 0 && (
+          {/* 审批历史 */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
-                附件 ({application.attachments.length})
+                <Clock className="h-5 w-5" />
+                审批历史
               </h3>
             </div>
             <div className="divide-y divide-gray-100">
-              {application.attachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <Paperclip className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{attachment.originalName}</p>
-                      <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4 mr-1" />
-                    下载
-                  </Button>
+              {mockApprovalHistory.length === 0 ? (
+                <div className="px-6 py-8 text-center text-gray-500">
+                  暂无审批记录
                 </div>
-              ))}
+              ) : (
+                mockApprovalHistory.map((record) => (
+                  <div key={record.id} className="px-6 py-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          record.action === "APPROVE" ? "bg-green-100" : "bg-red-100"
+                        }`}>
+                          {record.action === "APPROVE" ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {record.approverName}
+                            <span className="text-gray-500 font-normal ml-1">({record.approverRole})</span>
+                          </p>
+                          <p className="text-xs text-gray-500">{formatDate(record.createdAt)}</p>
+                        </div>
+                      </div>
+                      <Badge variant={record.action === "APPROVE" ? "green" : "red"}>
+                        {record.action === "APPROVE" ? "通过" : "拒绝"}
+                      </Badge>
+                    </div>
+                    {record.comment && (
+                      <p className="mt-2 text-sm text-gray-600 ml-11">{record.comment}</p>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        )}
 
-        {/* 审批历史 */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              审批历史
-            </h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {mockApprovalHistory.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-500">
-                暂无审批记录
-              </div>
-            ) : (
-              mockApprovalHistory.map((record) => (
-                <div key={record.id} className="px-6 py-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        record.action === "APPROVE" ? "bg-green-100" : "bg-red-100"
-                      }`}>
-                        {record.action === "APPROVE" ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {record.approverName}
-                          <span className="text-gray-500 font-normal ml-1">({record.approverRole})</span>
-                        </p>
-                        <p className="text-xs text-gray-500">{formatDate(record.createdAt)}</p>
-                      </div>
-                    </div>
-                    <Badge variant={record.action === "APPROVE" ? "green" : "red"}>
-                      {record.action === "APPROVE" ? "通过" : "拒绝"}
-                    </Badge>
-                  </div>
-                  {record.comment && (
-                    <p className="mt-2 text-sm text-gray-600 ml-11">{record.comment}</p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          {/* 审批操作按钮 */}
+          {canApprove && (
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setRejectDialogOpen(true)}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                拒绝
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => setApprovalDialogOpen(true)}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                通过
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* 审批操作按钮 */}
-        {canApprove && (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setRejectDialogOpen(true)}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              拒绝
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => setApprovalDialogOpen(true)}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              通过
-            </Button>
-          </div>
-        )}
-      </div>
+        {/* 通过对话框 */}
+        <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>确认通过</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <p className="text-sm text-gray-600 mb-4">
+                您确定要通过申请 "{application.title}" 吗？
+              </p>
+              <Textarea
+                label="审批意见（可选）"
+                placeholder="请输入审批意见..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+              />
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApprovalDialogOpen(false)} disabled={actionLoading}>
+                取消
+              </Button>
+              <Button onClick={handleApprove} disabled={actionLoading}>
+                {actionLoading ? "处理中..." : "确认通过"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* 通过对话框 */}
-      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认通过</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-gray-600 mb-4">
-              您确定要通过申请 "{application.title}" 吗？
-            </p>
-            <Textarea
-              label="审批意见（可选）"
-              placeholder="请输入审批意见..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-            />
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApprovalDialogOpen(false)} disabled={actionLoading}>
-              取消
-            </Button>
-            <Button onClick={handleApprove} disabled={actionLoading}>
-              {actionLoading ? "处理中..." : "确认通过"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 拒绝对话框 */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认拒绝</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-gray-600 mb-4">
-              您确定要拒绝申请 "{application.title}" 吗？
-            </p>
-            <Textarea
-              label="拒绝原因"
-              placeholder="请输入拒绝原因..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              required
-            />
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={actionLoading}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={handleReject} disabled={actionLoading}>
-              {actionLoading ? "处理中..." : "确认拒绝"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* 拒绝对话框 */}
+        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>确认拒绝</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <p className="text-sm text-gray-600 mb-4">
+                您确定要拒绝申请 "{application.title}" 吗？
+              </p>
+              <Textarea
+                label="拒绝原因"
+                placeholder="请输入拒绝原因..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                required
+              />
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={actionLoading}>
+                取消
+              </Button>
+              <Button variant="destructive" onClick={handleReject} disabled={actionLoading}>
+                {actionLoading ? "处理中..." : "确认拒绝"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </main>
     </div>
   )
 }

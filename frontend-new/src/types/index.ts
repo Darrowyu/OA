@@ -42,6 +42,8 @@ export interface User {
   department: string;
   email: string;
   canSubmitApplication: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // 审批记录类型
