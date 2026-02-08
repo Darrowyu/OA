@@ -54,30 +54,31 @@ interface StatCardProps {
   variant: "coral" | "blue" | "green" | "amber"
 }
 
+// 统计卡片组件 - 新设计风格
 const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, trend, variant }) => {
   const variantStyles = {
-    coral: "from-coral/10 to-orange-50",
-    blue: "from-blue-50 to-indigo-50",
-    green: "from-emerald-50 to-green-50",
-    amber: "from-amber-50 to-yellow-50",
+    coral: "bg-white",
+    blue: "bg-white",
+    green: "bg-white",
+    amber: "bg-white",
   }
 
   const iconStyles = {
-    coral: "bg-coral text-white shadow-lg shadow-coral/30",
-    blue: "bg-blue-500 text-white shadow-lg shadow-blue-500/30",
-    green: "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30",
-    amber: "bg-amber-500 text-white shadow-lg shadow-amber-500/30",
+    coral: "bg-gray-900 text-white",
+    blue: "bg-blue-500 text-white",
+    green: "bg-emerald-500 text-white",
+    amber: "bg-amber-500 text-white",
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${variantStyles[variant]} p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 group`}>
+    <div className={`relative overflow-hidden rounded-xl ${variantStyles[variant]} p-5 shadow-sm hover:shadow-md transition-all duration-200 group`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+          <p className="text-sm text-gray-500 mb-1">{title}</p>
           <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
           {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
           {trend && (
-            <div className="flex items-center gap-1 mt-3">
+            <div className="flex items-center gap-1 mt-2">
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 trend.isPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
               }`}>
@@ -92,7 +93,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, trend
             </div>
           )}
         </div>
-        <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${iconStyles[variant]} transition-transform duration-300 group-hover:scale-110`}>
+        <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${iconStyles[variant]} transition-transform duration-200 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
@@ -292,8 +293,8 @@ export function ApplicationList() {
           <h1 className="text-2xl font-bold text-gray-900">申请管理</h1>
           <p className="text-sm text-gray-500 mt-1">管理和追踪所有费用申请</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-gray-200 text-sm text-gray-500">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 text-sm text-gray-500">
             <Calendar className="h-4 w-4" />
             <span>最后更新: {formatDate(lastUpdated)}</span>
             <button
@@ -308,14 +309,14 @@ export function ApplicationList() {
             variant="outline"
             onClick={handleExportExcel}
             disabled={applications.length === 0}
-            className="rounded-xl border-gray-200 hover:bg-gray-50"
+            className="rounded-lg border-gray-200 hover:bg-gray-50"
           >
             <Download className="h-4 w-4 mr-2" />
             导出Excel
           </Button>
           <Button
             onClick={() => setIsCreateDialogOpen(true)}
-            className="rounded-xl bg-coral hover:bg-coral-dark shadow-lg shadow-coral/30"
+            className="rounded-lg bg-gray-900 hover:bg-gray-800 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
             新建申请
@@ -372,7 +373,7 @@ export function ApplicationList() {
         {/* 左侧主要内容 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 筛选栏 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex-1 min-w-[240px]">
                 <div className="relative">
@@ -380,7 +381,7 @@ export function ApplicationList() {
                   <input
                     type="text"
                     placeholder="搜索申请编号、标题或申请人..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-coral/20 focus:border-coral transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all text-sm"
                     value={filter.keyword || ""}
                     onChange={(e) => { setFilter((prev) => ({ ...prev, keyword: e.target.value })); setPage(1) }}
                   />
@@ -399,12 +400,12 @@ export function ApplicationList() {
           {/* 申请列表 */}
           <div className="space-y-3">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-100">
-                <Loader2 className="animate-spin h-8 w-8 text-coral mb-3" />
+              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+                <Loader2 className="animate-spin h-8 w-8 text-gray-900 mb-3" />
                 <p className="text-gray-500">加载中...</p>
               </div>
             ) : applications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-100">
+              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <FileText className="h-8 w-8 text-gray-400" />
                 </div>
@@ -426,7 +427,7 @@ export function ApplicationList() {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1 || loading}
-                className="rounded-xl border-gray-200"
+                className="rounded-lg border-gray-200"
               >
                 上一页
               </Button>
@@ -438,7 +439,7 @@ export function ApplicationList() {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages || loading}
-                className="rounded-xl border-gray-200"
+                className="rounded-lg border-gray-200"
               >
                 下一页
               </Button>
@@ -449,7 +450,7 @@ export function ApplicationList() {
         {/* 右侧边栏 */}
         <div className="space-y-6">
           {/* 金额分类统计 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">金额分布</h3>
               <button className="text-gray-400 hover:text-gray-600">
@@ -460,7 +461,7 @@ export function ApplicationList() {
               </button>
             </div>
             <div className="mb-4">
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900">
                 ¥{(stats.totalRMB + stats.totalUSD * 7).toLocaleString()}
               </p>
               <div className="flex items-center gap-1 mt-1">
@@ -470,7 +471,7 @@ export function ApplicationList() {
               </div>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-6">
-              <div className="h-full bg-gradient-to-r from-coral to-orange-400 rounded-full" style={{ width: "65%" }} />
+              <div className="h-full bg-gradient-to-r from-gray-900 to-gray-600 rounded-full" style={{ width: "65%" }} />
             </div>
             <div className="space-y-1">
               <CategoryStat
@@ -495,44 +496,44 @@ export function ApplicationList() {
           </div>
 
           {/* 快速统计 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">快捷统计</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-coral-light flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-coral" />
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-gray-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">待处理</p>
                     <p className="text-xs text-gray-400">需要您审批</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-coral">{stats.pendingCount}</span>
+                <span className="text-base font-bold text-gray-900">{stats.pendingCount}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600" />
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">已通过</p>
                     <p className="text-xs text-gray-400">本月审批通过</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-emerald-600">{stats.approvedCount}</span>
+                <span className="text-base font-bold text-emerald-600">{stats.approvedCount}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">总申请</p>
                     <p className="text-xs text-gray-400">本月累计</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-blue-600">{stats.totalCount}</span>
+                <span className="text-base font-bold text-blue-600">{stats.totalCount}</span>
               </div>
             </div>
           </div>
@@ -541,14 +542,14 @@ export function ApplicationList() {
 
       {/* 新建申请对话框 */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">新建申请</DialogTitle>
           </DialogHeader>
           <DialogBody>
             {loadingUsers ? (
               <div className="text-center py-8">
-                <Loader2 className="inline-block animate-spin h-6 w-6 text-coral" />
+                <Loader2 className="inline-block animate-spin h-6 w-6 text-gray-900" />
                 <p className="mt-2 text-gray-500">加载中...</p>
               </div>
             ) : (

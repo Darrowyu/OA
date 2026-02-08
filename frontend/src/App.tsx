@@ -1,9 +1,21 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { Login } from "@/pages/Login"
+import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { Sidebar } from "@/components/Sidebar"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
+
+// 带侧边栏的布局组件
+function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-[#F3F4F6] flex">
+      <Sidebar />
+      {children}
+    </div>
+  )
+}
 
 function App() {
   return (
@@ -11,12 +23,14 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* 工作台 - 跳转申请列表 */}
+      {/* 工作台 - 新设计 Dashboard */}
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Navigate to="/approval" replace />
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -26,7 +40,9 @@ function App() {
         path="/approval/*"
         element={
           <ProtectedRoute>
-            <ApplicationsModule />
+            <DashboardLayout>
+              <ApplicationsModule />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -36,7 +52,12 @@ function App() {
         path="/attendance"
         element={
           <ProtectedRoute>
-            <div className="p-8">考勤管理模块开发中...</div>
+            <DashboardLayout>
+              <div className="flex-1 ml-[260px] p-8">
+                <h1 className="text-2xl font-bold text-gray-900">考勤管理</h1>
+                <p className="text-gray-500 mt-4">模块开发中...</p>
+              </div>
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -44,7 +65,12 @@ function App() {
         path="/schedule"
         element={
           <ProtectedRoute>
-            <div className="p-8">日程管理模块开发中...</div>
+            <DashboardLayout>
+              <div className="flex-1 ml-[260px] p-8">
+                <h1 className="text-2xl font-bold text-gray-900">日程管理</h1>
+                <p className="text-gray-500 mt-4">模块开发中...</p>
+              </div>
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -52,7 +78,12 @@ function App() {
         path="/documents"
         element={
           <ProtectedRoute>
-            <div className="p-8">文档中心模块开发中...</div>
+            <DashboardLayout>
+              <div className="flex-1 ml-[260px] p-8">
+                <h1 className="text-2xl font-bold text-gray-900">文档中心</h1>
+                <p className="text-gray-500 mt-4">模块开发中...</p>
+              </div>
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -60,7 +91,12 @@ function App() {
         path="/contacts"
         element={
           <ProtectedRoute>
-            <div className="p-8">通讯录模块开发中...</div>
+            <DashboardLayout>
+              <div className="flex-1 ml-[260px] p-8">
+                <h1 className="text-2xl font-bold text-gray-900">通讯录</h1>
+                <p className="text-gray-500 mt-4">模块开发中...</p>
+              </div>
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -68,7 +104,12 @@ function App() {
         path="/announcements"
         element={
           <ProtectedRoute>
-            <div className="p-8">公告通知模块开发中...</div>
+            <DashboardLayout>
+              <div className="flex-1 ml-[260px] p-8">
+                <h1 className="text-2xl font-bold text-gray-900">公告通知</h1>
+                <p className="text-gray-500 mt-4">模块开发中...</p>
+              </div>
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -78,7 +119,9 @@ function App() {
         path="/users"
         element={
           <ProtectedRoute requireAdmin>
-            <Users />
+            <DashboardLayout>
+              <Users />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />
@@ -88,7 +131,9 @@ function App() {
         path="/settings"
         element={
           <ProtectedRoute requireAdmin>
-            <Settings />
+            <DashboardLayout>
+              <Settings />
+            </DashboardLayout>
           </ProtectedRoute>
         }
       />

@@ -4,13 +4,8 @@
 
 @layer base {
   :root {
-    /* 珊瑚橙主色调 */
-    --primary: 8 82% 58%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 8 82% 95%;
-
-    /* 背景色系 */
-    --background: 0 0% 97%;
+    /* 灰色系主色调 - 设计复刻风格 */
+    --background: 220 14% 96%;
     --foreground: 220 13% 13%;
 
     /* 卡片 */
@@ -21,6 +16,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 13% 13%;
 
+    /* 主色 - 深灰色 */
+    --primary: 220 13% 13%;
+    --primary-foreground: 0 0% 100%;
+
     /* 次要色 */
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 13% 13%;
@@ -29,8 +28,8 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    /* 强调色 */
-    --accent: 8 82% 58%;
+    /* 强调色 - 橙色 */
+    --accent: 24 95% 53%;
     --accent-foreground: 0 0% 100%;
 
     /* 危险色 */
@@ -40,19 +39,42 @@
     /* 边框和输入 */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 8 82% 58%;
+    --ring: 220 13% 13%;
 
     /* 圆角 */
     --radius: 0.75rem;
 
     /* 自定义颜色变量 */
-    --coral: #E85D4E;
-    --coral-light: #FEF2F0;
-    --coral-dark: #C94A3D;
-    --bg-main: #F8F9FA;
-    --text-primary: #1D1D1F;
-    --text-secondary: #6B7280;
-    --border-light: #E5E7EB;
+    --gray-900: #111827;
+    --gray-800: #1F2937;
+    --gray-700: #374151;
+    --gray-600: #4B5563;
+    --gray-500: #6B7280;
+    --gray-400: #9CA3AF;
+    --gray-300: #D1D5DB;
+    --gray-200: #E5E7EB;
+    --gray-100: #F3F4F6;
+    --gray-50: #F9FAFB;
+
+    --orange-500: #F97316;
+    --orange-100: #FFEDD5;
+
+    --blue-500: #3B82F6;
+    --blue-100: #DBEAFE;
+
+    --green-500: #10B981;
+    --green-100: #D1FAE5;
+
+    --purple-500: #8B5CF6;
+    --purple-100: #EDE9FE;
+
+    --amber-500: #F59E0B;
+    --amber-100: #FEF3C7;
+
+    --red-500: #EF4444;
+    --red-100: #FEE2E2;
+
+    --emerald-500: #10B981;
   }
 }
 
@@ -61,7 +83,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-[#F3F4F6] text-foreground antialiased;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   }
 }
@@ -87,22 +109,16 @@
 
 /* 自定义工具类 */
 @layer utilities {
-  .text-coral {
-    color: var(--coral);
+  .text-gray-900 {
+    color: var(--gray-900);
   }
-  .bg-coral {
-    background-color: var(--coral);
+  .bg-gray-900 {
+    background-color: var(--gray-900);
   }
-  .bg-coral-light {
-    background-color: var(--coral-light);
+  .bg-gray-100 {
+    background-color: var(--gray-100);
   }
-  .border-coral {
-    border-color: var(--coral);
-  }
-  .hover\:bg-coral:hover {
-    background-color: var(--coral);
-  }
-  .hover\:bg-coral-light:hover {
-    background-color: var(--coral-light);
+  .bg-gray-50 {
+    background-color: var(--gray-50);
   }
 }
