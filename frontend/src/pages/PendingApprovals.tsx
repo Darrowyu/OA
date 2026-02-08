@@ -41,7 +41,6 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
-import { Sidebar } from "@/components/Sidebar"
 
 // 状态映射
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -356,9 +355,7 @@ export const PendingApprovals: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 p-8">
+    <div>
         {/* 页面标题 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -670,7 +667,6 @@ export const PendingApprovals: React.FC = () => {
           username={user.username}
         />
       )}
-      </main>
     </div>
   )
 }

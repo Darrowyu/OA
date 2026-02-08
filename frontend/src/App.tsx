@@ -1,11 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { Login } from "@/pages/Login"
-import { Applications } from "@/pages/Applications"
-import { ApplicationDetail } from "@/pages/ApplicationDetail"
+import { ApplicationsModule } from "@/pages/applications"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import Users from "@/pages/Users"
-import { PendingApprovals } from "@/pages/PendingApprovals"
-import { ApprovedApplications } from "@/pages/ApprovedApplications"
 import Settings from "@/pages/Settings"
 
 function App() {
@@ -13,22 +10,18 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/applications" replace />} />
+
+      {/* 申请管理模块 */}
       <Route
-        path="/applications"
+        path="/applications/*"
         element={
           <ProtectedRoute>
-            <Applications />
+            <ApplicationsModule />
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/applications/:id"
-        element={
-          <ProtectedRoute>
-            <ApplicationDetail />
-          </ProtectedRoute>
-        }
-      />
+
+      {/* 用户管理 */}
       <Route
         path="/users"
         element={
@@ -37,22 +30,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/pending"
-        element={
-          <ProtectedRoute requireRoles={["FACTORY_MANAGER", "DIRECTOR", "MANAGER", "CEO", "ADMIN"]}>
-            <PendingApprovals />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/approved"
-        element={
-          <ProtectedRoute>
-            <ApprovedApplications />
-          </ProtectedRoute>
-        }
-      />
+
+      {/* 系统设置 */}
       <Route
         path="/settings"
         element={

@@ -53,7 +53,6 @@ import {
   Filter,
 } from "lucide-react"
 import { toast } from "sonner"
-import { Sidebar } from "@/components/Sidebar"
 
 // 状态筛选选项
 type StatusFilter = "all" | "approved" | "rejected"
@@ -341,7 +340,7 @@ export const ApprovedApplications: React.FC = () => {
   // 如果没有登录
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center h-96">
         <Card className="w-96">
           <CardContent className="p-6 text-center">
             <Loader2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -354,9 +353,7 @@ export const ApprovedApplications: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 p-8">
+    <div>
         {/* 页面标题 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -707,7 +704,6 @@ export const ApprovedApplications: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </main>
     </div>
   )
 }

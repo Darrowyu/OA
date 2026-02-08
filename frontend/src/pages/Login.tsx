@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Mail, Lock } from "lucide-react"
+import { Loader2, Mail, Lock, LayoutDashboard, ArrowRight } from "lucide-react"
 import { authApi } from "@/services/auth"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -51,67 +50,94 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">OA系统登录</CardTitle>
-          <CardDescription className="text-center">
-            请输入您的用户名和密码
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+      <div className="w-full max-w-md">
+        {/* Logo区域 */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-coral text-white shadow-xl shadow-coral/30 mb-4">
+            <LayoutDashboard className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">OA系统</h1>
+          <p className="text-sm text-gray-500 mt-1">办公自动化管理平台</p>
+        </div>
+
+        {/* 登录卡片 */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 border border-gray-100">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">欢迎回来</h2>
+            <p className="text-sm text-gray-500 mt-1">请登录您的账户</p>
+          </div>
+
           {error && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant="destructive" className="mb-6 rounded-xl bg-red-50 border-red-200 text-red-700">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username">用户名</Label>
+              <Label htmlFor="username" className="text-sm font-medium text-gray-700">用户名</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="username"
                   type="text"
                   placeholder="请输入用户名"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="pl-10"
+                  className="pl-11 h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-coral focus:ring-coral/20 transition-all"
                   required
                 />
               </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">密码</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="请输入密码"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-10"
+                  className="pl-11 h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-coral focus:ring-coral/20 transition-all"
                   required
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl bg-coral hover:bg-coral-dark shadow-lg shadow-coral/30 text-base font-medium transition-all"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   登录中...
                 </>
               ) : (
-                "登录"
+                <>
+                  登录
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
               )}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>默认账号: admin / admin123</p>
+
+          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+            <p className="text-xs text-gray-400">
+              默认账号: <span className="font-mono text-gray-600">admin / admin123</span>
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* 底部版权 */}
+        <p className="text-center text-xs text-gray-400 mt-8">
+          © 2024 OA系统. All rights reserved.
+        </p>
+      </div>
     </div>
   )
 }
