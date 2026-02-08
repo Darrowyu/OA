@@ -44,13 +44,24 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 
 export function MilestoneTracker() {
   const [activeRange, setActiveRange] = useState("6个月")
-  const [mounted, setMounted] = useState(false)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 延迟渲染图表，确保容器已有尺寸
-    const timer = setTimeout(() => setMounted(true), 100)
-    return () => clearTimeout(timer)
+    if (!containerRef.current) return
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        // 只有当尺寸大于0时才更新状态
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height })
+        }
+      }
+    })
+
+    resizeObserver.observe(containerRef.current)
+    return () => resizeObserver.disconnect()
   }, [])
 
   return (
@@ -87,8 +98,8 @@ export function MilestoneTracker() {
 
       {/* Chart */}
       <div ref={containerRef} className="h-48 min-h-[192px]">
-        {mounted && (
-          <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={192}>
+        {containerSize.width > 0 && containerSize.height > 0 && (
+          <ResponsiveContainer width={containerSize.width} height={containerSize.height}>
             <BarChart
               data={milestoneData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
