@@ -1,11 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Share2, Bell, MoreHorizontal, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
+import { Search, Share2, MoreHorizontal, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/AuthContext"
+import { NotificationBell } from "@/components/NotificationBell"
+import { useNotifications } from "@/hooks/useNotifications"
 
 const breadcrumbMap: Record<string, { name: string; icon: React.ElementType }> = {
   "/dashboard": { name: "工作台", icon: LayoutGrid },
@@ -26,6 +28,9 @@ export function Header() {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // 使用通知 Hook
+  const { unreadCount, wsStatus } = useNotifications()
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -88,10 +93,7 @@ export function Header() {
           <Share2 className="h-4 w-4 text-gray-600" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100 relative">
-          <Bell className="h-4 w-4 text-gray-600" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-        </Button>
+        <NotificationBell unreadCount={unreadCount} wsStatus={wsStatus} />
 
         {/* 更多菜单 */}
         <div className="relative" ref={menuRef}>

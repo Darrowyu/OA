@@ -143,3 +143,114 @@ export interface ApplicationFilter {
   startDate?: string;
   endDate?: string;
 }
+
+// ============================================
+// 组织架构管理类型
+// ============================================
+
+// 部门类型
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  parentId: string | null;
+  level: number;
+  sortOrder: number;
+  managerId: string | null;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  manager?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  parent?: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
+  children?: Department[];
+  userCount?: number;
+}
+
+// 部门树节点
+export interface DepartmentTreeNode extends Department {
+  children: DepartmentTreeNode[];
+}
+
+// 创建部门请求
+export interface CreateDepartmentRequest {
+  name: string;
+  code: string;
+  parentId?: string | null;
+  managerId?: string | null;
+  description?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// 更新部门请求
+export type UpdateDepartmentRequest = Partial<CreateDepartmentRequest>;
+
+// 部门成员
+export interface DepartmentUser {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  employeeId: string;
+  position?: string;
+  phone?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ============================================
+// 通知中心类型定义
+// ============================================
+
+// 通知类型枚举
+export enum NotificationType {
+  APPROVAL = 'APPROVAL',    // 审批通知
+  SYSTEM = 'SYSTEM',        // 系统通知
+  MESSAGE = 'MESSAGE',      // 消息通知
+  TASK = 'TASK',            // 任务通知
+}
+
+// 通知数据类型
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  content: string;
+  data?: Record<string, unknown>;
+  isRead: boolean;
+  readAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// 分页通知响应
+export interface PaginatedNotifications {
+  items: Notification[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// WebSocket 连接状态
+export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+// 通知上下文状态
+export interface NotificationState {
+  notifications: Notification[];
+  unreadCount: number;
+  wsStatus: WebSocketStatus;
+  isLoading: boolean;
+  hasMore: boolean;
+  page: number;
+}
