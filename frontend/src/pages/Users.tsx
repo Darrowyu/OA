@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight, Pen } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
+import { Header } from '@/components/Header';
 import { SignatureDialog } from '@/components/SignatureDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,9 +284,9 @@ export default function Users() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 p-8">
+    <div className="flex-1 ml-[260px]">
+      <Header />
+      <main className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>
           <p className="text-gray-500 mt-1">管理系统用户账号和权限</p>

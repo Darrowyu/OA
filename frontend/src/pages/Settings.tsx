@@ -15,7 +15,7 @@ import {
   Database,
   HardDrive,
 } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
+import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -331,9 +331,9 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 p-8">
+    <div className="flex-1 ml-[260px]">
+      <Header />
+      <main className="p-6">
         {/* 页面标题 */}
         <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
