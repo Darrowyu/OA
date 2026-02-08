@@ -17,8 +17,13 @@ import reminderRoutes from './routes/reminders';
 import adminRoutes from './routes/admin';
 import equipmentRoutes from './routes/equipment';
 import profileRoutes from './routes/profile';
+import departmentRoutes from './routes/departments';
+import auditRoutes from './routes/audit';
 import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { initializeSocket } from './services/socketService';
+import notificationRoutes from './routes/notifications';
+import { createServer } from 'http';
 
 // 创建Express应用
 const app = express();
@@ -71,6 +76,9 @@ app.use('/api/settings/reminders', reminderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/audit', auditRoutes);
 
 // 404处理
 app.use(notFoundHandler);
@@ -78,8 +86,14 @@ app.use(notFoundHandler);
 // 全局错误处理中间件
 app.use(errorHandler);
 
+// 创建HTTP服务器
+const server = createServer(app);
+
+// 初始化Socket.io
+initializeSocket(server);
+
 // 启动服务器
-const server = app.listen(config.port, () => {
+server.listen(config.port, () => {
   console.log(`
 ========================================
   OA系统后端服务已启动

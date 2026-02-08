@@ -12,6 +12,8 @@ import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
 import Profile from "@/pages/Profile"
+import AuditLogs from "@/pages/admin/AuditLogs"
+import Departments from "@/pages/admin/Departments"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -218,6 +220,30 @@ function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <Profile />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 组织架构管理 - 管理员专用 */}
+      <Route
+        path="/admin/departments"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout>
+              <Departments />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 审计日志 - 管理员专用 */}
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout>
+              <AuditLogs />
             </DashboardLayout>
           </ProtectedRoute>
         }
