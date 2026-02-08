@@ -16,8 +16,6 @@ import {
   Plus,
   HelpCircle,
   Receipt,
-  PanelLeft,
-  PanelRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -39,7 +37,7 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 export function Sidebar({ pendingCount = 0 }: SidebarProps) {
-  const { isCollapsed, setIsCollapsed } = useSidebar()
+  const { isCollapsed } = useSidebar()
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -65,10 +63,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
     return map[role] || role
   }
 
-  // 检查当前是否在审批中心相关页面
   const isApprovalActive = location.pathname.startsWith("/approval")
 
-  // 主导航项
   const mainNavItems = [
     { path: "/dashboard", name: "工作台", icon: "LayoutGrid", active: location.pathname === "/dashboard" },
     { path: "/approval", name: "审批中心", icon: "FileCheck", badge: pendingCount, active: isApprovalActive },
@@ -79,14 +75,12 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
     { path: "/announcements", name: "公告通知", icon: "Bell" },
   ]
 
-  // 快捷入口
   const favouriteItems = [
     { path: "/approval/pending", name: "我的审批", icon: "FileCheck", show: isApprover },
     { path: "/approval/new?type=reimbursement", name: "报销申请", icon: "Receipt", show: true },
     { path: "/approval/new?type=leave", name: "请假申请", icon: "Calendar", show: true },
   ]
 
-  // 动画配置
   const sidebarVariants = {
     expanded: { width: 260 },
     collapsed: { width: 72 },
@@ -105,8 +99,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50 overflow-hidden"
     >
-      {/* Logo */}
-      <div className={`p-4 flex items-center gap-3 border-b border-gray-100 ${isCollapsed ? "justify-center" : ""}`}>
+      {/* Logo - 只保留图标 */}
+      <div className={`p-4 flex items-center border-b border-gray-100 ${isCollapsed ? "justify-center" : "gap-3"}`}>
         <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0">
           <LayoutGrid className="h-5 w-5 text-white" />
         </div>
@@ -125,37 +119,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Toggle Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0 ${isCollapsed ? "" : "ml-auto"}`}
-        >
-          <AnimatePresence mode="wait">
-            {isCollapsed ? (
-              <motion.div
-                key="expand"
-                initial={{ rotate: -90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 90, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <PanelRight className="h-4 w-4" />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="collapse"
-                initial={{ rotate: 90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -90, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <PanelLeft className="h-4 w-4" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.button>
       </div>
 
       {/* Create Task Button */}
@@ -184,7 +147,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2">
-        {/* Main Navigation */}
         <ul className="space-y-1">
           {mainNavItems.map((item) => {
             const Icon = iconMap[item.icon] || LayoutGrid
@@ -196,9 +158,9 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                     item.active
                       ? "bg-gray-100 text-gray-900 font-medium"
                       : "text-gray-600 hover:bg-gray-50"
-                  } ${isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"}`}
+                  } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
                 >
-                  <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+                  <Icon className="h-5 w-5 flex-shrink-0" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -218,7 +180,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                       {item.badge > 99 ? "99+" : item.badge}
                     </Badge>
                   ) : null}
-                  {/* Tooltip for collapsed state */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                       {item.name}
@@ -230,7 +191,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
           })}
         </ul>
 
-        {/* Favourites */}
         <div className="mt-6">
           <AnimatePresence>
             {!isCollapsed && (
@@ -261,10 +221,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                     <NavLink
                       to={item.path}
                       className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
-                        isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                        isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
                       }`}
                     >
-                      <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+                      <Icon className="h-5 w-5 flex-shrink-0" />
                       <AnimatePresence>
                         {!isCollapsed && (
                           <motion.span
@@ -279,7 +239,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                           </motion.span>
                         )}
                       </AnimatePresence>
-                      {/* Tooltip for collapsed state */}
                       {isCollapsed && (
                         <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                           {item.name}
@@ -292,7 +251,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
           </ul>
         </div>
 
-        {/* Admin Section */}
         {isAdmin && (
           <div className="mt-6">
             <AnimatePresence>
@@ -314,10 +272,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 <NavLink
                   to="/users"
                   className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
-                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                    isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
                   }`}
                 >
-                  <UserCog className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+                  <UserCog className="h-5 w-5 flex-shrink-0" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -332,7 +290,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                       </motion.span>
                     )}
                   </AnimatePresence>
-                  {/* Tooltip for collapsed state */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                       用户管理
@@ -344,10 +301,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 <NavLink
                   to="/settings"
                   className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
-                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                    isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
                   }`}
                 >
-                  <Settings className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+                  <Settings className="h-5 w-5 flex-shrink-0" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -362,7 +319,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                       </motion.span>
                     )}
                   </AnimatePresence>
-                  {/* Tooltip for collapsed state */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                       系统设置
@@ -375,13 +331,12 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
         )}
       </nav>
 
-      {/* Help Center & Logout */}
       <div className="p-4 border-t border-gray-200">
         <div className="space-y-1">
           <button className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative w-full ${
-            isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+            isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
           }`}>
-            <HelpCircle className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+            <HelpCircle className="h-5 w-5 flex-shrink-0" />
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.span
@@ -396,7 +351,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 </motion.span>
               )}
             </AnimatePresence>
-            {/* Tooltip for collapsed state */}
             {isCollapsed && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                 帮助中心
@@ -406,10 +360,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
           <button
             onClick={handleLogout}
             className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-red-600 transition-all duration-300 group relative w-full ${
-              isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+              isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
             }`}
           >
-            <LogOut className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
+            <LogOut className="h-5 w-5 flex-shrink-0" />
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.span
@@ -424,7 +378,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 </motion.span>
               )}
             </AnimatePresence>
-            {/* Tooltip for collapsed state */}
             {isCollapsed && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                 退出登录
@@ -434,7 +387,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
         </div>
       </div>
 
-      {/* User Profile - 底部 */}
       <div className="p-4 border-t border-gray-200">
         <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
           <Avatar className="w-10 h-10 flex-shrink-0">

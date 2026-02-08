@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { PanelLeft, PanelRight } from "lucide-react"
 import { Header } from "@/components/Header"
 import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
@@ -9,12 +11,52 @@ import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
 
+// 侧边栏切换按钮组件
+function SidebarToggle() {
+  const { isCollapsed, setIsCollapsed } = useSidebar()
+
+  return (
+    <motion.button
+      initial={false}
+      animate={{ left: isCollapsed ? '80px' : '268px' }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      onClick={() => setIsCollapsed(!isCollapsed)}
+      className="fixed top-4 z-[60] p-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 text-gray-500 transition-colors"
+    >
+      <AnimatePresence mode="wait">
+        {isCollapsed ? (
+          <motion.div
+            key="expand"
+            initial={{ rotate: -90, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            exit={{ rotate: 90, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <PanelRight className="h-4 w-4" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="collapse"
+            initial={{ rotate: 90, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            exit={{ rotate: -90, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  )
+}
+
 // 带侧边栏的布局组件 - 使用pl来适配动态宽度的侧边栏
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar()
   return (
     <div className="min-h-screen bg-[#F3F4F6] flex">
       <Sidebar />
+      <SidebarToggle />
       <div
         className="flex-1 h-screen overflow-auto transition-all duration-350"
         style={{
