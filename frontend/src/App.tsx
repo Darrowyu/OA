@@ -22,6 +22,7 @@ import ContactsPage from "@/pages/contacts"
 import AnnouncementsPage from "@/pages/announcements"
 import AnnouncementDetail from "@/pages/announcements/AnnouncementDetail"
 import AnnouncementForm from "@/pages/announcements/AnnouncementForm"
+import TasksPage from "@/pages/tasks"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -194,6 +195,18 @@ function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <ContactsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 任务管理模块 */}
+      <Route
+        path="/tasks/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <TasksPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

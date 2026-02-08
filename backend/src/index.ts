@@ -24,6 +24,7 @@ import documentRoutes from './routes/documents';
 import attendanceRoutes from './routes/attendance';
 import announcementRoutes from './routes/announcements';
 import taskRoutes from './routes/tasks';
+import meetingRoutes from './routes/meetings';
 import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeSocket } from './services/socketService';
@@ -89,6 +90,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // 404处理
 app.use(notFoundHandler);
