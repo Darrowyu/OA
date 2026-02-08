@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,13 +25,9 @@ import {
   PageHeader,
   SearchToolbar,
 } from "../components"
-
-const maintenanceRecords = [
-  { id: "MR001", equipmentId: "EQ001", equipmentName: "数控机床 A型", type: "保养", content: "定期润滑、清洁、检查刀具磨损", operator: "张师傅", startTime: "2026-01-15 08:00", endTime: "2026-01-15 12:00", duration: "4小时", status: "completed", cost: 500 },
-  { id: "MR002", equipmentId: "EQ002", equipmentName: "注塑机 B型", type: "维修", content: "更换液压密封件、调试压力参数", operator: "李师傅", startTime: "2026-01-20 09:00", endTime: "2026-01-20 16:00", duration: "7小时", status: "completed", cost: 2800 },
-  { id: "MR003", equipmentId: "EQ003", equipmentName: "激光切割机", type: "维修", content: "激光器功率下降检修、光路校准", operator: "王师傅", startTime: "2026-01-22 08:30", endTime: null, duration: null, status: "in_progress", cost: null },
-  { id: "MR004", equipmentId: "EQ005", equipmentName: "冲压机 C型", type: "保养", content: "更换润滑油、检查安全装置", operator: "张师傅", startTime: "2026-02-01 10:00", endTime: "2026-02-01 14:00", duration: "4小时", status: "completed", cost: 300 },
-]
+import { Pagination } from "@/components/Pagination"
+import { equipmentApi, type MaintenanceRecord } from "@/services/equipment"
+import { toast } from "sonner"
 
 const statusMap: Record<string, { label: string; color: string }> = {
   completed: { label: "已完成", color: "bg-green-100 text-green-700" },
@@ -46,11 +42,50 @@ const typeMap: Record<string, { label: string; color: string }> = {
 
 export function MaintenanceRecords() {
   const [searchQuery, setSearchQuery] = useState("")
-  const filteredRecords = maintenanceRecords.filter(
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [records, setRecords] = useState<MaintenanceRecord[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+
+  const fetchRecords = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await equipmentApi.getMaintenanceRecords({
+        page: currentPage,
+        pageSize: pageSize,
+      })
+      if (response.success) {
+        setRecords(response.data.items)
+        setTotal(response.data.pagination.total)
+        setTotalPages(response.data.pagination.totalPages)
+      }
+    } catch (error) {
+      toast.error("获取维修记录失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, pageSize])
+
+  useEffect(() => {
+    fetchRecords()
+  }, [fetchRecords])
+
+  const filteredRecords = records.filter(
     (item) =>
       item.equipmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
@@ -98,24 +133,46 @@ export function MaintenanceRecords() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRecords.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.id}</TableCell>
-                    <TableCell>{item.equipmentName}</TableCell>
-                    <TableCell><Badge className={typeMap[item.type].color}>{typeMap[item.type].label}</Badge></TableCell>
-                    <TableCell className="max-w-xs truncate">{item.content}</TableCell>
-                    <TableCell>{item.operator}</TableCell>
-                    <TableCell>{item.startTime}</TableCell>
-                    <TableCell>{item.endTime || "-"}</TableCell>
-                    <TableCell>{item.cost ? `¥${item.cost}` : "-"}</TableCell>
-                    <TableCell><Badge className={statusMap[item.status].color}>{statusMap[item.status].label}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8">
+                      加载中...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredRecords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRecords.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.id}</TableCell>
+                      <TableCell>{item.equipmentName}</TableCell>
+                      <TableCell><Badge className={typeMap[item.type].color}>{typeMap[item.type].label}</Badge></TableCell>
+                      <TableCell className="max-w-xs truncate">{item.content}</TableCell>
+                      <TableCell>{item.operator}</TableCell>
+                      <TableCell>{item.startTime}</TableCell>
+                      <TableCell>{item.endTime || "-"}</TableCell>
+                      <TableCell>{item.cost ? `¥${item.cost}` : "-"}</TableCell>
+                      <TableCell><Badge className={statusMap[item.status].color}>{statusMap[item.status].label}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </CardContent>
         </Card>
       </motion.div>

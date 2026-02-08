@@ -87,12 +87,7 @@ export function needsCeoApproval(amount: number | null, skipManager: boolean): b
   return !skipManager;
 }
 
-/**
- * 检查经理是否为特殊经理(E10002)
- */
-export function isSpecialManager(employeeId: string): boolean {
-  return employeeId === 'E10002';
-}
+export { isSpecialManager } from '../config/special-rules'; // 重新导出配置函数保持向后兼容
 
 /**
  * 获取状态显示文本

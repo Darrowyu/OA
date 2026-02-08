@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -15,7 +15,9 @@ import exportRoutes from './routes/export';
 import emailRoutes from './routes/email';
 import reminderRoutes from './routes/reminders';
 import adminRoutes from './routes/admin';
+import equipmentRoutes from './routes/equipment';
 import { startReminderScheduler } from './services/reminder';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // 创建Express应用
 const app = express();
@@ -66,74 +68,13 @@ app.use('/api/export', exportRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/settings/reminders', reminderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/equipment', equipmentRoutes);
 
 // 404处理
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: '请求的资源不存在',
-    },
-  });
-});
+app.use(notFoundHandler);
 
 // 全局错误处理中间件
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err);
-
-  // Prisma错误处理
-  if (err.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as { code?: string; meta?: unknown };
-
-    // 唯一约束冲突
-    if (prismaError.code === 'P2002') {
-      res.status(409).json({
-        success: false,
-        error: {
-          code: 'DUPLICATE_ENTRY',
-          message: '数据已存在',
-          details: prismaError.meta,
-        },
-      });
-      return;
-    }
-
-    // 外键约束失败
-    if (prismaError.code === 'P2003') {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'FOREIGN_KEY_CONSTRAINT',
-          message: '关联数据不存在',
-        },
-      });
-      return;
-    }
-
-    // 记录未找到
-    if (prismaError.code === 'P2025') {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: '记录不存在',
-        },
-      });
-      return;
-    }
-  }
-
-  // 默认错误响应
-  res.status(500).json({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: config.nodeEnv === 'development' ? err.message : '服务器内部错误',
-      ...(config.nodeEnv === 'development' && { stack: err.stack }),
-    },
-  });
-});
+app.use(errorHandler);
 
 // 启动服务器
 const server = app.listen(config.port, () => {

@@ -5,6 +5,7 @@ import { Header } from "@/components/Header"
 import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
+import { EquipmentModule } from "@/pages/equipment"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
@@ -116,6 +117,18 @@ function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <ApplicationsModule />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 设备管理模块 */}
+      <Route
+        path="/equipment/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <EquipmentModule />
             </DashboardLayout>
           </ProtectedRoute>
         }

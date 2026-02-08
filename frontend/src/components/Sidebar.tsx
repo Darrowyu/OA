@@ -17,6 +17,21 @@ import {
   CheckCircle,
   ChevronDown,
   HelpCircle,
+  Monitor,
+  Info,
+  Settings,
+  Wrench,
+  ClipboardList,
+  Package,
+  Gauge,
+  Zap,
+  CircleDollarSign,
+  History,
+  BarChart3,
+  Trash2,
+  RefreshCcw,
+  Repeat,
+  FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,6 +60,21 @@ const iconMap: Record<string, React.ElementType> = {
   List,
   CheckCircle,
   Plus,
+  Monitor,
+  Info,
+  Settings,
+  Wrench,
+  ClipboardList,
+  Package,
+  Gauge,
+  Zap,
+  CircleDollarSign,
+  History,
+  BarChart3,
+  Trash2,
+  RefreshCcw,
+  Repeat,
+  FileText,
 }
 
 export function Sidebar({ pendingCount = 0 }: SidebarProps) {
@@ -52,6 +82,9 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const [isApprovalExpanded, setIsApprovalExpanded] = useState(false)  // 审批中心展开状态
+  const [isEquipmentExpanded, setIsEquipmentExpanded] = useState(false)  // 设备管理展开状态
+  const [isMaintenanceExpanded, setIsMaintenanceExpanded] = useState(false)  // 维修保养展开状态
+  const [isPartsExpanded, setIsPartsExpanded] = useState(false)  // 配件管理展开状态
 
   // 从 localStorage 获取用户信息
   const userStr = localStorage.getItem('user')
@@ -61,6 +94,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const isApprover = user?.role === "FACTORY_MANAGER" || user?.role === "DIRECTOR" || user?.role === "MANAGER" || user?.role === "CEO" || user?.role === "ADMIN"
 
   const isApprovalActive = location.pathname.startsWith("/approval")
+  const isEquipmentActive = location.pathname.startsWith("/equipment")
 
   const mainNavItems = [
     { path: "/dashboard", name: "工作台", icon: "LayoutGrid", active: location.pathname === "/dashboard" },
@@ -76,6 +110,30 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
     { path: "/approval/pending", name: "待我审批", icon: "FileCheck", badge: pendingCount, show: isApprover },
     { path: "/approval/approved", name: "已审批", icon: "CheckCircle" },
     { path: "/approval/new", name: "新建申请", icon: "Plus" },
+  ]
+
+  // 设备管理 - 维修保养子菜单
+  const maintenanceSubItems: SubMenuItem[] = [
+    { path: "/equipment/maintenance/records", name: "维修/保养记录", icon: "ClipboardList" },
+    { path: "/equipment/maintenance/plans", name: "保养计划", icon: "Calendar" },
+    { path: "/equipment/maintenance/templates", name: "保养模板", icon: "FileText" },
+  ]
+
+  // 设备管理 - 配件管理子菜单
+  const partsSubItems: SubMenuItem[] = [
+    { path: "/equipment/parts/list", name: "配件列表", icon: "List" },
+    { path: "/equipment/parts/lifecycle", name: "生命周期", icon: "Gauge" },
+    { path: "/equipment/parts/usage", name: "日常领用", icon: "ClipboardList" },
+    { path: "/equipment/parts/scrap", name: "配件报废", icon: "Trash2" },
+    { path: "/equipment/parts/stock", name: "出入库流水", icon: "RefreshCcw" },
+    { path: "/equipment/parts/statistics", name: "使用统计", icon: "BarChart3" },
+  ]
+
+  // 设备管理子菜单
+  const equipmentSubItems: SubMenuItem[] = [
+    { path: "/equipment", name: "设备信息", icon: "Monitor" },
+    { path: "/equipment/health", name: "设备健康度评估", icon: "Gauge" },
+    { path: "/equipment/capacity", name: "设备产能管理", icon: "Zap" },
   ]
 
   const favouriteItems = [
@@ -265,6 +323,183 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                           </li>
                         )
                       })}
+                  </div>
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </li>
+
+          {/* 设备管理 - 带子菜单 */}
+          <li>
+            <button
+              onClick={() => !isCollapsed && setIsEquipmentExpanded(!isEquipmentExpanded)}
+              className={`w-full flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
+                isEquipmentActive
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+              } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
+            >
+              <Monitor className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    variants={textVariants}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex-1 whitespace-nowrap text-left overflow-hidden"
+                  >
+                    设备管理
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  animate={{ rotate: isEquipmentExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </motion.div>
+              )}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                  设备管理
+                </div>
+              )}
+            </button>
+
+            {/* 设备管理子菜单 */}
+            <AnimatePresence>
+              {!isCollapsed && isEquipmentExpanded && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-1 pb-1 pl-4 border-l-2 border-gray-100 ml-5 space-y-1">
+                    {/* 设备信息 */}
+                    {equipmentSubItems.map((item) => {
+                      const Icon = iconMap[item.icon] || Monitor
+                      const isActive = location.pathname === item.path || (item.path !== "/equipment" && location.pathname.startsWith(item.path))
+                      return (
+                        <li key={item.path}>
+                          <NavLink
+                            to={item.path}
+                            className={`flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 ${
+                              isActive
+                                ? "bg-gray-50 text-gray-900 font-medium"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                          </NavLink>
+                        </li>
+                      )
+                    })}
+
+                    {/* 维修保养子菜单 */}
+                    <li>
+                      <button
+                        onClick={() => setIsMaintenanceExpanded(!isMaintenanceExpanded)}
+                        className="w-full flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      >
+                        <Settings className="h-4 w-4 flex-shrink-0" />
+                        <span className="flex-1 whitespace-nowrap text-left">维修保养</span>
+                        <motion.div
+                          animate={{ rotate: isMaintenanceExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="h-3 w-3 text-gray-400" />
+                        </motion.div>
+                      </button>
+                      <AnimatePresence>
+                        {isMaintenanceExpanded && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-1 pb-1 pl-4 border-l-2 border-gray-100 ml-3 space-y-1">
+                              {maintenanceSubItems.map((item) => {
+                                const Icon = iconMap[item.icon] || Settings
+                                const isActive = location.pathname === item.path || location.pathname.startsWith(item.path)
+                                return (
+                                  <li key={item.path}>
+                                    <NavLink
+                                      to={item.path}
+                                      className={`flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 ${
+                                        isActive
+                                          ? "bg-gray-50 text-gray-900 font-medium"
+                                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <Icon className="h-4 w-4 flex-shrink-0" />
+                                      <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                                    </NavLink>
+                                  </li>
+                                )
+                              })}
+                            </div>
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </li>
+
+                    {/* 配件管理子菜单 */}
+                    <li>
+                      <button
+                        onClick={() => setIsPartsExpanded(!isPartsExpanded)}
+                        className="w-full flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      >
+                        <Package className="h-4 w-4 flex-shrink-0" />
+                        <span className="flex-1 whitespace-nowrap text-left">配件管理</span>
+                        <motion.div
+                          animate={{ rotate: isPartsExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="h-3 w-3 text-gray-400" />
+                        </motion.div>
+                      </button>
+                      <AnimatePresence>
+                        {isPartsExpanded && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-1 pb-1 pl-4 border-l-2 border-gray-100 ml-3 space-y-1">
+                              {partsSubItems.map((item) => {
+                                const Icon = iconMap[item.icon] || Package
+                                const isActive = location.pathname === item.path || location.pathname.startsWith(item.path)
+                                return (
+                                  <li key={item.path}>
+                                    <NavLink
+                                      to={item.path}
+                                      className={`flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 ${
+                                        isActive
+                                          ? "bg-gray-50 text-gray-900 font-medium"
+                                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <Icon className="h-4 w-4 flex-shrink-0" />
+                                      <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                                    </NavLink>
+                                  </li>
+                                )
+                              })}
+                            </div>
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </li>
                   </div>
                 </motion.ul>
               )}

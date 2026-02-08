@@ -250,3 +250,340 @@ model ArchiveRecord {
   @@index([archivedAt])
   @@index([applicationNo])
 }
+
+// ============================================
+// 设备管理模块模型
+// ============================================
+
+enum EquipmentStatus {
+  RUNNING      // 运行中
+  WARNING      // 预警
+  STOPPED      // 停机
+  MAINTENANCE  // 保养中
+  SCRAPPED     // 已报废
+}
+
+enum MaintenanceType {
+  MAINTENANCE  // 保养
+  REPAIR       // 维修
+}
+
+enum MaintenanceRecordStatus {
+  PENDING      // 待处理
+  IN_PROGRESS  // 进行中
+  COMPLETED    // 已完成
+  CANCELLED    // 已取消
+}
+
+enum MaintenancePlanStatus {
+  ACTIVE       // 正常
+  WARNING      // 即将到期
+  OVERDUE      // 已逾期
+  PAUSED       // 已暂停
+}
+
+enum MaintenancePlanFrequency {
+  DAILY        // 每日
+  WEEKLY       // 每周
+  MONTHLY      // 每月
+  QUARTERLY    // 每季度
+  HALF_YEARLY  // 每半年
+  YEARLY       // 每年
+}
+
+enum MaintenanceTemplateStatus {
+  ACTIVE       // 已启用
+  DRAFT        // 草稿
+  DISABLED     // 已禁用
+}
+
+enum PartStatus {
+  NORMAL       // 正常
+  LOW          // 库存不足
+  HIGH         // 库存过多
+  DISCONTINUED // 已停用
+}
+
+enum PartUsageStatus {
+  PENDING      // 审批中
+  APPROVED     // 已批准
+  REJECTED     // 已驳回
+  COMPLETED    // 已完成
+}
+
+enum PartScrapStatus {
+  PENDING      // 审批中
+  APPROVED     // 已批准
+  REJECTED     // 已驳回
+}
+
+enum StockType {
+  IN           // 入库
+  OUT          // 出库
+}
+
+enum StockSource {
+  PURCHASE     // 采购入库
+  RETURN       // 退货入库
+  PRODUCE      // 生产出库
+  USAGE        // 领用出库
+  SCRAP        // 报废出库
+  ADJUST       // 盘点调整
+  OTHER        // 其他
+}
+
+enum PartLifecycleStatus {
+  ACTIVE       // 正常
+  WARNING      // 即将到期
+  CRITICAL     // 急需更换
+  EXPIRED      // 已到期
+}
+
+// 设备信息
+model Equipment {
+  id                String           @id @default(cuid())
+  code              String           @unique // 设备编号
+  name              String           // 设备名称
+  model             String           // 型号
+  category          String           // 分类
+  manufacturer      String?          // 制造商
+  location          String           // 存放位置
+  status            EquipmentStatus  @default(RUNNING)
+  healthScore       Int?             @db.SmallInt // 健康度 0-100
+  purchaseDate      DateTime?        // 购买日期
+  warrantyDate      DateTime?        // 保修到期日
+  purchasePrice     Decimal?         @db.Decimal(15, 2) // 购买价格
+  serialNumber      String?          // 序列号
+  description       String?          // 备注
+  lastMaintenanceAt DateTime?        // 上次保养时间
+  nextMaintenanceAt DateTime?        // 下次保养时间
+  totalWorkHours    Int?             @default(0) // 累计工作时长
+  createdBy         String           // 创建人ID
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // 关联字段
+  maintenanceRecords MaintenanceRecord[]
+  maintenancePlans   MaintenancePlan[]
+  partUsages         PartUsage[]
+
+  @@index([status])
+  @@index([code])
+  @@index([category])
+  @@index([location])
+}
+
+// 维修/保养记录
+model MaintenanceRecord {
+  id                String                    @id @default(cuid())
+  code              String                    @unique // 记录编号
+  equipmentId       String
+  type              MaintenanceType           // 类型：保养/维修
+  content           String                    // 内容描述
+  operator          String                    // 操作人员
+  startTime         DateTime                  // 开始时间
+  endTime           DateTime?                 // 完成时间
+  duration          Int?                      // 实际耗时(分钟)
+  estimatedDuration Int?                      // 预计耗时(分钟)
+  cost              Decimal?                  @db.Decimal(15, 2) // 费用
+  status            MaintenanceRecordStatus   @default(PENDING)
+  templateId        String?                   // 使用的模板ID
+  partsUsed         Json?                     // 使用的配件列表
+  result            String?                   // 结果/结论
+  beforeImages      String[]                  // 维修前图片
+  afterImages       String[]                  // 维修后图片
+  createdBy         String
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  // 关联字段
+  equipment         Equipment                 @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  template          MaintenanceTemplate?      @relation(fields: [templateId], references: [id])
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([type])
+  @@index([startTime])
+}
+
+// 保养计划
+model MaintenancePlan {
+  id                String                    @id @default(cuid())
+  code              String                    @unique // 计划编号
+  equipmentId       String
+  planName          String                    // 计划名称
+  frequency         MaintenancePlanFrequency  // 保养频率
+  intervalDays      Int                       // 间隔天数
+  nextDate          DateTime                  // 下次保养日期
+  responsible       String                    // 负责人
+  reminderDays      Int?                      @default(7) // 提前提醒天数
+  status            MaintenancePlanStatus     @default(ACTIVE)
+  templateId        String?                   // 使用的模板ID
+  description       String?                   // 说明
+  createdBy         String
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  // 关联字段
+  equipment         Equipment                 @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  template          MaintenanceTemplate?      @relation(fields: [templateId], references: [id])
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([nextDate])
+}
+
+// 保养模板
+model MaintenanceTemplate {
+  id                String                    @id @default(cuid())
+  code              String                    @unique // 模板编号
+  name              String                    // 模板名称
+  category          String                    // 适用分类
+  items             Json                      // 检查项列表
+  estimatedTime     Int                       // 预计耗时(分钟)
+  status            MaintenanceTemplateStatus @default(DRAFT)
+  usageCount        Int                       @default(0) // 使用次数
+  createdBy         String
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  // 关联字段
+  maintenanceRecords MaintenanceRecord[]
+  maintenancePlans   MaintenancePlan[]
+
+  @@index([status])
+  @@index([category])
+}
+
+// 配件
+model Part {
+  id                String           @id @default(cuid())
+  code              String           @unique // 配件编号
+  name              String           // 配件名称
+  model             String           // 型号
+  category          String           // 分类
+  unit              String           // 单位
+  stock             Int              @default(0) // 当前库存
+  minStock          Int              @default(0) // 最低库存
+  maxStock          Int              @default(0) // 最高库存
+  location          String?          // 存放位置
+  supplier          String?          // 供应商
+  status            PartStatus       @default(NORMAL)
+  unitPrice         Decimal?         @db.Decimal(15, 2) // 单价
+  description       String?          // 备注
+  createdBy         String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // 关联字段
+  stockRecords      PartStock[]
+  partUsages        PartUsage[]
+  partScraps        PartScrap[]
+  partLifecycles    PartLifecycle[]
+
+  @@index([status])
+  @@index([code])
+  @@index([category])
+}
+
+// 配件领用
+model PartUsage {
+  id                String              @id @default(cuid())
+  code              String              @unique // 申请单号
+  partId            String
+  quantity          Int                 // 领用数量
+  applicant         String              // 申请人
+  department        String              // 部门
+  purpose           String              // 用途
+  equipmentId       String?             // 关联设备
+  applyDate         DateTime            // 申请日期
+  status            PartUsageStatus     @default(PENDING)
+  approvedBy        String?             // 审批人
+  approvedAt        DateTime?           // 审批时间
+  remark            String?             // 备注
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // 关联字段
+  part              Part                @relation(fields: [partId], references: [id], onDelete: Cascade)
+  equipment         Equipment?          @relation(fields: [equipmentId], references: [id])
+
+  @@index([partId])
+  @@index([status])
+  @@index([applicant])
+  @@index([applyDate])
+}
+
+// 配件报废
+model PartScrap {
+  id                String              @id @default(cuid())
+  code              String              @unique // 申请单号
+  partId            String
+  quantity          Int                 // 数量
+  reason            String              // 报废原因
+  originalValue     Decimal             @db.Decimal(15, 2) // 原值
+  residualValue     Decimal             @db.Decimal(15, 2) // 残值
+  applicant         String              // 申请人
+  applyDate         DateTime            // 申请日期
+  status            PartScrapStatus     @default(PENDING)
+  approvedBy        String?             // 审批人
+  approvedAt        DateTime?           // 审批时间
+  remark            String?             // 备注
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // 关联字段
+  part              Part                @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([status])
+  @@index([applicant])
+}
+
+// 出入库流水
+model PartStock {
+  id                String           @id @default(cuid())
+  partId            String
+  type              StockType        // 入库/出库
+  quantity          Int              // 数量
+  beforeStock       Int              // 变动前库存
+  afterStock        Int              // 变动后库存
+  operator          String           // 操作人员
+  documentNo        String?          // 关联单据号
+  source            StockSource      // 来源
+  date              DateTime         @default(now()) // 操作时间
+  remark            String?          // 备注
+  relatedId         String?          // 关联记录ID
+  createdAt         DateTime         @default(now())
+
+  // 关联字段
+  part              Part             @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([type])
+  @@index([date])
+  @@index([source])
+}
+
+// 配件生命周期
+model PartLifecycle {
+  id                String                  @id @default(cuid())
+  partId            String                  @unique
+  totalCycles       Int                     // 总周期
+  installedCycles   Int                     @default(0) // 已使用周期
+  remainingCycles   Int                     // 剩余周期
+  avgUsage          Int                     // 平均使用频率
+  status            PartLifecycleStatus     @default(ACTIVE)
+  installedAt       DateTime?               // 安装日期
+  expectedEndDate   DateTime?               // 预计到期日
+  equipmentId       String?                 // 安装在哪个设备
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  // 关联字段
+  part              Part                    @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([status])
+  @@index([expectedEndDate])
+}

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -25,14 +25,9 @@ import {
   PageHeader,
   SearchToolbar,
 } from "./components"
-
-const equipmentData = [
-  { id: "EQ001", name: "数控机床 A型", model: "CNC-2000X", location: "生产车间A-01", status: "running", health: 92, lastMaintenance: "2026-01-15", nextMaintenance: "2026-04-15" },
-  { id: "EQ002", name: "注塑机 B型", model: "IMM-500T", location: "生产车间A-02", status: "warning", health: 78, lastMaintenance: "2026-01-20", nextMaintenance: "2026-02-20" },
-  { id: "EQ003", name: "激光切割机", model: "LC-3000", location: "生产车间B-01", status: "stopped", health: 45, lastMaintenance: "2025-12-10", nextMaintenance: "2026-02-10" },
-  { id: "EQ004", name: "自动焊接机器人", model: "AW-R01", location: "生产车间B-02", status: "running", health: 88, lastMaintenance: "2026-01-25", nextMaintenance: "2026-04-25" },
-  { id: "EQ005", name: "冲压机 C型", model: "PM-100T", location: "生产车间A-03", status: "maintenance", health: 60, lastMaintenance: "2026-02-01", nextMaintenance: "2026-02-08" },
-]
+import { Pagination } from "@/components/Pagination"
+import { equipmentApi, type Equipment } from "@/services/equipment"
+import { toast } from "sonner"
 
 const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   running: { label: "运行中", color: "bg-green-100 text-green-700", icon: <CheckCircle2 className="h-3 w-3" /> },
@@ -43,11 +38,50 @@ const statusMap: Record<string, { label: string; color: string; icon: React.Reac
 
 export function EquipmentInfo() {
   const [searchQuery, setSearchQuery] = useState("")
-  const filteredEquipment = equipmentData.filter(
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+
+  const fetchEquipment = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await equipmentApi.getEquipmentList({
+        page: currentPage,
+        pageSize: pageSize,
+      })
+      if (response.success) {
+        setEquipmentList(response.data.items)
+        setTotal(response.data.pagination.total)
+        setTotalPages(response.data.pagination.totalPages)
+      }
+    } catch (error) {
+      toast.error("获取设备列表失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, pageSize])
+
+  useEffect(() => {
+    fetchEquipment()
+  }, [fetchEquipment])
+
+  const filteredEquipment = equipmentList.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
@@ -94,43 +128,65 @@ export function EquipmentInfo() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEquipment.map((item) => {
-                  const status = statusMap[item.status]
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.id}</TableCell>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.model}</TableCell>
-                      <TableCell>{item.location}</TableCell>
-                      <TableCell>
-                        <Badge className={status.color}>
-                          <span className="flex items-center gap-1">
-                            {status.icon}
-                            {status.label}
-                          </span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${item.health >= 80 ? "bg-green-500" : item.health >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
-                              style={{ width: `${item.health}%` }}
-                            />
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredEquipment.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredEquipment.map((item) => {
+                    const status = statusMap[item.status]
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.id}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.model}</TableCell>
+                        <TableCell>{item.location}</TableCell>
+                        <TableCell>
+                          <Badge className={status.color}>
+                            <span className="flex items-center gap-1">
+                              {status.icon}
+                              {status.label}
+                            </span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${item.health >= 80 ? "bg-green-500" : item.health >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
+                                style={{ width: `${item.health}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-600">{item.health}%</span>
                           </div>
-                          <span className="text-sm text-gray-600">{item.health}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.lastMaintenance}</TableCell>
-                      <TableCell>{item.nextMaintenance}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
+                        </TableCell>
+                        <TableCell>{item.lastMaintenance}</TableCell>
+                        <TableCell>{item.nextMaintenance}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </CardContent>
         </Card>
       </motion.div>

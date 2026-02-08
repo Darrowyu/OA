@@ -1,3 +1,4 @@
+import { AxiosResponse } from 'axios';
 import apiClient from '@/lib/api';
 
 export interface UploadResponse {
@@ -17,13 +18,14 @@ export const uploadsApi = {
     if (applicationId) formData.append('applicationId', applicationId);
     if (isApprovalAttachment) formData.append('isApprovalAttachment', 'true');
 
-    return apiClient.post('/uploads', formData, {
+    return apiClient.post<{ success: boolean; data: UploadResponse }>('/uploads', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((res: unknown) => res as { success: boolean; data: UploadResponse });
+    });
   },
   getFiles: (applicationId?: string): Promise<{ success: boolean; data: UploadResponse[] }> =>
-    apiClient.get('/uploads', { params: { applicationId } }).then((res: unknown) => res as { success: boolean; data: UploadResponse[] }),
+    apiClient.get<{ success: boolean; data: UploadResponse[] }>('/uploads', { params: { applicationId } }),
   deleteFile: (id: string): Promise<{ success: boolean; message?: string }> =>
-    apiClient.delete(`/uploads/${id}`).then((res: unknown) => res as { success: boolean; message?: string }),
-  downloadFile: (id: string) => apiClient.get(`/uploads/${id}/download`, { responseType: 'blob' }),
+    apiClient.delete<{ success: boolean; message?: string }>(`/uploads/${id}`),
+  downloadFile: (id: string): Promise<AxiosResponse<Blob>> =>
+    apiClient.get<AxiosResponse<Blob>>(`/uploads/${id}/download`, { responseType: 'blob' }),
 };

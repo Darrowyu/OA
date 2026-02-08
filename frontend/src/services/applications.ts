@@ -39,17 +39,28 @@ export interface ApplicationsResponse {
 
 import { Application } from '@/types';
 
+// API 响应类型
+interface ApplicationResponse {
+  success: boolean;
+  data: Application;
+}
+
+interface DeleteResponse {
+  success: boolean;
+  message?: string;
+}
+
 export const applicationsApi = {
   getApplications: (params?: GetApplicationsParams): Promise<ApplicationsResponse> =>
-    apiClient.get('/applications', { params }).then((res: unknown) => res as ApplicationsResponse),
-  getApplication: (id: string): Promise<{ success: boolean; data: Application }> =>
-    apiClient.get(`/applications/${id}`).then((res: unknown) => res as { success: boolean; data: Application }),
-  createApplication: (data: CreateApplicationRequest): Promise<{ success: boolean; data: Application }> =>
-    apiClient.post('/applications', data).then((res: unknown) => res as { success: boolean; data: Application }),
-  updateApplication: (id: string, data: UpdateApplicationRequest): Promise<{ success: boolean; data: Application }> =>
-    apiClient.put(`/applications/${id}`, data).then((res: unknown) => res as { success: boolean; data: Application }),
-  deleteApplication: (id: string): Promise<{ success: boolean; message?: string }> =>
-    apiClient.delete(`/applications/${id}`).then((res: unknown) => res as { success: boolean; message?: string }),
-  submitApplication: (id: string): Promise<{ success: boolean; data: Application }> =>
-    apiClient.post(`/applications/${id}/submit`).then((res: unknown) => res as { success: boolean; data: Application }),
+    apiClient.get<ApplicationsResponse>('/applications', { params }),
+  getApplication: (id: string): Promise<ApplicationResponse> =>
+    apiClient.get<ApplicationResponse>(`/applications/${id}`),
+  createApplication: (data: CreateApplicationRequest): Promise<ApplicationResponse> =>
+    apiClient.post<ApplicationResponse>('/applications', data),
+  updateApplication: (id: string, data: UpdateApplicationRequest): Promise<ApplicationResponse> =>
+    apiClient.put<ApplicationResponse>(`/applications/${id}`, data),
+  deleteApplication: (id: string): Promise<DeleteResponse> =>
+    apiClient.delete<DeleteResponse>(`/applications/${id}`),
+  submitApplication: (id: string): Promise<ApplicationResponse> =>
+    apiClient.post<ApplicationResponse>(`/applications/${id}/submit`),
 };

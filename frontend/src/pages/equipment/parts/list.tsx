@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,14 +27,9 @@ import {
   PageHeader,
   SearchToolbar,
 } from "../components"
-
-const partsData = [
-  { id: "PT001", name: "液压密封圈", model: "HS-50A", category: "液压件", unit: "个", stock: 156, minStock: 50, maxStock: 200, location: "仓库A-01-03", supplier: "华密封件厂", status: "normal" },
-  { id: "PT002", name: "伺服电机", model: "SM-2000W", category: "电机", unit: "台", stock: 8, minStock: 10, maxStock: 30, location: "仓库B-02-01", supplier: "精密电机公司", status: "low" },
-  { id: "PT003", name: "刀具套装", model: "CT-SET-01", category: "刀具", unit: "套", stock: 25, minStock: 20, maxStock: 50, location: "仓库A-03-02", supplier: "锐锋刀具厂", status: "normal" },
-  { id: "PT004", name: "激光器模块", model: "LM-3000", category: "激光件", unit: "个", stock: 3, minStock: 5, maxStock: 15, location: "仓库B-01-01", supplier: "光科激光", status: "low" },
-  { id: "PT005", name: "润滑油", model: "LO-68", category: "油液", unit: "桶", stock: 42, minStock: 30, maxStock: 80, location: "仓库C-01-05", supplier: "石化油品", status: "normal" },
-]
+import { Pagination } from "@/components/Pagination"
+import { equipmentApi, type Part } from "@/services/equipment"
+import { toast } from "sonner"
 
 const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   normal: { label: "正常", color: "bg-green-100 text-green-700", icon: <CheckCircle2 className="h-3 w-3" /> },
@@ -44,11 +39,50 @@ const statusMap: Record<string, { label: string; color: string; icon: React.Reac
 
 export function PartsList() {
   const [searchQuery, setSearchQuery] = useState("")
-  const filteredParts = partsData.filter(
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [parts, setParts] = useState<Part[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+
+  const fetchParts = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await equipmentApi.getPartsList({
+        page: currentPage,
+        pageSize: pageSize,
+      })
+      if (response.success) {
+        setParts(response.data.items)
+        setTotal(response.data.pagination.total)
+        setTotalPages(response.data.pagination.totalPages)
+      }
+    } catch (error) {
+      toast.error("获取配件列表失败")
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, pageSize])
+
+  useEffect(() => {
+    fetchParts()
+  }, [fetchParts])
+
+  const filteredParts = parts.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
@@ -97,50 +131,72 @@ export function PartsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredParts.map((item) => {
-                  const status = statusMap[item.status]
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.id}</TableCell>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.model}</TableCell>
-                      <TableCell><Badge variant="secondary">{item.category}</Badge></TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{item.stock}</span>
-                          <span className="text-gray-400 text-sm">/{item.maxStock}</span>
-                          <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                item.stock < item.minStock ? "bg-red-500" :
-                                item.stock > item.maxStock * 0.9 ? "bg-yellow-500" : "bg-green-500"
-                              }`}
-                              style={{ width: `${(item.stock / item.maxStock) * 100}%` }}
-                            />
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredParts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredParts.map((item) => {
+                    const status = statusMap[item.status]
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.id}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.model}</TableCell>
+                        <TableCell><Badge variant="secondary">{item.category}</Badge></TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{item.stock}</span>
+                            <span className="text-gray-400 text-sm">/{item.maxStock}</span>
+                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  item.stock < item.minStock ? "bg-red-500" :
+                                  item.stock > item.maxStock * 0.9 ? "bg-yellow-500" : "bg-green-500"
+                                }`}
+                                style={{ width: `${(item.stock / item.maxStock) * 100}%` }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <Warehouse className="h-3 w-3 text-gray-400" />
-                          {item.location}
-                        </span>
-                      </TableCell>
-                      <TableCell>{item.supplier}</TableCell>
-                      <TableCell>
-                        <Badge className={status.color}>
-                          <span className="flex items-center gap-1">{status.icon}{status.label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1">
+                            <Warehouse className="h-3 w-3 text-gray-400" />
+                            {item.location}
+                          </span>
+                        </TableCell>
+                        <TableCell>{item.supplier}</TableCell>
+                        <TableCell>
+                          <Badge className={status.color}>
+                            <span className="flex items-center gap-1">{status.icon}{status.label}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
           </CardContent>
         </Card>
       </motion.div>

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Share2, Bell, MoreHorizontal, ChevronRight, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
+import { Search, Share2, Bell, MoreHorizontal, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"

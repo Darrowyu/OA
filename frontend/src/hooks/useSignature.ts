@@ -83,8 +83,8 @@ export function useSignature() {
     // 从服务器获取
     try {
       setIsLoading(true);
-      const response = await api.get(`/api/signatures/${username}`);
-      const signatureData = response.data?.signature;
+      const data = await api.get<{ signature?: string }>(`/api/signatures/${username}`);
+      const signatureData = data?.signature;
 
       if (signatureData) {
         setSignatures(prev => new Map(prev).set(username, signatureData));
@@ -121,16 +121,16 @@ export function useSignature() {
     // 批量获取
     try {
       setIsLoading(true);
-      const response = await api.post('/api/signatures/batch', {
+      const data = await api.post<{ signatures?: Record<string, string> }>('/api/signatures/batch', {
         usernames: toFetch,
       });
 
-      const fetchedSignatures = response.data?.signatures || {};
-      Object.entries(fetchedSignatures).forEach(([username, data]) => {
-        if (data) {
-          result.set(username, data as string);
-          setSignatures(prev => new Map(prev).set(username, data as string));
-          saveToCache(username, data as string);
+      const fetchedSignatures = data?.signatures || {};
+      Object.entries(fetchedSignatures).forEach(([username, sigData]) => {
+        if (sigData) {
+          result.set(username, sigData);
+          setSignatures(prev => new Map(prev).set(username, sigData));
+          saveToCache(username, sigData);
         }
       });
     } catch (error) {

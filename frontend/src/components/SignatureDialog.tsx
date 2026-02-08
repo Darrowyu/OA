@@ -36,9 +36,9 @@ export function SignatureDialog({
 
   const loadExistingSignature = async () => {
     try {
-      const response = await api.get(`/api/signatures/${username}`);
-      if (response.data?.signature) {
-        setCurrentSignature(response.data.signature);
+      const data = await api.get<{ signature?: string }>(`/api/signatures/${username}`);
+      if (data?.signature) {
+        setCurrentSignature(data.signature);
       }
     } catch (error) {
       // 如果没有签名，不显示错误
