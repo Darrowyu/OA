@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,14 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 
 export function MilestoneTracker() {
   const [activeRange, setActiveRange] = useState("6个月")
+  const [mounted, setMounted] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // 延迟渲染图表，确保容器已有尺寸
+    const timer = setTimeout(() => setMounted(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <motion.div
@@ -78,41 +86,43 @@ export function MilestoneTracker() {
       </div>
 
       {/* Chart */}
-      <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={milestoneData}
-            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-            barGap={4}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fill: "#6B7280" }}
-              dy={10}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fill: "#6B7280" }}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F3F4F6" }} />
-            <Bar
-              dataKey="target"
-              fill="#4B5563"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={20}
-            />
-            <Bar
-              dataKey="actual"
-              fill="#F97316"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={20}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      <div ref={containerRef} className="h-48 min-h-[192px]">
+        {mounted && (
+          <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={192}>
+            <BarChart
+              data={milestoneData}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              barGap={4}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: "#6B7280" }}
+                dy={10}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: "#6B7280" }}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F3F4F6" }} />
+              <Bar
+                dataKey="target"
+                fill="#4B5563"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+              />
+              <Bar
+                dataKey="actual"
+                fill="#F97316"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </motion.div>
   )
