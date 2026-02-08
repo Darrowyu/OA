@@ -457,11 +457,10 @@ export class ReportService {
 
   // 审批人响应时间排行
   private async getApproverRanking(startDate?: Date, endDate?: Date) {
-    const approverIds = new Set<string>();
     const approverStats: Record<string, { total: number; totalTime: number; name: string; department: string }> = {};
 
     // 收集所有审批记录
-    const [factoryApprovals, directorApprovals, managerApprovals, ceoApprovals] = await Promise.all([
+    const [factoryApprovals] = await Promise.all([
       prisma.factoryApproval.findMany({
         where: { action: 'APPROVE', approvedAt: { not: null, ...(startDate && endDate ? { gte: startDate, lte: endDate } : {}) } },
         include: { approver: { select: { id: true, name: true, department: { select: { name: true } } } } },

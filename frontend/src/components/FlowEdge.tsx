@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -9,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 // 流程连线组件
 export function FlowEdgeComponent({
-  id,
+  // id - 保留用于未来使用
   sourceX,
   sourceY,
   targetX,
@@ -66,7 +65,7 @@ export function FlowEdgeComponent({
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             }}
           >
-            {data?.condition || label}
+            {(data?.condition as string) || label}
           </div>
         </EdgeLabelRenderer>
       )}

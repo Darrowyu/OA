@@ -1,13 +1,13 @@
-import type { FC } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import type { NodeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { Play, User, GitBranch, Users, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // 节点类型定义
 export type FlowNodeType = 'start' | 'approval' | 'condition' | 'parallel' | 'end' | string;
 
-// 节点数据接口
-export interface FlowNodeData {
+// 节点数据接口 - 使用 Record 来满足 React Flow 的类型要求
+export interface FlowNodeData extends Record<string, unknown> {
   label: string;
   assignee?: string;
   assigneeType?: 'user' | 'role' | 'department' | 'applicant';
