@@ -331,9 +331,9 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex-1 ml-[260px]">
+    <div className="flex-1 ml-[260px] h-screen overflow-auto">
       <Header />
-      <main className="p-6">
+      <main className="p-6 min-h-[calc(100vh-4rem)]">
         {/* 页面标题 */}
         <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>

@@ -42,7 +42,7 @@ export function Header() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, delay: 0.1 }}
-      className="h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-transparent"
+      className="sticky top-0 z-40 h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white/95 backdrop-blur-sm"
     >
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm">

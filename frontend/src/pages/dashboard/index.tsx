@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
 
   return (
-    <div className="flex-1 ml-[260px]">
+    <div className="flex-1 ml-[260px] h-screen overflow-auto">
       {/* Header */}
       <Header />
 
@@ -47,7 +47,7 @@ export default function Dashboard() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="p-6"
+        className="p-6 min-h-[calc(100vh-4rem)]"
       >
         {/* Page Title */}
         <motion.div variants={itemVariants} className="mb-6">

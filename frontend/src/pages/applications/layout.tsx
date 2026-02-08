@@ -8,9 +8,9 @@ export function ApplicationsLayout() {
   }, [])
 
   return (
-    <div className="flex-1 ml-[260px]">
+    <div className="flex-1 ml-[260px] h-screen overflow-auto">
       <Header />
-      <main className="p-6">
+      <main className="p-6 min-h-[calc(100vh-4rem)]">
         <Outlet />
       </main>
     </div>

@@ -284,9 +284,9 @@ export default function Users() {
   }
 
   return (
-    <div className="flex-1 ml-[260px]">
+    <div className="flex-1 ml-[260px] h-screen overflow-auto">
       <Header />
-      <main className="p-6">
+      <main className="p-6 min-h-[calc(100vh-4rem)]">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>
           <p className="text-gray-500 mt-1">管理系统用户账号和权限</p>

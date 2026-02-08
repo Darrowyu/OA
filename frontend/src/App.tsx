@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom"
+import { Header } from "@/components/Header"
 import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
@@ -13,6 +14,19 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#F3F4F6] flex">
       <Sidebar />
       {children}
+    </div>
+  )
+}
+
+// 占位页面布局
+function PlaceholderPage({ title }: { title: string }) {
+  return (
+    <div className="flex-1 ml-[260px] h-screen overflow-auto">
+      <Header />
+      <main className="p-6 min-h-[calc(100vh-4rem)]">
+        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        <p className="text-gray-500 mt-4">模块开发中...</p>
+      </main>
     </div>
   )
 }
@@ -53,10 +67,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <div className="flex-1 ml-[260px] p-8">
-                <h1 className="text-2xl font-bold text-gray-900">考勤管理</h1>
-                <p className="text-gray-500 mt-4">模块开发中...</p>
-              </div>
+              <PlaceholderPage title="考勤管理" />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -66,10 +77,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <div className="flex-1 ml-[260px] p-8">
-                <h1 className="text-2xl font-bold text-gray-900">日程管理</h1>
-                <p className="text-gray-500 mt-4">模块开发中...</p>
-              </div>
+              <PlaceholderPage title="日程管理" />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -79,10 +87,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <div className="flex-1 ml-[260px] p-8">
-                <h1 className="text-2xl font-bold text-gray-900">文档中心</h1>
-                <p className="text-gray-500 mt-4">模块开发中...</p>
-              </div>
+              <PlaceholderPage title="文档中心" />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -92,10 +97,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <div className="flex-1 ml-[260px] p-8">
-                <h1 className="text-2xl font-bold text-gray-900">通讯录</h1>
-                <p className="text-gray-500 mt-4">模块开发中...</p>
-              </div>
+              <PlaceholderPage title="通讯录" />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -105,10 +107,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <div className="flex-1 ml-[260px] p-8">
-                <h1 className="text-2xl font-bold text-gray-900">公告通知</h1>
-                <p className="text-gray-500 mt-4">模块开发中...</p>
-              </div>
+              <PlaceholderPage title="公告通知" />
             </DashboardLayout>
           </ProtectedRoute>
         }
