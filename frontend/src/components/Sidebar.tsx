@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { useSidebar } from "@/contexts/SidebarContext"
 import {
   LayoutGrid,
   FileCheck,
@@ -39,7 +39,7 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 export function Sidebar({ pendingCount = 0 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isCollapsed, setIsCollapsed } = useSidebar()
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -157,32 +157,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
         </motion.button>
       </div>
 
-      {/* User Profile */}
-      <div className="p-4 flex items-center gap-3">
-        <Avatar className="w-10 h-10 flex-shrink-0">
-          <AvatarFallback className="bg-gray-200 text-gray-700">
-            {(user?.name?.charAt(0) || user?.username?.charAt(0) || "U").toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <AnimatePresence>
-          {!isCollapsed && (
-            <motion.div
-              variants={textVariants}
-              initial="collapsed"
-              animate="expanded"
-              exit="collapsed"
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1 min-w-0"
-            >
-              <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || user?.username}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email || getRoleLabel(user?.role || "")}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* Create Task Button */}
-      <div className="px-4 pb-4">
+      <div className="px-4 py-4">
         <Button
           className="w-full bg-gray-900 hover:bg-gray-800 text-white"
           onClick={() => navigate("/approval/new")}
@@ -443,6 +419,32 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               </div>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* User Profile - 底部 */}
+      <div className="p-4 border-t border-gray-200">
+        <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
+          <Avatar className="w-10 h-10 flex-shrink-0">
+            <AvatarFallback className="bg-gray-200 text-gray-700">
+              {(user?.name?.charAt(0) || user?.username?.charAt(0) || "U").toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                variants={textVariants}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="flex-1 min-w-0"
+              >
+                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || user?.username}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email || getRoleLabel(user?.role || "")}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.aside>

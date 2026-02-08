@@ -5,18 +5,34 @@ import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
+import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
 
 // 带侧边栏的布局组件 - 使用pl来适配动态宽度的侧边栏
-function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isCollapsed } = useSidebar()
   return (
     <div className="min-h-screen bg-[#F3F4F6] flex">
       <Sidebar />
-      <div className="flex-1 h-screen overflow-auto">
+      <div
+        className="flex-1 h-screen overflow-auto transition-all duration-350"
+        style={{
+          marginLeft: isCollapsed ? '72px' : '260px',
+          transition: 'margin-left 0.35s cubic-bezier(0.22, 1, 0.36, 1)'
+        }}
+      >
         {children}
       </div>
     </div>
+  )
+}
+
+function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </SidebarProvider>
   )
 }
 
