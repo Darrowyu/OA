@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
 
   return (
-    <div className="flex-1 ml-[260px] h-screen overflow-auto">
+    <div className="h-screen overflow-auto">
       {/* Header */}
       <Header />
 

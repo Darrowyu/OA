@@ -284,7 +284,7 @@ export default function Users() {
   }
 
   return (
-    <div className="flex-1 ml-[260px] h-screen overflow-auto">
+    <div className="h-screen overflow-auto">
       <Header />
       <main className="p-6 min-h-[calc(100vh-4rem)]">
         <div className="mb-6">

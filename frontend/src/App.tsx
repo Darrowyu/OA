@@ -8,12 +8,14 @@ import { Sidebar } from "@/components/Sidebar"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
 
-// 带侧边栏的布局组件
+// 带侧边栏的布局组件 - 使用pl来适配动态宽度的侧边栏
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F3F4F6] flex">
       <Sidebar />
-      {children}
+      <div className="flex-1 h-screen overflow-auto">
+        {children}
+      </div>
     </div>
   )
 }
@@ -21,13 +23,13 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
 // 占位页面布局
 function PlaceholderPage({ title }: { title: string }) {
   return (
-    <div className="flex-1 ml-[260px] h-screen overflow-auto">
+    <>
       <Header />
       <main className="p-6 min-h-[calc(100vh-4rem)]">
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
         <p className="text-gray-500 mt-4">模块开发中...</p>
       </main>
-    </div>
+    </>
   )
 }
 
