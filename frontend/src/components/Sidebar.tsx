@@ -10,7 +10,6 @@ import {
   FolderOpen,
   Users,
   Bell,
-  Settings,
   UserCog,
   Plus,
   Receipt,
@@ -408,35 +407,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                       用户管理
-                    </div>
-                  )}
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/settings"
-                  className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
-                    isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
-                  }`}
-                >
-                  <Settings className="h-5 w-5 flex-shrink-0" />
-                  <AnimatePresence>
-                    {!isCollapsed && (
-                      <motion.span
-                        variants={textVariants}
-                        initial="collapsed"
-                        animate="expanded"
-                        exit="collapsed"
-                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="whitespace-nowrap overflow-hidden"
-                      >
-                        系统设置
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                      系统设置
                     </div>
                   )}
                 </NavLink>
