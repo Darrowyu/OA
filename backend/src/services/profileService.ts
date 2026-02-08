@@ -348,6 +348,13 @@ export async function exportPersonalData(userId: string) {
     where: { id: userId },
     include: {
       preference: true,
+      department: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
       applications: {
         select: {
           applicationNo: true,
@@ -386,7 +393,7 @@ export async function exportPersonalData(userId: string) {
       email: user.email,
       phone: user.phone,
       role: user.role,
-      department: user.department,
+      department: user.department?.name || null,
       position: user.position,
       employeeId: user.employeeId,
       createdAt: user.createdAt,

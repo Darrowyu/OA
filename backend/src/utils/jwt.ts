@@ -8,7 +8,8 @@ export interface JwtPayload {
   role: UserRole;
   employeeId?: string;
   name?: string;
-  department?: string;
+  departmentId?: string | null;
+  department?: string | null;  // 部门名称
   iat?: number;
   exp?: number;
 }
@@ -27,10 +28,11 @@ export function generateAccessToken(
   role: UserRole,
   employeeId?: string,
   name?: string,
-  department?: string
+  departmentId?: string | null,
+  department?: string | null
 ): string {
   return jwt.sign(
-    { userId, username, role, employeeId, name, department },
+    { userId, username, role, employeeId, name, departmentId, department },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] }
   );

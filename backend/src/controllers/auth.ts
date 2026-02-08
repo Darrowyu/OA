@@ -17,7 +17,7 @@ interface RegisterRequest {
   name: string;
   email: string;
   role?: UserRole;
-  department: string;
+  departmentId?: string;
   employeeId: string;
 }
 
@@ -87,7 +87,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department,
+        departmentId: user.departmentId,
         employeeId: user.employeeId,
       },
       ...tokens,
@@ -109,12 +109,12 @@ export async function register(req: Request, res: Response): Promise<void> {
       name,
       email,
       role = UserRole.USER,
-      department,
+      departmentId,
       employeeId,
     } = req.body as RegisterRequest;
 
     // 验证必填字段
-    if (!username || !password || !name || !email || !department || !employeeId) {
+    if (!username || !password || !name || !email || !employeeId) {
       res.status(400).json(fail('MISSING_FIELDS', '请填写所有必填字段'));
       return;
     }
@@ -178,7 +178,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         name,
         email,
         role,
-        department,
+        departmentId: departmentId || null,
         employeeId,
         isActive: true,
       },
@@ -194,7 +194,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department,
+        departmentId: user.departmentId,
         employeeId: user.employeeId,
       },
       ...tokens,

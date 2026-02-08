@@ -70,7 +70,14 @@ export async function authMiddleware(
     // 检查用户是否存在且激活
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, isActive: true, employeeId: true, name: true, department: true },
+      select: {
+        id: true,
+        isActive: true,
+        employeeId: true,
+        name: true,
+        departmentId: true,
+        department: { select: { name: true } }
+      },
     });
 
     if (!user) {
@@ -88,7 +95,8 @@ export async function authMiddleware(
       isActive: user.isActive,
       employeeId: user.employeeId,
       name: user.name,
-      department: user.department,
+      departmentId: user.departmentId,
+      department: user.department?.name || null,
     };
 
     next();
@@ -232,7 +240,14 @@ export async function optionalAuthMiddleware(
       const payload = verifyAccessToken(token);
       const user = await prisma.user.findUnique({
         where: { id: payload.userId },
-        select: { id: true, isActive: true, employeeId: true, name: true, department: true },
+        select: {
+          id: true,
+          isActive: true,
+          employeeId: true,
+          name: true,
+          departmentId: true,
+          department: { select: { name: true } }
+        },
       });
 
       if (user && user.isActive) {
@@ -242,7 +257,8 @@ export async function optionalAuthMiddleware(
           isActive: user.isActive,
           employeeId: user.employeeId,
           name: user.name,
-          department: user.department,
+          departmentId: user.departmentId,
+          department: user.department?.name || null,
         };
       }
     }

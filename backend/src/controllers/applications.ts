@@ -18,7 +18,7 @@ interface RequestUser {
   role: UserRole;
   employeeId?: string;
   name?: string;
-  department?: string;
+  department?: string | null;
   isActive: boolean;
 }
 

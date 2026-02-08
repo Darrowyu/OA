@@ -21,7 +21,7 @@ interface CreateUserRequest {
   name: string;
   email: string;
   role: UserRole;
-  department: string;
+  departmentId?: string;
   employeeId: string;
   isActive?: boolean;
 }
@@ -31,7 +31,7 @@ interface UpdateUserRequest {
   name?: string;
   email?: string;
   role?: UserRole;
-  department?: string;
+  departmentId?: string;
   isActive?: boolean;
 }
 
@@ -43,7 +43,7 @@ interface ImportUserRequest {
     name: string;
     email: string;
     role: UserRole;
-    department: string;
+    departmentId?: string;
     employeeId: string;
   }>;
 }
@@ -77,7 +77,11 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
     }
 
     if (department) {
-      where.department = { contains: department, mode: 'insensitive' };
+      where.department = {
+        is: {
+          name: { contains: department, mode: 'insensitive' },
+        },
+      };
     }
 
     if (isActive !== undefined) {
@@ -104,11 +108,18 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
           name: true,
           email: true,
           role: true,
-          department: true,
+          departmentId: true,
           employeeId: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          department: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            }
+          }
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -180,13 +191,13 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       name,
       email,
       role,
-      department,
+      departmentId,
       employeeId,
       isActive = true,
     } = req.body as CreateUserRequest;
 
     // 验证必填字段
-    if (!username || !password || !name || !email || !role || !department || !employeeId) {
+    if (!username || !password || !name || !email || !role || !employeeId) {
       res.status(400).json(fail('MISSING_FIELDS', '请填写所有必填字段'));
       return;
     }
@@ -241,7 +252,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         name,
         email,
         role,
-        department,
+        departmentId: departmentId || null,
         employeeId,
         isActive,
       },
@@ -251,11 +262,18 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         name: true,
         email: true,
         role: true,
-        department: true,
+        departmentId: true,
         employeeId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          }
+        }
       },
     });
 
@@ -272,7 +290,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 export async function updateUser(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
-    const { name, email, role, department, isActive } = req.body as UpdateUserRequest;
+    const { name, email, role, departmentId, isActive } = req.body as UpdateUserRequest;
 
     // 检查用户是否存在
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -295,7 +313,9 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (role !== undefined) updateData.role = role;
-    if (department !== undefined) updateData.department = department;
+    if (departmentId !== undefined) {
+      updateData.department = departmentId ? { connect: { id: departmentId } } : { disconnect: true };
+    }
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const user = await prisma.user.update({
@@ -307,11 +327,18 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
         name: true,
         email: true,
         role: true,
-        department: true,
+        departmentId: true,
         employeeId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          }
+        }
       },
     });
 
@@ -410,7 +437,7 @@ interface ImportUserData {
   name: string;
   email: string;
   role: UserRole;
-  department: string;
+  departmentId?: string;
   employeeId: string;
 }
 
@@ -420,7 +447,7 @@ interface ImportUserData {
 function validateUserData(userData: ImportUserData, index: number): { valid: boolean; error?: { index: number; field: string; message: string } } {
   // 验证必填字段
   if (!userData.username || !userData.password || !userData.name ||
-      !userData.email || !userData.role || !userData.department || !userData.employeeId) {
+      !userData.email || !userData.role || !userData.employeeId) {
     return { valid: false, error: { index, field: 'multiple', message: '缺少必填字段' } };
   }
 
@@ -471,7 +498,7 @@ async function createSingleUser(userData: ImportUserData) {
       name: userData.name,
       email: userData.email,
       role: userData.role,
-      department: userData.department,
+      departmentId: userData.departmentId || null,
       employeeId: userData.employeeId,
       isActive: true,
     },
@@ -481,7 +508,14 @@ async function createSingleUser(userData: ImportUserData) {
       name: true,
       email: true,
       role: true,
-      department: true,
+      departmentId: true,
+      department: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        }
+      },
       employeeId: true,
       isActive: true,
       createdAt: true,
