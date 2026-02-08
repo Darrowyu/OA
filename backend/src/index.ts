@@ -22,6 +22,8 @@ import auditRoutes from './routes/audit';
 import calendarRoutes from './routes/calendar';
 import documentRoutes from './routes/documents';
 import attendanceRoutes from './routes/attendance';
+import announcementRoutes from './routes/announcements';
+import taskRoutes from './routes/tasks';
 import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeSocket } from './services/socketService';
@@ -85,6 +87,8 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // 404处理
 app.use(notFoundHandler);

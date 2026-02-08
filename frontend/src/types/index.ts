@@ -254,3 +254,64 @@ export interface NotificationState {
   hasMore: boolean;
   page: number;
 }
+
+// ============================================
+// 公告通知模块类型定义
+// ============================================
+
+// 公告类型枚举
+export enum AnnouncementType {
+  COMPANY = 'COMPANY',      // 公司公告
+  DEPARTMENT = 'DEPARTMENT', // 部门公告
+  SYSTEM = 'SYSTEM',        // 系统通知
+}
+
+// 公告附件类型
+export interface AnnouncementAttachment {
+  name: string;
+  url: string;
+  size: number;
+}
+
+// 公告类型
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: AnnouncementType;
+  targetDepts?: string[];
+  isTop: boolean;
+  validFrom: string;
+  validUntil?: string;
+  attachments?: AnnouncementAttachment[];
+  viewCount: number;
+  authorId: string;
+  authorName?: string;
+  isRead?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 阅读统计用户
+export interface ReadUser {
+  id: string;
+  name: string;
+  department: string;
+  readAt: string;
+}
+
+export interface UnreadUser {
+  id: string;
+  name: string;
+  department: string;
+}
+
+// 公告阅读统计
+export interface AnnouncementReadStats {
+  totalUsers: number;
+  readCount: number;
+  unreadCount: number;
+  readRate: number;
+  readUsers: ReadUser[];
+  unreadUsers: UnreadUser[];
+}

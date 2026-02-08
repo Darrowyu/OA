@@ -114,6 +114,12 @@ model User {
   approvedLeaves     LeaveRequest[]     @relation("LeaveApprover") // 审批的请假
   documentFolders    DocumentFolder[] // 创建的文件夹
   documents          Document[] // 上传的文档
+  announcements      Announcement[]     @relation("UserAnnouncements") // 发布的公告
+  announcementReads  AnnouncementRead[] // 已读公告记录
+  meetings           Meeting[]          @relation("UserMeetings") // 组织的会议
+  assignedTasks      Task[]             @relation("AssignedTasks") // 被分配的任务
+  createdTasks       Task[]             @relation("CreatedTasks") // 创建的任务
+  ownedProjects      TaskProject[]      // 拥有的项目
 
   @@index([departmentId])
   @@index([role])
@@ -1008,4 +1014,178 @@ model LeaveRequest {
   @@index([status])
   @@index([startDate])
   @@map("leave_requests")
+}
+
+// ============================================
+// 会议管理模块模型
+// ============================================
+
+enum MeetingStatus {
+  SCHEDULED   // 已预定
+  ONGOING     // 进行中
+  COMPLETED   // 已完成
+  CANCELLED   // 已取消
+}
+
+model MeetingRoom {
+  id          String    @id @default(cuid())
+  name        String    // 会议室名称
+  capacity    Int       // 容纳人数
+  location    String?   // 具体位置
+  facilities  Json?     // 设施列表 ["projector", "whiteboard", "video"]
+  image       String?   // 会议室图片URL
+  isActive    Boolean   @default(true)  // 是否启用
+  description String?   // 描述
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  meetings    Meeting[] // 关联会议
+
+  @@index([isActive])
+  @@index([capacity])
+  @@map("meeting_rooms")
+}
+
+model Meeting {
+  id          String        @id @default(cuid())
+  title       String        // 会议标题
+  description String?       // 会议描述
+  roomId      String?       // 会议室ID（可选，线上会议无会议室）
+  startTime   DateTime      // 开始时间
+  endTime     DateTime      // 结束时间
+  organizerId String        // 组织者ID
+  attendees   Json?         // 参与者列表 [{ userId, name, email, status }]
+  status      MeetingStatus @default(SCHEDULED)
+  minutes     String?       // 会议纪要
+  attachments Json?         // 附件列表 [{ name, url, size }]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // 关联字段
+  room      MeetingRoom? @relation(fields: [roomId], references: [id])
+  organizer User         @relation("UserMeetings", fields: [organizerId], references: [id])
+
+  @@index([roomId])
+  @@index([startTime])
+  @@index([organizerId])
+  @@index([status])
+  @@map("meetings")
+}
+
+// ============================================
+// 公告通知模块模型
+// ============================================
+
+enum AnnouncementType {
+  COMPANY      // 公司公告
+  DEPARTMENT   // 部门公告
+  SYSTEM       // 系统通知
+}
+
+model Announcement {
+  id          String             @id @default(cuid())
+  title       String             // 公告标题
+  content     String             // 富文本HTML内容
+  type        AnnouncementType   // 公告类型
+  targetDepts Json?              // 目标部门ID数组
+  isTop       Boolean            @default(false) // 是否置顶
+  validFrom   DateTime           // 生效时间
+  validUntil  DateTime?          // 过期时间
+  attachments Json?              // 附件 [{ name, url, size }]
+  viewCount   Int                @default(0) // 浏览次数
+  authorId    String             // 发布人ID
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // 关联字段
+  author User               @relation("UserAnnouncements", fields: [authorId], references: [id])
+  reads  AnnouncementRead[]
+
+  @@index([type])
+  @@index([isTop])
+  @@index([validFrom])
+  @@index([authorId])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  userId         String
+  readAt         DateTime     @default(now())
+
+  // 关联字段
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
+  @@map("announcement_reads")
+}
+
+// ============================================
+// 任务管理模块模型
+// ============================================
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  assigneeId  String?
+  creatorId   String
+  projectId   String?
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+  tags        Json?        // ["前端", "紧急"]
+  parentId    String?      // 子任务支持
+  order       Int          @default(0) // 看板排序
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // 关联字段
+  assignee User?  @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creator  User   @relation("CreatedTasks", fields: [creatorId], references: [id])
+  parent   Task?  @relation("SubTasks", fields: [parentId], references: [id])
+  subTasks Task[] @relation("SubTasks")
+
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([creatorId])
+  @@index([parentId])
+  @@map("tasks")
+}
+
+model TaskProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  ownerId     String
+  members     Json?    // 项目成员ID列表
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联字段
+  owner User @relation(fields: [ownerId], references: [id])
+
+  @@index([ownerId])
+  @@map("task_projects")
 }

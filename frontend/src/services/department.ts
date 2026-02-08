@@ -91,6 +91,14 @@ export const departmentApi = {
       .then((res: unknown) => res as ApiResponse<Department[]>),
 
   /**
+   * 获取部门列表（别名）
+   */
+  getDepartments: (): Promise<ApiResponse<Department[]>> =>
+    apiClient
+      .get('/departments/list')
+      .then((res: unknown) => res as ApiResponse<Department[]>),
+
+  /**
    * 获取部门详情
    */
   getDepartment: (id: string): Promise<ApiResponse<Department>> =>

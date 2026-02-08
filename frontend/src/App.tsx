@@ -17,7 +17,11 @@ import AuditLogs from "@/pages/admin/AuditLogs"
 import Departments from "@/pages/admin/Departments"
 import SchedulePage from "@/pages/schedule"
 import DocumentsPage from "@/pages/documents"
+import { MeetingsModule } from "@/pages/meetings"
 import ContactsPage from "@/pages/contacts"
+import AnnouncementsPage from "@/pages/announcements"
+import AnnouncementDetail from "@/pages/announcements/AnnouncementDetail"
+import AnnouncementForm from "@/pages/announcements/AnnouncementForm"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -152,6 +156,18 @@ function App() {
           </ProtectedRoute>
         }
       />
+      {/* 会议管理模块 */}
+      <Route
+        path="/meetings/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <MeetingsModule />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/schedule"
         element={
@@ -182,12 +198,44 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* 公告通知模块 */}
       <Route
         path="/announcements"
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <PlaceholderPage title="公告通知" />
+              <AnnouncementsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/announcements/new"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <AnnouncementForm />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/announcements/:id"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <AnnouncementDetail />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/announcements/:id/edit"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <AnnouncementForm />
             </DashboardLayout>
           </ProtectedRoute>
         }
