@@ -662,3 +662,233 @@ export async function getManagers(req: Request, res: Response): Promise<void> {
     res.status(500).json(fail('INTERNAL_ERROR', '获取经理列表失败'));
   }
 }
+
+// 通讯录查询参数类型
+interface ContactsQueryParams {
+  page?: string;
+  pageSize?: string;
+  departmentId?: string;
+  search?: string;
+}
+
+/**
+ * 获取通讯录列表
+ * GET /api/users/contacts
+ */
+export async function getContacts(req: Request, res: Response): Promise<void> {
+  try {
+    const {
+      page = '1',
+      pageSize = '20',
+      departmentId,
+      search,
+    } = req.query as ContactsQueryParams;
+
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const size = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const skip = (pageNum - 1) * size;
+
+    // 构建查询条件
+    const where: Prisma.UserWhereInput = {
+      isActive: true,
+    };
+
+    if (departmentId) {
+      where.departmentId = departmentId;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { employeeId: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // 并行查询总数和数据
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          role: true,
+          employeeId: true,
+          phone: true,
+          position: true,
+          isActive: true,
+          createdAt: true,
+          department: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            }
+          }
+        },
+        orderBy: { name: 'asc' },
+        skip,
+        take: size,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / size);
+
+    // 格式化返回数据
+    const formattedUsers = users.map(user => ({
+      ...user,
+      department: user.department?.name || '',
+      departmentId: user.department?.id || '',
+    }));
+
+    res.json(success(formattedUsers, {
+      pagination: {
+        page: pageNum,
+        pageSize: size,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
+      },
+    }));
+  } catch (error) {
+    logger.error('获取通讯录失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取通讯录时发生错误'));
+  }
+}
+
+/**
+ * 获取通讯录用户详情
+ * GET /api/users/:id/contact
+ */
+export async function getContactDetail(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        role: true,
+        employeeId: true,
+        phone: true,
+        position: true,
+        isActive: true,
+        createdAt: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            manager: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        },
+      },
+    });
+
+    if (!user) {
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
+      return;
+    }
+
+    // 格式化返回数据
+    const formattedUser = {
+      ...user,
+      department: user.department?.name || '',
+      departmentId: user.department?.id || '',
+      departmentName: user.department?.name || '',
+      manager: user.department?.manager || null,
+    };
+
+    res.json(success(formattedUser));
+  } catch (error) {
+    logger.error('获取用户详情失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户详情时发生错误'));
+  }
+}
+
+/**
+ * 导出通讯录
+ * GET /api/users/export
+ */
+export async function exportContacts(req: Request, res: Response): Promise<void> {
+  try {
+    const { departmentId, search } = req.query as { departmentId?: string; search?: string };
+
+    // 构建查询条件
+    const where: Prisma.UserWhereInput = {
+      isActive: true,
+    };
+
+    if (departmentId) {
+      where.departmentId = departmentId;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { employeeId: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // 查询所有符合条件的用户
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+        phone: true,
+        position: true,
+        department: {
+          select: {
+            name: true,
+          }
+        }
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // 生成 CSV 内容
+    const headers = ['姓名', '工号', '部门', '职位', '邮箱', '电话'];
+    const rows = users.map(user => [
+      user.name,
+      user.employeeId || '',
+      user.department?.name || '',
+      user.position || '',
+      user.email,
+      user.phone || '',
+    ]);
+
+    // BOM for Excel UTF-8 compatibility
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="通讯录_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csvContent);
+  } catch (error) {
+    logger.error('导出通讯录失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '导出通讯录时发生错误'));
+  }
+}

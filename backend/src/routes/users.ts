@@ -9,6 +9,9 @@ import {
   importUsers,
   getFactoryManagers,
   getManagers,
+  getContacts,
+  getContactDetail,
+  exportContacts,
 } from '../controllers/users';
 import { authMiddleware, requireRole, requireMinRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
@@ -80,5 +83,26 @@ router.delete('/:id', requireRole(UserRole.ADMIN), deleteUser);
  * @access  Private (Admin only)
  */
 router.post('/:id/reset-password', requireRole(UserRole.ADMIN), resetPassword);
+
+/**
+ * @route   GET /api/users/contacts
+ * @desc    获取通讯录列表（支持分页、搜索、部门筛选）
+ * @access  Private
+ */
+router.get('/contacts', getContacts);
+
+/**
+ * @route   GET /api/users/export
+ * @desc    导出通讯录
+ * @access  Private
+ */
+router.get('/export', exportContacts);
+
+/**
+ * @route   GET /api/users/:id/contact
+ * @desc    获取通讯录用户详情
+ * @access  Private
+ */
+router.get('/:id/contact', getContactDetail);
 
 export default router;

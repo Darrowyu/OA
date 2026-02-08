@@ -17,6 +17,7 @@ import AuditLogs from "@/pages/admin/AuditLogs"
 import Departments from "@/pages/admin/Departments"
 import SchedulePage from "@/pages/schedule"
 import DocumentsPage from "@/pages/documents"
+import ContactsPage from "@/pages/contacts"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -176,7 +177,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <PlaceholderPage title="通讯录" />
+              <ContactsPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
