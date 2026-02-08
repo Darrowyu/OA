@@ -1,21 +1,8 @@
 import { Request, Response } from 'express';
 import { CalendarEventType } from '@prisma/client';
 import * as calendarService from '../services/calendarService';
+import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
-
-// 扩展Request类型
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        name: string;
-        role: string;
-      };
-    }
-  }
-}
 
 /**
  * 获取日程列表
@@ -312,7 +299,18 @@ export async function getAttendingEvents(req: Request, res: Response): Promise<v
       return;
     }
 
-    const events = await calendarService.getAttendingEvents(user.id, user.email, start, end);
+    // 获取用户邮箱
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true },
+    });
+
+    if (!userRecord) {
+      res.status(404).json({ success: false, error: '用户不存在' });
+      return;
+    }
+
+    const events = await calendarService.getAttendingEvents(user.id, userRecord.email, start, end);
 
     res.json({
       success: true,
@@ -345,7 +343,18 @@ export async function updateAttendeeStatus(req: Request, res: Response): Promise
       return;
     }
 
-    await calendarService.updateAttendeeStatus(id, user.email, status as calendarService.Attendee['status']);
+    // 获取用户邮箱
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true },
+    });
+
+    if (!userRecord) {
+      res.status(404).json({ success: false, error: '用户不存在' });
+      return;
+    }
+
+    await calendarService.updateAttendeeStatus(id, userRecord.email, status as calendarService.Attendee['status']);
 
     res.json({
       success: true,

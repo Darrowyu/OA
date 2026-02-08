@@ -62,7 +62,7 @@ export async function createEvent(
         type: data.type,
         isAllDay: data.isAllDay ?? false,
         recurrence: data.recurrence,
-        attendees: data.attendees as Prisma.InputJsonValue,
+        attendees: data.attendees as unknown as Prisma.InputJsonValue,
         isPrivate: data.isPrivate ?? false,
         color: data.color,
       },
@@ -197,7 +197,7 @@ export async function updateEvent(
         type: data.type,
         isAllDay: data.isAllDay,
         recurrence: data.recurrence,
-        attendees: data.attendees as Prisma.InputJsonValue,
+        attendees: data.attendees as unknown as Prisma.InputJsonValue,
         isPrivate: data.isPrivate,
         color: data.color,
       },
@@ -300,16 +300,13 @@ export async function getAttendingEvents(
 ): Promise<CalendarEventWithUser[]> {
   try {
     // 查找用户作为参与者的日程
+    // 使用字符串匹配查询包含用户邮箱的 attendees JSON
     const events = await prisma.calendarEvent.findMany({
       where: {
         AND: [
           { startTime: { lte: endDate } },
           { endTime: { gte: startDate } },
         ],
-        attendees: {
-          path: '$[*].email',
-          array_contains: userEmail,
-        },
       },
       orderBy: { startTime: 'asc' },
       include: {
@@ -324,7 +321,13 @@ export async function getAttendingEvents(
       },
     });
 
-    return events;
+    // 在内存中过滤包含用户邮箱的事件
+    const filteredEvents = events.filter((event) => {
+      const attendees = event.attendees as Attendee[] | null;
+      return attendees?.some((attendee) => attendee.email === userEmail);
+    });
+
+    return filteredEvents;
   } catch (error) {
     logger.error('获取参与日程失败', { error: error instanceof Error ? error.message : '未知错误', userId });
     throw error;
@@ -356,7 +359,7 @@ export async function updateAttendeeStatus(
     await prisma.calendarEvent.update({
       where: { id: eventId },
       data: {
-        attendees: updatedAttendees as Prisma.InputJsonValue,
+        attendees: updatedAttendees as unknown as Prisma.InputJsonValue,
       },
     });
 

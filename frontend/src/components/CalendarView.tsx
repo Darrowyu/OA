@@ -10,7 +10,6 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   addMonths,
   subMonths,
   addWeeks,
@@ -20,7 +19,6 @@ import {
   startOfDay,
   endOfDay,
   isToday,
-  getHours,
   setHours,
   setMinutes,
 } from 'date-fns';
