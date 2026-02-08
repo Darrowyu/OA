@@ -41,7 +41,13 @@ const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
   }
 }
 
+// 可以执行审批的角色（不包括管理员，管理员只能查看）
 const canApprove = (role: UserRole): boolean => {
+  return [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO].includes(role)
+}
+
+// 可以查看待审批页面的角色（包括管理员）
+const canViewPending = (role: UserRole): boolean => {
   return [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO, UserRole.ADMIN].includes(role)
 }
 
@@ -73,7 +79,7 @@ export function PendingList() {
   }, [])
 
   const loadPendingApplications = React.useCallback(async () => {
-    if (!user || !canApprove(user.role)) return
+    if (!user || !canViewPending(user.role)) return
     setLoading(true)
     try {
       const status = getPendingStatusByRole(user.role)
@@ -101,6 +107,12 @@ export function PendingList() {
     const { application, action, comment, skipManager, selectedManagerIds } = approvalDialog
     if (!application || !action || !user) return
 
+    // 管理员不能执行审批操作
+    if (user.role === UserRole.ADMIN) {
+      toast.error("管理员只能查看，不能执行审批操作")
+      return
+    }
+
     if (action === "APPROVE") {
       const signature = await getSignature(user.username)
       if (!signature) {
@@ -108,7 +120,7 @@ export function PendingList() {
         setSignatureDialogOpen(true)
         return
       }
-      if ((user.role === UserRole.DIRECTOR || user.role === UserRole.ADMIN) && !skipManager && selectedManagerIds.length === 0) {
+      if (user.role === UserRole.DIRECTOR && !skipManager && selectedManagerIds.length === 0) {
         toast.error("请选择至少一位经理进行审批")
         return
       }
@@ -122,8 +134,7 @@ export function PendingList() {
         case UserRole.FACTORY_MANAGER: response = await approvalsApi.factoryApprove(application.id, data); break
         case UserRole.DIRECTOR: response = await approvalsApi.directorApprove(application.id, data); break
         case UserRole.MANAGER: response = await approvalsApi.managerApprove(application.id, data); break
-        case UserRole.CEO:
-        case UserRole.ADMIN: response = await approvalsApi.ceoApprove(application.id, data); break
+        case UserRole.CEO: response = await approvalsApi.ceoApprove(application.id, data); break
         default: throw new Error("无审批权限")
       }
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
@@ -154,7 +165,7 @@ export function PendingList() {
     )
   }
 
-  if (!user || !canApprove(user.role)) {
+  if (!user || !canViewPending(user.role)) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="w-96 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
@@ -167,6 +178,9 @@ export function PendingList() {
       </div>
     )
   }
+
+  // 判断当前用户是否可以执行审批操作（管理员只能查看，不能审批）
+  const userCanApprove = user && canApprove(user.role)
 
   return (
     <div className="space-y-6">
@@ -226,24 +240,28 @@ export function PendingList() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
-                        onClick={() => openApprovalDialog(app, "APPROVE")}
-                        disabled={processingId === app.id}
-                      >
-                        {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
-                        onClick={() => openApprovalDialog(app, "REJECT")}
-                        disabled={processingId === app.id}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
+                      {userCanApprove && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
+                            onClick={() => openApprovalDialog(app, "APPROVE")}
+                            disabled={processingId === app.id}
+                          >
+                            {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                            onClick={() => openApprovalDialog(app, "REJECT")}
+                            disabled={processingId === app.id}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -253,8 +271,8 @@ export function PendingList() {
         </div>
       )}
 
-      {/* 审批对话框 */}
-      <Dialog open={approvalDialog.open} onOpenChange={(open) => setApprovalDialog({ ...approvalDialog, open })}>
+      {/* 审批对话框 - 仅对可审批用户显示 */}
+      <Dialog open={approvalDialog.open && userCanApprove} onOpenChange={(open) => setApprovalDialog({ ...approvalDialog, open })}>
         <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
@@ -269,7 +287,7 @@ export function PendingList() {
                   <p className="font-medium text-gray-900">{approvalDialog.application.title}</p>
                 </div>
               )}
-              {(user?.role === UserRole.DIRECTOR || user?.role === UserRole.ADMIN) && approvalDialog.action === "APPROVE" && (
+              {user?.role === UserRole.DIRECTOR && approvalDialog.action === "APPROVE" && (
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
