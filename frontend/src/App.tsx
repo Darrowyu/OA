@@ -9,14 +9,66 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Navigate to="/applications" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* 申请管理模块 */}
+      {/* 工作台 - 跳转申请列表 */}
       <Route
-        path="/applications/*"
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Navigate to="/approval" replace />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 审批中心模块 */}
+      <Route
+        path="/approval/*"
         element={
           <ProtectedRoute>
             <ApplicationsModule />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 其他模块占位 */}
+      <Route
+        path="/attendance"
+        element={
+          <ProtectedRoute>
+            <div className="p-8">考勤管理模块开发中...</div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/schedule"
+        element={
+          <ProtectedRoute>
+            <div className="p-8">日程管理模块开发中...</div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <div className="p-8">文档中心模块开发中...</div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contacts"
+        element={
+          <ProtectedRoute>
+            <div className="p-8">通讯录模块开发中...</div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/announcements"
+        element={
+          <ProtectedRoute>
+            <div className="p-8">公告通知模块开发中...</div>
           </ProtectedRoute>
         }
       />
@@ -40,6 +92,9 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* 旧路由重定向 */}
+      <Route path="/applications/*" element={<Navigate to="/approval" replace />} />
     </Routes>
   )
 }

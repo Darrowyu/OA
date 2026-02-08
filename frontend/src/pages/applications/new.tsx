@@ -39,7 +39,7 @@ export function ApplicationNew() {
     try {
       await applicationsApi.createApplication(data)
       toast.success("申请创建成功")
-      navigate("/applications")
+      navigate("/approval")
     } catch (error) {
       console.error("创建申请失败:", error)
       toast.error("创建申请失败")
@@ -56,7 +56,7 @@ export function ApplicationNew() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/applications")}
+            onClick={() => navigate("/approval")}
             className="rounded-xl hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -93,7 +93,7 @@ export function ApplicationNew() {
               factoryManagers={factoryManagers}
               managers={managers}
               onSubmit={handleSubmit}
-              onCancel={() => navigate("/applications")}
+              onCancel={() => navigate("/approval")}
               loading={submitting}
             />
           )}

@@ -248,7 +248,7 @@ export const ApprovedList: React.FC = () => {
         variant="outline"
         size="sm"
         className="w-full rounded-xl"
-        onClick={() => navigate(`/applications/${app.id}`)}
+        onClick={() => navigate(`/approval/${app.id}`)}
       >
         <Eye className="h-4 w-4 mr-1" /> 查看详情
       </Button>
@@ -415,7 +415,7 @@ export const ApprovedList: React.FC = () => {
                           variant="ghost"
                           size="icon"
                           className="rounded-lg hover:bg-gray-100"
-                          onClick={() => navigate(`/applications/${app.id}`)}
+                          onClick={() => navigate(`/approval/${app.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

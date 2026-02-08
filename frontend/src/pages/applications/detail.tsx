@@ -266,7 +266,7 @@ export const ApplicationDetail: React.FC = () => {
         <Button
           variant="outline"
           className="mt-4 rounded-xl"
-          onClick={() => navigate("/applications")}
+          onClick={() => navigate("/approval")}
         >
           返回列表
         </Button>
@@ -284,7 +284,7 @@ export const ApplicationDetail: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/applications")}
+          onClick={() => navigate("/approval")}
           className="rounded-xl hover:bg-gray-100"
         >
           <ArrowLeft className="h-5 w-5" />

@@ -126,7 +126,7 @@ export default function Settings() {
   // 权限检查
   useEffect(() => {
     if (!isAdmin) {
-      navigate('/applications');
+      navigate('/approval');
     }
   }, [isAdmin, navigate]);
 

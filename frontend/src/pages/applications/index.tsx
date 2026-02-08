@@ -17,7 +17,7 @@ export function ApplicationsModule() {
         <Route path=":id" element={<ApplicationDetail />} />
         <Route path="pending" element={<PendingList />} />
         <Route path="approved" element={<ApprovedList />} />
-        <Route path="*" element={<Navigate to="/applications" replace />} />
+        <Route path="*" element={<Navigate to="/approval" replace />} />
       </Route>
     </Routes>
   )

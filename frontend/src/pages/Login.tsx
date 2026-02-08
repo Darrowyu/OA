@@ -40,7 +40,7 @@ export function Login() {
 
       login(user, accessToken)
 
-      navigate("/applications")
+      navigate("/approval")
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '登录失败';
       setError(errorMessage);

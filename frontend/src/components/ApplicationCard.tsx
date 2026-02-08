@@ -94,7 +94,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({ application })
   const priority = priorityConfig[application.priority]
 
   const handleClick = () => {
-    navigate(`/applications/${application.id}`)
+    navigate(`/approval/${application.id}`)
   }
 
   return (
