@@ -60,6 +60,9 @@ model User {
   department   String
   employeeId   String     @unique
   isActive     Boolean    @default(true)
+  avatar       String?    // 头像图片 URL
+  phone        String?    // 手机号
+  position     String?    // 职位
   signature    String?    // 签名图片 Base64
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -72,6 +75,8 @@ model User {
   ceoApprovals CeoApproval[]
   attachments Attachment[]
   reminderLogs ReminderLog[]
+  preference UserPreference?  // 用户偏好设置（一对一）
+  devices    UserDevice[]     // 登录设备列表
 
   @@index([department])
   @@index([role])
@@ -586,4 +591,94 @@ model PartLifecycle {
   @@index([partId])
   @@index([status])
   @@index([expectedEndDate])
+}
+
+// ============================================
+// 用户偏好设置模块模型
+// ============================================
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum InterfaceDensity {
+  COMPACT
+  DEFAULT
+  COMFORTABLE
+}
+
+enum ProfileVisibility {
+  EVERYONE
+  COLLEAGUES
+  DEPARTMENT
+}
+
+enum OnlineStatus {
+  VISIBLE
+  HIDDEN
+}
+
+enum NotificationFrequency {
+  INSTANT
+  DIGEST
+  OFF
+}
+
+// 用户偏好设置
+model UserPreference {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+
+  // 个性化设置
+  theme                 Theme               @default(SYSTEM)
+  interfaceDensity      InterfaceDensity    @default(DEFAULT)
+  sidebarCollapsed      Boolean             @default(false)
+
+  // 通知偏好
+  emailNotifications    Boolean             @default(true)
+  approvalNotifications NotificationFrequency @default(INSTANT)
+  systemAnnouncements   Boolean             @default(true)
+  weeklyReport          Boolean             @default(false)
+  monthlyReport         Boolean             @default(false)
+
+  // 隐私设置
+  profileVisibility     ProfileVisibility   @default(COLLEAGUES)
+  onlineStatus          OnlineStatus        @default(VISIBLE)
+
+  // 2FA 设置
+  twoFactorEnabled      Boolean             @default(false)
+  twoFactorSecret       String?             // 2FA 密钥（加密存储）
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  // 关联字段
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 用户登录设备
+model UserDevice {
+  id            String    @id @default(cuid())
+  userId        String
+  deviceId      String    @unique  // 设备唯一标识
+  deviceName    String    // 设备名称（如：Chrome on Windows）
+  deviceType    String?   // 设备类型（desktop/mobile/tablet）
+  browser       String?   // 浏览器
+  os            String?   // 操作系统
+  ipAddress     String?   // IP 地址
+  location      String?   // 登录位置
+  lastActiveAt  DateTime  @default(now())
+  isCurrent     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  // 关联字段
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([lastActiveAt])
 }

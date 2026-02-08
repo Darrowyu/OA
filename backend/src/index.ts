@@ -16,6 +16,7 @@ import emailRoutes from './routes/email';
 import reminderRoutes from './routes/reminders';
 import adminRoutes from './routes/admin';
 import equipmentRoutes from './routes/equipment';
+import profileRoutes from './routes/profile';
 import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
@@ -69,6 +70,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/settings/reminders', reminderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/equipment', equipmentRoutes);
+app.use('/api/profile', profileRoutes);
 
 // 404处理
 app.use(notFoundHandler);

@@ -11,6 +11,7 @@ import { Sidebar } from "@/components/Sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
 import Users from "@/pages/Users"
 import Settings from "@/pages/Settings"
+import Profile from "@/pages/Profile"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -205,6 +206,18 @@ function App() {
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
               <Settings />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 个人设置 */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Profile />
             </DashboardLayout>
           </ProtectedRoute>
         }

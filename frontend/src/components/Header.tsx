@@ -17,6 +17,7 @@ const breadcrumbMap: Record<string, { name: string; icon: React.ElementType }> =
   "/announcements": { name: "公告通知", icon: LayoutGrid },
   "/users": { name: "用户管理", icon: LayoutGrid },
   "/settings": { name: "系统设置", icon: LayoutGrid },
+  "/profile": { name: "个人设置", icon: User },
 }
 
 export function Header() {
@@ -142,12 +143,12 @@ export function Header() {
                   <button
                     onClick={() => {
                       setIsMenuOpen(false)
-                      // TODO: 打开个人资料页面
+                      navigate("/profile")
                     }}
                     className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <User className="h-4 w-4 text-gray-500" />
-                    个人资料
+                    个人设置
                   </button>
                 </div>
 
