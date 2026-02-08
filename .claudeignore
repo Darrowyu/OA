@@ -1,0 +1,37 @@
+# 依赖和构建产物 - 减少token消耗
+node_modules/
+dist/
+build/
+.cache/
+*.log
+
+# 版本控制
+.git/
+
+# 测试和覆盖率
+coverage/
+
+# 大型资源文件
+*.min.js
+*.min.css
+*.bundle.js
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 数据库相关（大型SQL文件）
+*.dump
+*.sql
+
+# 临时文件
+*.tmp
+*.temp
+tmp/
+temp/

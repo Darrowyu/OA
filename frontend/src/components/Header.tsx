@@ -1,6 +1,7 @@
-import { motion } from "framer-motion"
-import { Search, Share2, Bell, MoreHorizontal, ChevronRight, LayoutGrid, FileCheck, Users } from "lucide-react"
-import { useLocation } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { Search, Share2, Bell, MoreHorizontal, ChevronRight, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -19,8 +20,27 @@ const breadcrumbMap: Record<string, { name: string; icon: React.ElementType }> =
 }
 
 export function Header() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
 
   // 获取当前页面面包屑
   const getBreadcrumb = () => {
@@ -35,7 +55,6 @@ export function Header() {
   }
 
   const breadcrumb = getBreadcrumb()
-  const Icon = breadcrumb.icon
 
   return (
     <motion.header
@@ -45,13 +64,8 @@ export function Header() {
       className="sticky top-0 z-40 h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white/95 backdrop-blur-sm"
     >
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm">
-        <span className="text-gray-500">智慧OA</span>
-        <ChevronRight className="h-4 w-4 text-gray-400" />
-        <span className="text-gray-900 font-medium flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          {breadcrumb.name}
-        </span>
+      <nav className="flex items-center text-sm ml-8">
+        <span className="text-gray-900 font-medium">{breadcrumb.name}</span>
       </nav>
 
       {/* Search */}
@@ -69,13 +83,6 @@ export function Header() {
       <div className="flex items-center gap-3">
         <span className="text-xs text-gray-500">3分钟前更新</span>
 
-        {/* User Avatar */}
-        <Avatar className="w-8 h-8 border-2 border-white">
-          <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
-            {(user?.name?.charAt(0) || user?.username?.charAt(0) || "U").toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-
         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
           <Share2 className="h-4 w-4 text-gray-600" />
         </Button>
@@ -85,14 +92,80 @@ export function Header() {
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
         </Button>
 
-        <Button className="bg-gray-900 hover:bg-gray-800 text-white text-sm">
-          <Users className="h-4 w-4 mr-2" />
-          邀请成员
-        </Button>
+        {/* 更多菜单 */}
+        <div className="relative" ref={menuRef}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full hover:bg-gray-100"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <MoreHorizontal className="h-4 w-4 text-gray-600" />
+          </Button>
 
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
-          <MoreHorizontal className="h-4 w-4 text-gray-600" />
-        </Button>
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
+              >
+                {/* 用户信息 */}
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-gray-200 text-gray-700 text-sm">
+                        {(user?.name?.charAt(0) || user?.username?.charAt(0) || "U").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.username}</p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email || user?.role}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 菜单项 */}
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      navigate("/settings")
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Settings className="h-4 w-4 text-gray-500" />
+                    系统设置
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      // TODO: 打开个人资料页面
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <User className="h-4 w-4 text-gray-500" />
+                    个人资料
+                  </button>
+                </div>
+
+                {/* 分隔线 */}
+                <div className="border-t border-gray-100 my-1" />
+
+                {/* 退出登录 */}
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  退出登录
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.header>
   )

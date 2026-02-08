@@ -21,7 +21,7 @@ function SidebarToggle() {
       animate={{ left: isCollapsed ? '80px' : '268px' }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       onClick={() => setIsCollapsed(!isCollapsed)}
-      className="fixed top-4 z-[60] p-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 text-gray-500 transition-colors"
+      className="fixed top-4 z-[60] p-2 bg-transparent rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
     >
       <AnimatePresence mode="wait">
         {isCollapsed ? (

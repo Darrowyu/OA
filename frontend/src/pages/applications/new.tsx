@@ -57,7 +57,7 @@ export function ApplicationNew() {
             variant="ghost"
             size="icon"
             onClick={() => navigate("/approval")}
-            className="rounded-xl hover:bg-gray-100"
+            className="rounded-xl hover:bg-blue-500 hover:text-white text-blue-500"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -72,8 +72,8 @@ export function ApplicationNew() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-coral-light to-orange-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-coral text-white flex items-center justify-center shadow-lg shadow-coral/30">
-              <FilePlus className="h-5 w-5" />
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
+              <FilePlus className="h-5 w-5 text-blue-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">填写申请信息</h2>

@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { useAuth } from "@/contexts/AuthContext"
+import { useState } from "react"
 import { useSidebar } from "@/contexts/SidebarContext"
 import {
   LayoutGrid,
@@ -12,17 +12,26 @@ import {
   Bell,
   Settings,
   UserCog,
-  LogOut,
   Plus,
-  HelpCircle,
   Receipt,
+  List,
+  CheckCircle,
+  ChevronDown,
+  HelpCircle,
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
 interface SidebarProps {
   pendingCount?: number
+}
+
+interface SubMenuItem {
+  path: string
+  name: string
+  icon: string
+  badge?: number
+  show?: boolean
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -34,40 +43,28 @@ const iconMap: Record<string, React.ElementType> = {
   Users,
   Bell,
   Receipt,
+  List,
+  CheckCircle,
+  Plus,
 }
 
 export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const { isCollapsed } = useSidebar()
-  const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const [isApprovalExpanded, setIsApprovalExpanded] = useState(false)  // 审批中心展开状态
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
-  }
+  // 从 localStorage 获取用户信息
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
 
   const isAdmin = user?.role === "ADMIN"
   const isApprover = user?.role === "FACTORY_MANAGER" || user?.role === "DIRECTOR" || user?.role === "MANAGER" || user?.role === "CEO" || user?.role === "ADMIN"
-
-  const getRoleLabel = (role: string) => {
-    const map: Record<string, string> = {
-      ADMIN: "管理员",
-      FACTORY_MANAGER: "厂长",
-      DIRECTOR: "总监",
-      MANAGER: "经理",
-      CEO: "CEO",
-      USER: "普通用户",
-      READONLY: "只读用户",
-    }
-    return map[role] || role
-  }
 
   const isApprovalActive = location.pathname.startsWith("/approval")
 
   const mainNavItems = [
     { path: "/dashboard", name: "工作台", icon: "LayoutGrid", active: location.pathname === "/dashboard" },
-    { path: "/approval", name: "审批中心", icon: "FileCheck", badge: pendingCount, active: isApprovalActive },
     { path: "/attendance", name: "考勤管理", icon: "Clock" },
     { path: "/schedule", name: "日程管理", icon: "Calendar" },
     { path: "/documents", name: "文档中心", icon: "FolderOpen" },
@@ -75,8 +72,14 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
     { path: "/announcements", name: "公告通知", icon: "Bell" },
   ]
 
+  const approvalSubItems: SubMenuItem[] = [
+    { path: "/approval", name: "全部申请", icon: "List" },
+    { path: "/approval/pending", name: "待我审批", icon: "FileCheck", badge: pendingCount, show: isApprover },
+    { path: "/approval/approved", name: "已审批", icon: "CheckCircle" },
+    { path: "/approval/new", name: "新建申请", icon: "Plus" },
+  ]
+
   const favouriteItems = [
-    { path: "/approval/pending", name: "我的审批", icon: "FileCheck", show: isApprover },
     { path: "/approval/new?type=reimbursement", name: "报销申请", icon: "Receipt", show: true },
     { path: "/approval/new?type=leave", name: "请假申请", icon: "Calendar", show: true },
   ]
@@ -87,8 +90,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   }
 
   const textVariants = {
-    expanded: { opacity: 1, x: 0, display: "block" },
-    collapsed: { opacity: 0, x: -10, display: "none" },
+    expanded: { opacity: 1, x: 0, width: "auto" },
+    collapsed: { opacity: 0, x: -10, width: 0 },
   }
 
   return (
@@ -112,7 +115,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               animate="expanded"
               exit="collapsed"
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1 min-w-0"
+              className="flex-1 min-w-0 overflow-hidden"
             >
               <p className="text-lg font-bold text-gray-900">智慧OA</p>
               <p className="text-xs text-gray-500">企业办公系统</p>
@@ -136,7 +139,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 animate="expanded"
                 exit="collapsed"
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="ml-2"
+                className="ml-2 overflow-hidden"
               >
                 新建申请
               </motion.span>
@@ -148,7 +151,129 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2">
         <ul className="space-y-1">
-          {mainNavItems.map((item) => {
+          {/* 工作台 */}
+          <li>
+            <NavLink
+              to="/dashboard"
+              className={`flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
+                location.pathname === "/dashboard"
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+              } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
+            >
+              <LayoutGrid className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    variants={textVariants}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex-1 whitespace-nowrap overflow-hidden"
+                  >
+                    工作台
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                  工作台
+                </div>
+              )}
+            </NavLink>
+          </li>
+
+          {/* 审批中心 - 带子菜单 */}
+          <li>
+            <button
+              onClick={() => !isCollapsed && setIsApprovalExpanded(!isApprovalExpanded)}
+              className={`w-full flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
+                isApprovalActive
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+              } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
+            >
+              <FileCheck className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    variants={textVariants}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex-1 whitespace-nowrap text-left overflow-hidden"
+                  >
+                    审批中心
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  animate={{ rotate: isApprovalExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </motion.div>
+              )}
+              {pendingCount > 0 && !isCollapsed && (
+                <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center text-xs bg-red-100 text-red-600">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </Badge>
+              )}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                  审批中心
+                </div>
+              )}
+            </button>
+
+            {/* 审批中心子菜单 */}
+            <AnimatePresence>
+              {!isCollapsed && isApprovalExpanded && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-1 pb-1 pl-4 border-l-2 border-gray-100 ml-5 space-y-1">
+                    {approvalSubItems
+                      .filter((item) => item.show !== false)
+                      .map((item) => {
+                        const Icon = iconMap[item.icon] || LayoutGrid
+                        const isActive = location.pathname === item.path || (item.path !== "/approval" && location.pathname.startsWith(item.path))
+                        return (
+                          <li key={item.path}>
+                            <NavLink
+                              to={item.path}
+                              className={`flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 ${
+                                isActive
+                                  ? "bg-gray-50 text-gray-900 font-medium"
+                                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <Icon className="h-4 w-4 flex-shrink-0" />
+                              <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                              {item.badge ? (
+                                <Badge variant="secondary" className="h-4 min-w-4 flex items-center justify-center text-xs bg-red-100 text-red-600">
+                                  {item.badge > 99 ? "99+" : item.badge}
+                                </Badge>
+                              ) : null}
+                            </NavLink>
+                          </li>
+                        )
+                      })}
+                  </div>
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </li>
+
+          {/* 其他主导航 */}
+          {mainNavItems.slice(1).map((item) => {
             const Icon = iconMap[item.icon] || LayoutGrid
             return (
               <li key={item.path}>
@@ -169,17 +294,12 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         animate="expanded"
                         exit="collapsed"
                         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="flex-1 whitespace-nowrap"
+                        className="flex-1 whitespace-nowrap overflow-hidden"
                       >
                         {item.name}
                       </motion.span>
                     )}
                   </AnimatePresence>
-                  {item.badge && !isCollapsed ? (
-                    <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center text-xs bg-red-100 text-red-600">
-                      {item.badge > 99 ? "99+" : item.badge}
-                    </Badge>
-                  ) : null}
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                       {item.name}
@@ -200,14 +320,9 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 animate="expanded"
                 exit="collapsed"
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="flex items-center justify-between px-3 mb-2"
+                className="flex items-center justify-between px-3 mb-2 overflow-hidden"
               >
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">快捷入口</span>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Plus className="h-3 w-3 text-gray-400" />
-                  </Button>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -233,7 +348,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                             animate="expanded"
                             exit="collapsed"
                             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className="whitespace-nowrap"
+                            className="whitespace-nowrap overflow-hidden"
                           >
                             {item.name}
                           </motion.span>
@@ -261,7 +376,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   animate="expanded"
                   exit="collapsed"
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="px-3 mb-2"
+                  className="px-3 mb-2 overflow-hidden"
                 >
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">系统管理</span>
                 </motion.div>
@@ -284,7 +399,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         animate="expanded"
                         exit="collapsed"
                         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="whitespace-nowrap"
+                        className="whitespace-nowrap overflow-hidden"
                       >
                         用户管理
                       </motion.span>
@@ -313,7 +428,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         animate="expanded"
                         exit="collapsed"
                         transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="whitespace-nowrap"
+                        className="whitespace-nowrap overflow-hidden"
                       >
                         系统设置
                       </motion.span>
@@ -331,86 +446,39 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
         )}
       </nav>
 
+      {/* 帮助按钮 */}
       <div className="p-4 border-t border-gray-200">
-        <div className="space-y-1">
-          <button className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative w-full ${
+        <button
+          onClick={() => {
+            // TODO: 打开帮助中心
+          }}
+          className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative w-full ${
             isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
-          }`}>
-            <HelpCircle className="h-5 w-5 flex-shrink-0" />
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  variants={textVariants}
-                  initial="collapsed"
-                  animate="expanded"
-                  exit="collapsed"
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="whitespace-nowrap"
-                >
-                  帮助中心
-                </motion.span>
-              )}
-            </AnimatePresence>
-            {isCollapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                帮助中心
-              </div>
-            )}
-          </button>
-          <button
-            onClick={handleLogout}
-            className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-red-600 transition-all duration-300 group relative w-full ${
-              isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
-            }`}
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  variants={textVariants}
-                  initial="collapsed"
-                  animate="expanded"
-                  exit="collapsed"
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="whitespace-nowrap"
-                >
-                  退出登录
-                </motion.span>
-              )}
-            </AnimatePresence>
-            {isCollapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                退出登录
-              </div>
-            )}
-          </button>
-        </div>
-      </div>
-
-      <div className="p-4 border-t border-gray-200">
-        <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
-          <Avatar className="w-10 h-10 flex-shrink-0">
-            <AvatarFallback className="bg-gray-200 text-gray-700">
-              {(user?.name?.charAt(0) || user?.username?.charAt(0) || "U").toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          }`}
+        >
+          <HelpCircle className="h-5 w-5 flex-shrink-0" />
           <AnimatePresence>
             {!isCollapsed && (
-              <motion.div
+              <motion.span
                 variants={textVariants}
                 initial="collapsed"
                 animate="expanded"
                 exit="collapsed"
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 min-w-0"
+                className="whitespace-nowrap overflow-hidden"
               >
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || user?.username}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email || getRoleLabel(user?.role || "")}</p>
-              </motion.div>
+                帮助中心
+              </motion.span>
             )}
           </AnimatePresence>
-        </div>
+          {isCollapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+              帮助中心
+            </div>
+          )}
+        </button>
       </div>
+
     </motion.aside>
   )
 }
