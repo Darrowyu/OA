@@ -14,6 +14,8 @@ import Settings from "@/pages/Settings"
 import Profile from "@/pages/Profile"
 import AuditLogs from "@/pages/admin/AuditLogs"
 import Departments from "@/pages/admin/Departments"
+import SchedulePage from "@/pages/schedule"
+import DocumentsPage from "@/pages/documents"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -153,17 +155,17 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <PlaceholderPage title="日程管理" />
+              <SchedulePage />
             </DashboardLayout>
           </ProtectedRoute>
         }
       />
       <Route
-        path="/documents"
+        path="/documents/*"
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <PlaceholderPage title="文档中心" />
+              <DocumentsPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
