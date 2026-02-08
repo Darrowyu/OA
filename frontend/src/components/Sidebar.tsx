@@ -93,8 +93,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   }
 
   const textVariants = {
-    expanded: { opacity: 1, x: 0 },
-    collapsed: { opacity: 0, x: -10 },
+    expanded: { opacity: 1, x: 0, display: "block" },
+    collapsed: { opacity: 0, x: -10, display: "none" },
   }
 
   return (
@@ -103,10 +103,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       animate={isCollapsed ? "collapsed" : "expanded"}
       variants={sidebarVariants}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50"
+      className="h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50 overflow-hidden"
     >
       {/* Logo */}
-      <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+      <div className={`p-4 flex items-center gap-3 border-b border-gray-100 ${isCollapsed ? "justify-center" : ""}`}>
         <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0">
           <LayoutGrid className="h-5 w-5 text-white" />
         </div>
@@ -117,7 +117,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-1 min-w-0"
             >
               <p className="text-lg font-bold text-gray-900">智慧OA</p>
               <p className="text-xs text-gray-500">企业办公系统</p>
@@ -129,7 +130,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-auto p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+          className={`p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0 ${isCollapsed ? "" : "ml-auto"}`}
         >
           <AnimatePresence mode="wait">
             {isCollapsed ? (
@@ -158,12 +159,12 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       </div>
 
       {/* Create Task Button */}
-      <div className="px-4 py-4">
+      <div className={`px-4 py-4 ${isCollapsed ? "flex justify-center" : ""}`}>
         <Button
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+          className={`bg-gray-900 hover:bg-gray-800 text-white transition-all duration-300 ${isCollapsed ? "w-10 h-10 p-0" : "w-full"}`}
           onClick={() => navigate("/approval/new")}
         >
-          <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
+          <Plus className="h-4 w-4 flex-shrink-0" />
           <AnimatePresence>
             {!isCollapsed && (
               <motion.span
@@ -171,7 +172,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 initial="collapsed"
                 animate="expanded"
                 exit="collapsed"
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="ml-2"
               >
                 新建申请
               </motion.span>
@@ -181,7 +183,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2">
         {/* Main Navigation */}
         <ul className="space-y-1">
           {mainNavItems.map((item) => {
@@ -190,13 +192,13 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 group relative ${
+                  className={`flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
                     item.active
-                      ? "bg-gray-100 text-gray-900 font-medium border-l-3 border-gray-900"
+                      ? "bg-gray-100 text-gray-900 font-medium"
                       : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                  } ${isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"}`}
                 >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -204,7 +206,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         initial="collapsed"
                         animate="expanded"
                         exit="collapsed"
-                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                         className="flex-1 whitespace-nowrap"
                       >
                         {item.name}
@@ -237,7 +239,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 initial="collapsed"
                 animate="expanded"
                 exit="collapsed"
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 className="flex items-center justify-between px-3 mb-2"
               >
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">快捷入口</span>
@@ -258,9 +260,11 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   <li key={item.path}>
                     <NavLink
                       to={item.path}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150 group relative"
+                      className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
+                        isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                      }`}
                     >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
                       <AnimatePresence>
                         {!isCollapsed && (
                           <motion.span
@@ -268,7 +272,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                             initial="collapsed"
                             animate="expanded"
                             exit="collapsed"
-                            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                             className="whitespace-nowrap"
                           >
                             {item.name}
@@ -298,7 +302,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   initial="collapsed"
                   animate="expanded"
                   exit="collapsed"
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className="px-3 mb-2"
                 >
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">系统管理</span>
@@ -309,9 +313,11 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               <li>
                 <NavLink
                   to="/users"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150 group relative"
+                  className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
+                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                  }`}
                 >
-                  <UserCog className="h-4 w-4 flex-shrink-0" />
+                  <UserCog className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -319,7 +325,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         initial="collapsed"
                         animate="expanded"
                         exit="collapsed"
-                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                         className="whitespace-nowrap"
                       >
                         用户管理
@@ -337,9 +343,11 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               <li>
                 <NavLink
                   to="/settings"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150 group relative"
+                  className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
+                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+                  }`}
                 >
-                  <Settings className="h-4 w-4 flex-shrink-0" />
+                  <Settings className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -347,7 +355,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                         initial="collapsed"
                         animate="expanded"
                         exit="collapsed"
-                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                         className="whitespace-nowrap"
                       >
                         系统设置
@@ -370,8 +378,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
       {/* Help Center & Logout */}
       <div className="p-4 border-t border-gray-200">
         <div className="space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150 group relative">
-            <HelpCircle className="h-4 w-4 flex-shrink-0" />
+          <button className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative w-full ${
+            isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+          }`}>
+            <HelpCircle className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.span
@@ -379,7 +389,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   initial="collapsed"
                   animate="expanded"
                   exit="collapsed"
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className="whitespace-nowrap"
                 >
                   帮助中心
@@ -395,9 +405,11 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
           </button>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-red-600 transition-colors duration-150 group relative"
+            className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-red-600 transition-all duration-300 group relative w-full ${
+              isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"
+            }`}
           >
-            <LogOut className="h-4 w-4 flex-shrink-0" />
+            <LogOut className="h-5 w-5 flex-shrink-0 transition-transform duration-300" />
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.span
@@ -405,7 +417,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   initial="collapsed"
                   animate="expanded"
                   exit="collapsed"
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className="whitespace-nowrap"
                 >
                   退出登录
@@ -437,7 +449,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                 initial="collapsed"
                 animate="expanded"
                 exit="collapsed"
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 min-w-0"
               >
                 <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || user?.username}</p>
