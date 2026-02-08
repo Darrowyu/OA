@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { attendanceApi, type Schedule as ScheduleType, type Shift } from '@/services/attendance'
 import { toast } from 'sonner'
 
@@ -40,6 +40,7 @@ export function Schedule() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedShift, setSelectedShift] = useState<string>('')
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -108,6 +109,7 @@ export function Schedule() {
         fetchSchedules()
         setSelectedDate(null)
         setSelectedShift('')
+        setDialogOpen(false)
       }
     } catch (error) {
       toast.error('设置排班失败')
@@ -134,67 +136,37 @@ export function Schedule() {
       const isRestDay = schedule?.isRestDay
 
       days.push(
-        <Dialog key={day}>
-          <DialogTrigger asChild>
-            <button
-              className={`h-24 p-2 border border-gray-100 hover:bg-gray-50 transition-colors text-left relative ${
-                isToday ? 'bg-blue-50/50 border-blue-200' : 'bg-white'
-              }`}
-              onClick={() => setSelectedDate(new Date(year, month, day))}
-            >
-              <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                {day}
-              </div>
-              {schedule && (
-                <div className="mt-2">
-                  {isRestDay ? (
-                    <Badge variant="secondary" className="text-xs">休息</Badge>
-                  ) : (
-                    <div className={`text-xs px-2 py-1 rounded border ${shiftColors[schedule.shift.name] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                      <div className="font-medium">{schedule.shift.name}</div>
-                      <div className="text-[10px] opacity-80">
-                        {formatTime(schedule.shift.startTime)} - {formatTime(schedule.shift.endTime)}
-                      </div>
-                    </div>
-                  )}
+        <button
+          key={day}
+          className={`h-24 p-2 border border-gray-100 hover:bg-gray-50 transition-colors text-left relative ${
+            isToday ? 'bg-blue-50/50 border-blue-200' : 'bg-white'
+          }`}
+          onClick={() => {
+            setSelectedDate(new Date(year, month, day))
+            setDialogOpen(true)
+          }}
+        >
+          <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+            {day}
+          </div>
+          {schedule && (
+            <div className="mt-2">
+              {isRestDay ? (
+                <Badge variant="secondary" className="text-xs">休息</Badge>
+              ) : (
+                <div className={`text-xs px-2 py-1 rounded border ${shiftColors[schedule.shift.name] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                  <div className="font-medium">{schedule.shift.name}</div>
+                  <div className="text-[10px] opacity-80">
+                    {formatTime(schedule.shift.startTime)} - {formatTime(schedule.shift.endTime)}
+                  </div>
                 </div>
               )}
-              {!schedule && (
-                <div className="mt-2 text-xs text-gray-400">未排班</div>
-              )}
-            </button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                设置排班 - {selectedDate?.toLocaleDateString('zh-CN')}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Select value={selectedShift} onValueChange={setSelectedShift}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择班次" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rest">休息日</SelectItem>
-                  {shifts.map(shift => (
-                    <SelectItem key={shift.id} value={shift.id}>
-                      {shift.name} ({formatTime(shift.startTime)} - {formatTime(shift.endTime)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setSelectedDate(null)}>
-                  取消
-                </Button>
-                <Button onClick={handleSetSchedule} disabled={!selectedShift}>
-                  保存
-                </Button>
-              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+          {!schedule && (
+            <div className="mt-2 text-xs text-gray-400">未排班</div>
+          )}
+        </button>
       )
     }
 
@@ -263,6 +235,40 @@ export function Schedule() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 排班设置对话框 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              设置排班 - {selectedDate?.toLocaleDateString('zh-CN')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Select value={selectedShift} onValueChange={setSelectedShift}>
+              <SelectTrigger>
+                <SelectValue placeholder="选择班次" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rest">休息日</SelectItem>
+                {shifts.map(shift => (
+                  <SelectItem key={shift.id} value={shift.id}>
+                    {shift.name} ({formatTime(shift.startTime)} - {formatTime(shift.endTime)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleSetSchedule} disabled={!selectedShift}>
+                保存
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }

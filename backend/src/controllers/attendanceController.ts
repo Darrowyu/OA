@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
-import { attendanceService, scheduleService } from '../services/attendanceService'
+import { attendanceService } from '../services/attendanceService'
+import { scheduleService } from '../services/scheduleService'
 import type { ClockInType, AttendanceStatus, LeaveType, LeaveRequestStatus } from '@prisma/client'
 
 type AuthRequest = Request & {

@@ -86,6 +86,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const [isMaintenanceExpanded, setIsMaintenanceExpanded] = useState(false)  // 维修保养展开状态
   const [isPartsExpanded, setIsPartsExpanded] = useState(false)  // 配件管理展开状态
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false)  // 日程管理展开状态
+  const [isAttendanceExpanded, setIsAttendanceExpanded] = useState(false)  // 考勤管理展开状态
 
   // 从 localStorage 获取用户信息
   const userStr = localStorage.getItem('user')
@@ -97,10 +98,10 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const isApprovalActive = location.pathname.startsWith("/approval")
   const isEquipmentActive = location.pathname.startsWith("/equipment")
   const isScheduleActive = location.pathname.startsWith("/schedule")
+  const isAttendanceActive = location.pathname.startsWith("/attendance")
 
   const mainNavItems = [
     { path: "/dashboard", name: "工作台", icon: "LayoutGrid", active: location.pathname === "/dashboard" },
-    { path: "/attendance", name: "考勤管理", icon: "Clock" },
     { path: "/documents", name: "文档中心", icon: "FolderOpen" },
     { path: "/contacts", name: "通讯录", icon: "Users" },
     { path: "/announcements", name: "公告通知", icon: "Bell" },
@@ -142,6 +143,14 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
     { path: "/schedule", name: "我的日程", icon: "Calendar" },
     { path: "/schedule/team", name: "团队日程", icon: "Users" },
     { path: "/schedule/invitations", name: "会议邀请", icon: "Bell" },
+  ]
+
+  // 考勤管理子菜单
+  const attendanceSubItems: SubMenuItem[] = [
+    { path: "/attendance/clock-in", name: "打卡签到", icon: "Clock" },
+    { path: "/attendance/schedule", name: "排班管理", icon: "Calendar" },
+    { path: "/attendance/leave", name: "请假申请", icon: "FileText" },
+    { path: "/attendance/statistics", name: "考勤统计", icon: "BarChart3" },
   ]
 
   const favouriteItems = [
@@ -568,6 +577,82 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                     {scheduleSubItems.map((item) => {
                       const Icon = iconMap[item.icon] || Calendar
                       const isActive = location.pathname === item.path || (item.path !== "/schedule" && location.pathname.startsWith(item.path))
+                      return (
+                        <li key={item.path}>
+                          <NavLink
+                            to={item.path}
+                            className={`flex items-center gap-2 rounded-lg text-sm transition-all duration-200 px-3 py-1.5 ${
+                              isActive
+                                ? "bg-gray-50 text-gray-900 font-medium"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="flex-1 whitespace-nowrap">{item.name}</span>
+                          </NavLink>
+                        </li>
+                      )
+                    })}
+                  </div>
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </li>
+
+          {/* 考勤管理 - 带子菜单 */}
+          <li>
+            <button
+              onClick={() => !isCollapsed && setIsAttendanceExpanded(!isAttendanceExpanded)}
+              className={`w-full flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
+                isAttendanceActive
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+              } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
+            >
+              <Clock className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    variants={textVariants}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex-1 whitespace-nowrap text-left overflow-hidden"
+                  >
+                    考勤管理
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  animate={{ rotate: isAttendanceExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </motion.div>
+              )}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                  考勤管理
+                </div>
+              )}
+            </button>
+
+            {/* 考勤管理子菜单 */}
+            <AnimatePresence>
+              {!isCollapsed && isAttendanceExpanded && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-1 pb-1 pl-4 border-l-2 border-gray-100 ml-5 space-y-1">
+                    {attendanceSubItems.map((item) => {
+                      const Icon = iconMap[item.icon] || Clock
+                      const isActive = location.pathname === item.path || location.pathname.startsWith(item.path)
                       return (
                         <li key={item.path}>
                           <NavLink

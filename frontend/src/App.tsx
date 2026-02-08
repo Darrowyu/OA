@@ -6,6 +6,7 @@ import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
 import { EquipmentModule } from "@/pages/equipment"
+import { AttendanceModule } from "@/pages/attendance"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
@@ -139,13 +140,13 @@ function App() {
         }
       />
 
-      {/* 其他模块占位 */}
+      {/* 考勤管理模块 */}
       <Route
-        path="/attendance"
+        path="/attendance/*"
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <PlaceholderPage title="考勤管理" />
+              <AttendanceModule />
             </DashboardLayout>
           </ProtectedRoute>
         }

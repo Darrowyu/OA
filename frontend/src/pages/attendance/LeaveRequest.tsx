@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { attendanceApi, type LeaveRequest as LeaveRequestType, type LeaveType, type LeaveRequestStatus } from '@/services/attendance'
 import { toast } from 'sonner'
 
@@ -154,13 +154,12 @@ export function LeaveRequest() {
           </TabsList>
         </Tabs>
 
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          新建申请
+        </Button>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              新建申请
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>新建请假申请</DialogTitle>

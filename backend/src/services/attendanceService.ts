@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma'
+import { Prisma } from '@prisma/client'
 import type { AttendanceStatus, ClockInType, LeaveType, LeaveRequestStatus } from '@prisma/client'
 
 export interface ClockInData {
@@ -110,7 +111,7 @@ export class AttendanceService {
         data: {
           clockIn: now,
           clockInType: data.type,
-          clockInLocation: data.location ? JSON.stringify(data.location) : null,
+          clockInLocation: data.location ? (data.location as Prisma.InputJsonValue) : undefined,
           notes: data.notes,
           status,
         },
@@ -124,7 +125,7 @@ export class AttendanceService {
         date: today,
         clockIn: now,
         clockInType: data.type,
-        clockInLocation: data.location ? JSON.stringify(data.location) : null,
+        clockInLocation: data.location ? (data.location as Prisma.InputJsonValue) : undefined,
         notes: data.notes,
         status,
       },
@@ -188,7 +189,7 @@ export class AttendanceService {
       data: {
         clockOut: now,
         clockOutType: data.type,
-        clockOutLocation: data.location ? JSON.stringify(data.location) : null,
+        clockOutLocation: data.location ? (data.location as Prisma.InputJsonValue) : undefined,
         workHours: Math.round(workHours * 100) / 100,
         status,
       },

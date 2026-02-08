@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Clock, MapPin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,7 @@ import { attendanceApi, type AttendanceRecord } from '@/services/attendance'
 import { toast } from 'sonner'
 
 // 格式化时间
-function formatTime(dateString: string | null): string {
+function formatTime(dateString: string | null | undefined): string {
   if (!dateString) return '--:--'
   return new Date(dateString).toLocaleTimeString('zh-CN', {
     hour: '2-digit',
@@ -120,7 +120,7 @@ export function ClockIn() {
 
       const response = await attendanceApi.clockIn({
         type: loc && loc.lat !== 0 ? 'GPS' : 'MANUAL',
-        location: loc,
+        location: loc || undefined,
       })
 
       if (response.success) {
@@ -149,7 +149,7 @@ export function ClockIn() {
 
       const response = await attendanceApi.clockOut({
         type: loc && loc.lat !== 0 ? 'GPS' : 'MANUAL',
-        location: loc,
+        location: loc || undefined,
       })
 
       if (response.success) {
