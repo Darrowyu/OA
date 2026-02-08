@@ -31,8 +31,45 @@ declare global {
   }
 }
 
+// 导出AuthRequest类型
+export interface AuthRequest extends Request {
+  user: JwtPayload & { id: string; isActive: boolean };
+}
+
 // 导出authenticate作为authMiddleware的别名
 export { authMiddleware as authenticate };
+
+// 导出auth作为authMiddleware的别名
+export { authMiddleware as auth };
+
+/**
+ * 要求管理员权限中间件
+ */
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: '请先登录',
+      },
+    });
+    return;
+  }
+
+  if (req.user.role !== UserRole.ADMIN) {
+    res.status(403).json({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: '需要管理员权限',
+      },
+    });
+    return;
+  }
+
+  next();
+}
 
 /**
  * 认证错误响应

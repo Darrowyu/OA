@@ -120,6 +120,9 @@ model User {
   assignedTasks      Task[]             @relation("AssignedTasks") // 被分配的任务
   createdTasks       Task[]             @relation("CreatedTasks") // 创建的任务
   ownedProjects      TaskProject[]      // 拥有的项目
+  createdWorkflows   Workflow[]         @relation(name: "WorkflowCreator") // 创建的工作流
+  knowledgeArticles  KnowledgeArticle[] // 创建的知识库文章
+  knowledgeFeedbacks KnowledgeFeedback[] // 知识库反馈
 
   @@index([departmentId])
   @@index([role])
@@ -1188,4 +1191,144 @@ model TaskProject {
 
   @@index([ownerId])
   @@map("task_projects")
+}
+
+// ============================================
+// 工作流引擎模块模型
+// ============================================
+
+enum WorkflowStatus {
+  DRAFT     // 草稿
+  PUBLISHED // 已发布
+  ARCHIVED  // 已归档
+}
+
+enum InstanceStatus {
+  RUNNING   // 运行中
+  COMPLETED // 已完成
+  REJECTED  // 已驳回
+  SUSPENDED // 已暂停
+}
+
+// 工作流定义
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String   // 流程名称
+  description String?  // 流程描述
+  entityType  String   // 关联的业务类型: Application, LeaveRequest, etc.
+  nodes       Json     // 流程节点配置 (FlowNode[])
+  edges       Json     // 流程连线配置 (FlowEdge[])
+  version     Int      @default(1)  // 版本号
+  status      WorkflowStatus @default(DRAFT) // 流程状态
+  isDefault   Boolean  @default(false) // 是否默认流程
+  createdBy   String   // 创建人ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联字段
+  creator   User               @relation(fields: [createdBy], references: [id], name: "WorkflowCreator")
+  instances WorkflowInstance[]
+
+  @@index([entityType])
+  @@index([status])
+  @@index([isDefault])
+  @@index([createdBy])
+  @@map("workflows")
+}
+
+// 工作流实例
+model WorkflowInstance {
+  id            String         @id @default(cuid())
+  workflowId    String         // 关联的工作流ID
+  entityId      String         // 关联的业务记录ID
+  entityType    String         // 业务类型
+  currentNodeId String         // 当前节点ID
+  status        InstanceStatus @default(RUNNING) // 实例状态
+  nodeHistory   Json?          // 节点执行历史
+  variables     Json?          // 流程变量
+  contextData   Json?          // 上下文数据
+  startedAt     DateTime       @default(now())
+  completedAt   DateTime?
+
+  // 关联字段
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([entityId])
+  @@index([entityType])
+  @@index([status])
+  @@index([currentNodeId])
+  @@map("workflow_instances")
+}
+
+// ============================================
+// 知识库/帮助中心模块模型
+// ============================================
+
+model KnowledgeCategory {
+  id          String            @id @default(cuid())
+  name        String            // 分类名称
+  description String?           // 分类描述
+  icon        String?           // 图标
+  sortOrder   Int               @default(0) // 排序
+  parentId    String?           // 父分类ID
+  isActive    Boolean           @default(true) // 是否启用
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // 关联字段
+  parent   KnowledgeCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children KnowledgeCategory[] @relation("CategoryHierarchy")
+  articles KnowledgeArticle[]
+
+  @@index([parentId])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("knowledge_categories")
+}
+
+model KnowledgeArticle {
+  id           String            @id @default(cuid())
+  title        String            // 文章标题
+  content      String            // 文章内容 (Markdown)
+  summary      String?           // 摘要
+  categoryId   String            // 所属分类ID
+  tags         Json?             // 标签 ["tag1", "tag2"]
+  attachments  Json?             // 附件 [{name, url, size}]
+  viewCount    Int               @default(0) // 浏览次数
+  helpfulCount Int               @default(0) // 有帮助次数
+  authorId     String            // 作者ID
+  isPublished  Boolean           @default(false) // 是否发布
+  publishedAt  DateTime?         // 发布时间
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // 关联字段
+  category  KnowledgeCategory   @relation(fields: [categoryId], references: [id])
+  author    User                @relation(fields: [authorId], references: [id])
+  feedbacks KnowledgeFeedback[]
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("knowledge_articles")
+}
+
+model KnowledgeFeedback {
+  id        String   @id @default(cuid())
+  articleId String   // 文章ID
+  userId    String   // 用户ID
+  isHelpful Boolean  // 是否有帮助
+  comment   String?  // 评论/反馈
+  createdAt DateTime @default(now())
+
+  // 关联字段
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id])
+
+  @@unique([articleId, userId]) // 每个用户对每篇文章只能反馈一次
+  @@index([articleId])
+  @@index([userId])
+  @@map("knowledge_feedback")
 }

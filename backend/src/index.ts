@@ -29,6 +29,9 @@ import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeSocket } from './services/socketService';
 import notificationRoutes from './routes/notifications';
+import workflowRoutes from './routes/workflows';
+import reportRoutes from './routes/reports';
+import knowledgeRoutes from './routes/knowledge';
 import { createServer } from 'http';
 
 // 创建Express应用
@@ -91,6 +94,9 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/workflows', workflowRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/knowledge', knowledgeRoutes);
 
 // 404处理
 app.use(notFoundHandler);

@@ -23,6 +23,15 @@ import AnnouncementsPage from "@/pages/announcements"
 import AnnouncementDetail from "@/pages/announcements/AnnouncementDetail"
 import AnnouncementForm from "@/pages/announcements/AnnouncementForm"
 import TasksPage from "@/pages/tasks"
+import WorkflowList from "@/pages/workflow/WorkflowList"
+import WorkflowDesigner from "@/pages/workflow/WorkflowDesigner"
+import ReportsCenter from "@/pages/reports"
+import ReportDashboard from "@/pages/reports/Dashboard"
+import ReportBuilder from "@/pages/reports/ReportBuilder"
+import KnowledgePage from "@/pages/knowledge"
+import ArticleView from "@/pages/knowledge/ArticleView"
+import ArticleEditor from "@/pages/knowledge/ArticleEditor"
+import SearchResults from "@/pages/knowledge/SearchResults"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -254,6 +263,38 @@ function App() {
         }
       />
 
+      {/* 报表中心模块 */}
+      <Route
+        path="/reports/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ReportsCenter />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ReportDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/builder"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ReportBuilder />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* 用户管理 */}
       <Route
         path="/users"
@@ -314,8 +355,83 @@ function App() {
         }
       />
 
+      {/* 工作流管理 - 管理员专用 */}
+      <Route
+        path="/workflow"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout>
+              <WorkflowList />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workflow/designer/:id"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout>
+              <WorkflowDesigner />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 知识库模块 */}
+      <Route
+        path="/knowledge"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <KnowledgePage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/search"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <SearchResults />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/articles/new"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ArticleEditor />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/articles/:id"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ArticleView />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/knowledge/articles/:id/edit"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ArticleEditor />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* 旧路由重定向 */}
       <Route path="/applications/*" element={<Navigate to="/approval" replace />} />
+      <Route path="/help" element={<Navigate to="/knowledge" replace />} />
     </Routes>
   )
 }

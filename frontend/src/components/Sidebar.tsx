@@ -34,6 +34,7 @@ import {
   FileText,
   Video,
   KanbanSquare,
+  GitBranch,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -79,6 +80,7 @@ const iconMap: Record<string, React.ElementType> = {
   FileText,
   Video,
   KanbanSquare,
+  GitBranch,
 }
 
 export function Sidebar({ pendingCount = 0 }: SidebarProps) {
@@ -766,6 +768,39 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
             </AnimatePresence>
           </li>
 
+          {/* 报表中心 */}
+          <li>
+            <NavLink
+              to="/reports"
+              className={`flex items-center rounded-lg text-sm transition-all duration-300 group relative ${
+                location.pathname.startsWith("/reports")
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+              } ${isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"}`}
+            >
+              <BarChart3 className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.span
+                    variants={textVariants}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex-1 whitespace-nowrap overflow-hidden"
+                  >
+                    报表中心
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                  报表中心
+                </div>
+              )}
+            </NavLink>
+          </li>
+
           {/* 其他主导航 */}
           {mainNavItems.slice(1).map((item) => {
             const Icon = iconMap[item.icon] || LayoutGrid
@@ -906,6 +941,35 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
                   )}
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/workflow"
+                  className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative ${
+                    isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
+                  }`}
+                >
+                  <GitBranch className="h-5 w-5 flex-shrink-0" />
+                  <AnimatePresence>
+                    {!isCollapsed && (
+                      <motion.span
+                        variants={textVariants}
+                        initial="collapsed"
+                        animate="expanded"
+                        exit="collapsed"
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="whitespace-nowrap overflow-hidden"
+                      >
+                        工作流管理
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                      工作流管理
+                    </div>
+                  )}
+                </NavLink>
+              </li>
             </ul>
           </div>
         )}
@@ -913,10 +977,8 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
 
       {/* 帮助按钮 */}
       <div className="p-4 border-t border-gray-200">
-        <button
-          onClick={() => {
-            // TODO: 打开帮助中心
-          }}
+        <NavLink
+          to="/knowledge"
           className={`flex items-center rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-all duration-300 group relative w-full ${
             isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2"
           }`}
@@ -941,7 +1003,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               帮助中心
             </div>
           )}
-        </button>
+        </NavLink>
       </div>
 
     </motion.aside>
