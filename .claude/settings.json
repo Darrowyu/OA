@@ -1,0 +1,9 @@
+{
+  "model": "claude-opus-4-6",
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  },
+  "env": {
+    "MAX_THINKING_TOKENS": "8000"
+  }
+}

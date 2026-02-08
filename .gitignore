@@ -36,8 +36,8 @@ tmp/
 temp/
 *.tmp
 
-# Claude
-.claude/
+# Claude - 本地配置不提交，项目配置保留
+.claude/settings.local.json
 
 # Uploads (keep directory but not files)
 uploads/*
