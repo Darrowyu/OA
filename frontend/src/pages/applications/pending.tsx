@@ -36,12 +36,13 @@ const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
     case UserRole.DIRECTOR: return ApplicationStatus.PENDING_DIRECTOR
     case UserRole.MANAGER: return ApplicationStatus.PENDING_MANAGER
     case UserRole.CEO: return ApplicationStatus.PENDING_CEO
+    case UserRole.ADMIN: return null // 管理员查看所有待审批状态
     default: return null
   }
 }
 
 const canApprove = (role: UserRole): boolean => {
-  return [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO].includes(role)
+  return [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO, UserRole.ADMIN].includes(role)
 }
 
 export function PendingList() {
@@ -107,7 +108,7 @@ export function PendingList() {
         setSignatureDialogOpen(true)
         return
       }
-      if (user.role === UserRole.DIRECTOR && !skipManager && selectedManagerIds.length === 0) {
+      if ((user.role === UserRole.DIRECTOR || user.role === UserRole.ADMIN) && !skipManager && selectedManagerIds.length === 0) {
         toast.error("请选择至少一位经理进行审批")
         return
       }
@@ -121,7 +122,8 @@ export function PendingList() {
         case UserRole.FACTORY_MANAGER: response = await approvalsApi.factoryApprove(application.id, data); break
         case UserRole.DIRECTOR: response = await approvalsApi.directorApprove(application.id, data); break
         case UserRole.MANAGER: response = await approvalsApi.managerApprove(application.id, data); break
-        case UserRole.CEO: response = await approvalsApi.ceoApprove(application.id, data); break
+        case UserRole.CEO:
+        case UserRole.ADMIN: response = await approvalsApi.ceoApprove(application.id, data); break
         default: throw new Error("无审批权限")
       }
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
@@ -267,7 +269,7 @@ export function PendingList() {
                   <p className="font-medium text-gray-900">{approvalDialog.application.title}</p>
                 </div>
               )}
-              {user?.role === UserRole.DIRECTOR && approvalDialog.action === "APPROVE" && (
+              {(user?.role === UserRole.DIRECTOR || user?.role === UserRole.ADMIN) && approvalDialog.action === "APPROVE" && (
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
