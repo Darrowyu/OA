@@ -574,9 +574,9 @@ export class MeetingService {
 
     // 时间范围查询
     if (startDate || endDate) {
-      where.AND = []
-      if (startDate) where.AND.push({ endTime: { gte: startDate } })
-      if (endDate) where.AND.push({ startTime: { lte: endDate } })
+      (where.AND as Record<string, unknown>[]) = []
+      if (startDate) (where.AND as Record<string, unknown>[]).push({ endTime: { gte: startDate } })
+      if (endDate) (where.AND as Record<string, unknown>[]).push({ startTime: { lte: endDate } })
     }
 
     // 查询用户参与的会议（在attendees中）
