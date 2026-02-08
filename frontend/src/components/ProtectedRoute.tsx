@@ -16,11 +16,11 @@ export function ProtectedRoute({ children, requireAdmin, requireRoles }: Protect
   }
 
   if (requireAdmin && user?.role !== "ADMIN") {
-    return <Navigate to="/applications" replace />
+    return <Navigate to="/approval" replace />
   }
 
   if (requireRoles && user?.role && !requireRoles.includes(user.role)) {
-    return <Navigate to="/applications" replace />
+    return <Navigate to="/approval" replace />
   }
 
   return <>{children}</>

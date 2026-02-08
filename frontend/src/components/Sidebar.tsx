@@ -77,7 +77,7 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
   const approvalSubItems = [
     { path: "/approval", label: "全部申请", icon: List, show: true },
     { path: "/approval/new", label: "新建申请", icon: FilePlus, show: true },
-    { path: "/approval/pending", label: "待我审批", icon: ClipboardCheck, show: isApprover, badge: pendingCount },
+    { path: "/approval/pending", label: "待审批", icon: ClipboardCheck, show: isApprover, badge: pendingCount },
     { path: "/approval/approved", label: "已审批", icon: CheckCircle, show: true },
   ]
 
