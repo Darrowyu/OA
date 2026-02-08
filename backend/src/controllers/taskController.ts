@@ -1,7 +1,7 @@
 // backend/src/controllers/taskController.ts
 import type { Request, Response } from 'express'
 import { taskService } from '../services/taskService'
-import type { TaskStatus } from '../types/task'
+import type { TaskStatus, TaskPriority } from '../types/task'
 
 export class TaskController {
   // 创建任务
@@ -26,7 +26,7 @@ export class TaskController {
         page: page ? parseInt(page as string, 10) : undefined,
         pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
         status: status as TaskStatus,
-        priority: priority as TaskStatus,
+        priority: priority as TaskPriority,
         keyword: keyword as string,
         assigneeId: userId,
       })

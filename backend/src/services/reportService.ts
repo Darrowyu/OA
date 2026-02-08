@@ -586,7 +586,7 @@ export class ReportService {
 
   // 设备统计分析
   async getEquipmentStats(filters: EquipmentStatsFilter): Promise<EquipmentStats> {
-    const { category, location, status, departmentId } = filters;
+    const { category, location, status } = filters;
 
     // 构建查询条件
     const where: Record<string, unknown> = {};
@@ -787,7 +787,6 @@ export class ReportService {
     const earlyLeaveCount = records.filter((r) => r.status === 'EARLY_LEAVE').length;
     const absentCount = records.filter((r) => r.status === 'ABSENT').length;
     const normalCount = records.filter((r) => r.status === 'NORMAL').length;
-    const onLeaveCount = records.filter((r) => r.status === 'ON_LEAVE').length;
 
     const totalWorkHours = records.reduce((sum, r) => sum + (r.workHours || 0), 0);
     const attendanceRate = totalRecords > 0
@@ -1248,8 +1247,8 @@ export class ReportService {
 
   private async generateApprovalReport(
     filters: Record<string, unknown>,
-    dimensions: string[],
-    metrics: string[],
+    _dimensions: string[],
+    _metrics: string[],
     page: number,
     pageSize: number
   ) {
@@ -1278,8 +1277,8 @@ export class ReportService {
 
   private async generateEquipmentReport(
     filters: Record<string, unknown>,
-    dimensions: string[],
-    metrics: string[],
+    _dimensions: string[],
+    _metrics: string[],
     page: number,
     pageSize: number
   ) {
@@ -1308,8 +1307,8 @@ export class ReportService {
 
   private async generateAttendanceReport(
     filters: Record<string, unknown>,
-    dimensions: string[],
-    metrics: string[],
+    _dimensions: string[],
+    _metrics: string[],
     page: number,
     pageSize: number
   ) {
@@ -1338,8 +1337,8 @@ export class ReportService {
 
   private async generatePerformanceReport(
     filters: Record<string, unknown>,
-    dimensions: string[],
-    metrics: string[],
+    _dimensions: string[],
+    _metrics: string[],
     page: number,
     pageSize: number
   ) {

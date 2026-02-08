@@ -333,25 +333,25 @@ export default function AuditLogs() {
                 <Select
                   value={actionFilter}
                   onChange={(e) => setActionFilter(e.target.value)}
-                >
-                  <option value="">全部操作</option>
-                  {actions.map((action) => (
-                    <option key={action} value={action}>
-                      {actionLabelMap[action] || action}
-                    </option>
-                  ))}
-                </Select>
+                  options={[
+                    { value: '', label: '全部操作' },
+                    ...actions.map((action) => ({
+                      value: action,
+                      label: actionLabelMap[action] || action,
+                    })),
+                  ]}
+                />
                 <Select
                   value={entityTypeFilter}
                   onChange={(e) => setEntityTypeFilter(e.target.value)}
-                >
-                  <option value="">全部实体</option>
-                  {entityTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {entityTypeLabelMap[type] || type}
-                    </option>
-                  ))}
-                </Select>
+                  options={[
+                    { value: '', label: '全部实体' },
+                    ...entityTypes.map((type) => ({
+                      value: type,
+                      label: entityTypeLabelMap[type] || type,
+                    })),
+                  ]}
+                />
                 <Input
                   type="date"
                   placeholder="开始日期"

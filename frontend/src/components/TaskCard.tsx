@@ -5,7 +5,7 @@ import { zhCN } from 'date-fns/locale'
 import { Calendar, MessageSquare, GripVertical } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import type { Task, TaskPriority, TaskStatus } from '@/services/tasks'
+import type { Task, TaskPriority } from '@/services/tasks'
 
 interface TaskCardProps {
   task: Task

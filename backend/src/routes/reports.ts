@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '@/middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import {
   getApprovalStats,
   getEquipmentStats,
@@ -9,7 +9,7 @@ import {
   generateCustomReport,
   exportReport,
   getMyPerformance,
-} from '@/controllers/reportController';
+} from '../controllers/reportController';
 
 const router = Router();
 

@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -132,8 +131,8 @@ export default function AnnouncementFormPage() {
       setLoading(true);
       try {
         const res = await announcementsApi.getAnnouncement(id);
-        if (res.data.success) {
-          const data = res.data.data;
+        if (res.success) {
+          const data = res.data;
           setTitle(data.title);
           setContent(data.content);
           setType(data.type);
@@ -165,8 +164,8 @@ export default function AnnouncementFormPage() {
     const loadDepartments = async () => {
       try {
         const res = await departmentApi.getDepartments();
-        if (res.data.success) {
-          setDepartments(res.data.data);
+        if (res.success) {
+          setDepartments(res.data);
         }
       } catch (error) {
         console.error('加载部门列表失败', error);
@@ -259,13 +258,13 @@ export default function AnnouncementFormPage() {
 
       if (isEditing && id) {
         const res = await announcementsApi.updateAnnouncement(id, data);
-        if (res.data.success) {
+        if (res.success) {
           toast.success('公告更新成功');
           navigate(`/announcements/${id}`);
         }
       } else {
         const res = await announcementsApi.createAnnouncement(data);
-        if (res.data.success) {
+        if (res.success) {
           toast.success('公告发布成功');
           navigate('/announcements');
         }

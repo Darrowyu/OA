@@ -36,7 +36,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
   });
 
   // 连接认证中间件
-  io.use(async (socket: Socket, next) => {
+  io.use(async (socket: Socket, next: (err?: Error) => void) => {
     try {
       const token = socket.handshake.auth.token as string;
       if (!token) {

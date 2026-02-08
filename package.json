@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/dagre": "^0.7.53",
     "@types/nodemailer": "^7.0.9",
+    "@types/socket.io": "^3.0.1",
     "concurrently": "^8.2.2"
   },
   "engines": {
@@ -38,6 +39,7 @@
   },
   "dependencies": {
     "@xyflow/react": "^12.10.0",
-    "dagre": "^0.8.5"
+    "dagre": "^0.8.5",
+    "socket.io": "^4.8.3"
   }
 }

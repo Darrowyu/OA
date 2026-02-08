@@ -23,7 +23,7 @@ export async function getRooms(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function getAllRooms(req: Request, res: Response): Promise<void> {
+export async function getAllRooms(_req: Request, res: Response): Promise<void> {
   try {
     const rooms = await meetingService.getAllActiveRooms();
     res.json({ success: true, data: rooms });

@@ -118,6 +118,7 @@ interface ApiClient {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
   post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
   put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
 }
 
@@ -128,6 +129,8 @@ const apiClient: ApiClient = {
     axiosInstance.post(url, data, config) as unknown as Promise<T>,
   put: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
     axiosInstance.put(url, data, config) as unknown as Promise<T>,
+  patch: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
+    axiosInstance.patch(url, data, config) as unknown as Promise<T>,
   delete: <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
     axiosInstance.delete(url, config) as unknown as Promise<T>,
 };

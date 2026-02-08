@@ -112,7 +112,7 @@ export async function getUserPerformance(req: Request, res: Response) {
 }
 
 // 仪表板汇总
-export async function getDashboardSummary(req: Request, res: Response) {
+export async function getDashboardSummary(_req: Request, res: Response) {
   try {
     const summary = await reportService.getDashboardSummary();
 
@@ -214,10 +214,10 @@ export async function exportReport(req: Request, res: Response) {
 }
 
 // 获取当前用户绩效（简化接口）
-export async function getMyPerformance(req: AuthRequest, res: Response) {
-  void req;  // 标记req为已使用
+export async function getMyPerformance(req: Request, res: Response) {
   try {
-    const userId = req.user?.userId;
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.userId;
     if (!userId) {
       res.status(401).json({
         success: false,

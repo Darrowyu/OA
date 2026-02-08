@@ -14,8 +14,6 @@ import {
   Trash2,
   FileText,
   X,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,8 +64,8 @@ export default function AnnouncementDetailPage() {
     const loadAnnouncement = async () => {
       try {
         const res = await announcementsApi.getAnnouncement(id);
-        if (res.data.success) {
-          setAnnouncement(res.data.data);
+        if (res.success) {
+          setAnnouncement(res.data);
         }
       } catch (error) {
         toast.error('加载公告详情失败');
@@ -86,8 +84,8 @@ export default function AnnouncementDetailPage() {
 
     try {
       const res = await announcementsApi.getReadStats(id);
-      if (res.data.success) {
-        setStats(res.data.data);
+      if (res.success) {
+        setStats(res.data);
         setShowStats(true);
       }
     } catch (error) {
@@ -101,7 +99,7 @@ export default function AnnouncementDetailPage() {
 
     try {
       const res = await announcementsApi.deleteAnnouncement(id);
-      if (res.data.success) {
+      if (res.success) {
         toast.success('公告删除成功');
         navigate('/announcements');
       }

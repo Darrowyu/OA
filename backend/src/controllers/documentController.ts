@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { documentService } from '../services/documentService'
 import type { DocumentType } from '../services/documentService'
 import fs from 'fs'
-import path from 'path'
 
 type AuthRequest = Request & {
   user?: {
@@ -148,7 +147,7 @@ export const documentController = {
       return
     }
 
-    const document = await documentService.uploadDocument(file, folderId, userId)
+    const document = await documentService.uploadDocument(file as Express.Multer.File, folderId, userId)
 
     res.status(201).json({
       success: true,
@@ -171,7 +170,7 @@ export const documentController = {
       return
     }
 
-    const document = await documentService.updateDocument(id, file, userId)
+    const document = await documentService.updateDocument(id, file as Express.Multer.File, userId)
 
     res.json({
       success: true,

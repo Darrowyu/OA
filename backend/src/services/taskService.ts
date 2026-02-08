@@ -12,7 +12,9 @@ import type {
   UpdateProjectInput,
   TaskProjectWithOwner,
   TaskStatus,
+  TaskPriority,
 } from '../types/task'
+import { TaskStatus as TaskStatusEnum } from '../types/task'
 
 export class TaskService {
   // 创建任务
@@ -21,7 +23,7 @@ export class TaskService {
       data: {
         title: data.title,
         description: data.description,
-        status: data.status || 'TODO',
+        status: data.status || TaskStatusEnum.TODO,
         priority: data.priority || 'MEDIUM',
         assigneeId: data.assigneeId,
         creatorId: userId,
@@ -30,7 +32,7 @@ export class TaskService {
         dueDate: data.dueDate,
         tags: data.tags || [],
         parentId: data.parentId,
-        order: await this.getNextOrder(data.status || 'TODO'),
+        order: await this.getNextOrder(data.status || TaskStatusEnum.TODO),
       },
       include: {
         assignee: {
@@ -164,9 +166,9 @@ export class TaskService {
     const updateData: Record<string, unknown> = { ...data }
 
     // 如果状态变为 DONE，设置 completedAt
-    if (data.status === 'DONE') {
+    if (data.status === TaskStatusEnum.DONE) {
       updateData.completedAt = new Date()
-    } else if (data.status && data.status !== 'DONE') {
+    } else if (data.status) {
       updateData.completedAt = null
     }
 
@@ -193,7 +195,7 @@ export class TaskService {
   async updateStatus(id: string, status: TaskStatus, order?: number): Promise<TaskWithRelations> {
     const updateData: Record<string, unknown> = { status }
     if (order !== undefined) updateData.order = order
-    if (status === 'DONE') updateData.completedAt = new Date()
+    if (status === TaskStatusEnum.DONE) updateData.completedAt = new Date()
     else updateData.completedAt = null
 
     const task = await prisma.task.update({
@@ -236,7 +238,7 @@ export class TaskService {
 
   // 获取看板数据
   async getKanbanBoard(userId: string): Promise<KanbanColumn[]> {
-    const columns: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']
+    const columns: TaskStatus[] = [TaskStatusEnum.TODO, TaskStatusEnum.IN_PROGRESS, TaskStatusEnum.REVIEW, TaskStatusEnum.DONE]
     const columnTitles: Record<TaskStatus, string> = {
       TODO: '待办',
       IN_PROGRESS: '进行中',
@@ -289,9 +291,9 @@ export class TaskService {
     return tasks.map(task => {
       const t = task as Record<string, unknown>
       let progress = 0
-      if (t.status === 'DONE') progress = 100
-      else if (t.status === 'IN_PROGRESS') progress = 50
-      else if (t.status === 'REVIEW') progress = 80
+      if (t.status === TaskStatusEnum.DONE) progress = 100
+      else if (t.status === TaskStatusEnum.IN_PROGRESS) progress = 50
+      else if (t.status === TaskStatusEnum.REVIEW) progress = 80
 
       return {
         id: t.id as string,
@@ -331,31 +333,31 @@ export class TaskService {
       prisma.task.count({
         where: {
           OR: [{ assigneeId: userId }, { creatorId: userId }],
-          status: 'TODO',
+          status: TaskStatusEnum.TODO,
         },
       }),
       prisma.task.count({
         where: {
           OR: [{ assigneeId: userId }, { creatorId: userId }],
-          status: 'IN_PROGRESS',
+          status: TaskStatusEnum.IN_PROGRESS,
         },
       }),
       prisma.task.count({
         where: {
           OR: [{ assigneeId: userId }, { creatorId: userId }],
-          status: 'REVIEW',
+          status: TaskStatusEnum.REVIEW,
         },
       }),
       prisma.task.count({
         where: {
           OR: [{ assigneeId: userId }, { creatorId: userId }],
-          status: 'DONE',
+          status: TaskStatusEnum.DONE,
         },
       }),
       prisma.task.count({
         where: {
           OR: [{ assigneeId: userId }, { creatorId: userId }],
-          status: { not: 'DONE' },
+          status: { not: TaskStatusEnum.DONE },
           dueDate: { lt: now },
         },
       }),

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight, FileText, Image as ImageIcon } from 'lucide-react';
+import { X, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -55,8 +54,7 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
 
     setLoading(true);
     try {
-      const res = await documentApi.preview(document.id);
-      const blob = new Blob([res.data]);
+      const blob = await documentApi.preview(document.id) as unknown as Blob;
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
     } catch (error) {
@@ -71,8 +69,8 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
 
     try {
       const res = await documentApi.getVersions(document.id);
-      if (res.data.success) {
-        setVersions(res.data.data);
+      if (res.success) {
+        setVersions(res.data);
       }
     } catch (error) {
       console.error('加载版本历史失败', error);
@@ -83,15 +81,14 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
     if (!document) return;
 
     try {
-      const res = await documentApi.download(document.id);
-      const blob = new Blob([res.data]);
+      const blob = await documentApi.download(document.id) as unknown as Blob;
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
       link.download = document.name;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       toast.success('下载已开始');
     } catch (error) {

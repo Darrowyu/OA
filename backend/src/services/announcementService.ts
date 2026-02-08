@@ -123,7 +123,7 @@ export async function getAnnouncements(
   // 未过期的公告
   if (!includeExpired) {
     where.OR = [
-      { validUntil: { equals: Prisma.DbNull } },
+      { validUntil: null },
       { validUntil: { gt: now } },
     ];
   }
@@ -399,7 +399,7 @@ export async function getReadStats(announcementId: string): Promise<ReadStats | 
  */
 export async function getUnreadCount(
   userId: string,
-  userDeptId?: string
+  _userDeptId?: string
 ): Promise<number> {
   const now = new Date();
 
@@ -416,7 +416,7 @@ export async function getUnreadCount(
       id: { notIn: readIdList },
       validFrom: { lte: now },
       OR: [
-        { validUntil: { equals: Prisma.DbNull } },
+        { validUntil: null },
         { validUntil: { gt: now } },
       ],
     },

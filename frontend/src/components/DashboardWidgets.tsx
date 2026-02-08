@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -25,18 +24,14 @@ import { motion } from 'framer-motion';
 import {
   TrendingUp,
   TrendingDown,
-  Users,
-  FileText,
-  Settings,
   Clock,
   AlertCircle,
   CheckCircle,
   Activity,
   ArrowUpRight,
   ArrowDownRight,
-  MoreHorizontal,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';

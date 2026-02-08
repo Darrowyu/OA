@@ -1,0 +1,76 @@
+import apiClient from '@/lib/api';
+
+// 部门类型
+export interface Department {
+  id: string;
+  name: string;
+  parentId: string | null;
+  managerId: string | null;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  children?: Department[];
+  manager?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+// 部门树节点
+export interface DepartmentTreeNode {
+  id: string;
+  name: string;
+  parentId: string | null;
+  children: DepartmentTreeNode[];
+}
+
+// 创建部门请求
+export interface CreateDepartmentRequest {
+  name: string;
+  parentId?: string | null;
+  managerId?: string | null;
+  description?: string;
+}
+
+// 更新部门请求
+export interface UpdateDepartmentRequest {
+  name?: string;
+  parentId?: string | null;
+  managerId?: string | null;
+  description?: string;
+}
+
+// API响应类型
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+// 部门API
+export const departmentApi = {
+  // 获取部门列表
+  getDepartments: (): Promise<ApiResponse<Department[]>> =>
+    apiClient.get<ApiResponse<Department[]>>('/departments'),
+
+  // 获取部门树
+  getDepartmentTree: (): Promise<ApiResponse<DepartmentTreeNode[]>> =>
+    apiClient.get<ApiResponse<DepartmentTreeNode[]>>('/departments/tree'),
+
+  // 获取部门详情
+  getDepartment: (id: string): Promise<ApiResponse<Department>> =>
+    apiClient.get<ApiResponse<Department>>(`/departments/${id}`),
+
+  // 创建部门
+  createDepartment: (data: CreateDepartmentRequest): Promise<ApiResponse<Department>> =>
+    apiClient.post<ApiResponse<Department>>('/departments', data),
+
+  // 更新部门
+  updateDepartment: (id: string, data: UpdateDepartmentRequest): Promise<ApiResponse<Department>> =>
+    apiClient.put<ApiResponse<Department>>(`/departments/${id}`, data),
+
+  // 删除部门
+  deleteDepartment: (id: string): Promise<ApiResponse<void>> =>
+    apiClient.delete<ApiResponse<void>>(`/departments/${id}`),
+};

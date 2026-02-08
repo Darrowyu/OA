@@ -93,6 +93,26 @@ const DialogTitle = React.forwardRef<HTMLHeadingElement, DialogTitleProps>(
 )
 DialogTitle.displayName = "DialogTitle"
 
+interface DialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
+  children: React.ReactNode
+}
+
+const DialogDescription = React.forwardRef<HTMLParagraphElement, DialogDescriptionProps>(
+  ({ className, children, ...props }, ref) => (
+    <p
+      ref={ref}
+      className={cn(
+        "text-sm text-gray-500",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </p>
+  )
+)
+DialogDescription.displayName = "DialogDescription"
+
 interface DialogBodyProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
 }
@@ -133,4 +153,4 @@ const DialogFooter = React.forwardRef<HTMLDivElement, DialogFooterProps>(
 )
 DialogFooter.displayName = "DialogFooter"
 
-export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter }
+export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter }

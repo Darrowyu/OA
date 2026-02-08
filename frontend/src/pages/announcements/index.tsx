@@ -5,15 +5,12 @@ import {
   Bell,
   Plus,
   Search,
-  Filter,
   Pin,
   Eye,
   Clock,
-  ChevronDown,
   MoreVertical,
   Edit3,
   Trash2,
-  BarChart3,
   CheckCircle2,
   Circle,
 } from 'lucide-react';
@@ -24,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -202,9 +198,9 @@ export default function AnnouncementsPage() {
         ...(searchQuery && { search: searchQuery }),
       });
 
-      if (res.data.success) {
-        setAnnouncements(res.data.data.items);
-        setTotal(res.data.data.total);
+      if (res.success) {
+        setAnnouncements(res.data.items);
+        setTotal(res.data.total);
       }
     } catch (error) {
       toast.error('加载公告列表失败');
@@ -223,7 +219,7 @@ export default function AnnouncementsPage() {
 
     try {
       const res = await announcementsApi.deleteAnnouncement(deleteId);
-      if (res.data.success) {
+      if (res.success) {
         toast.success('公告删除成功');
         loadAnnouncements();
       }

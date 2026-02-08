@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Folder,
+  Folder as FolderIcon,
   FileText,
   MoreVertical,
-  Plus,
   Upload,
   Search,
   Grid,
@@ -14,7 +12,6 @@ import {
   Download,
   Trash2,
   Edit3,
-  Move,
   Eye,
   Clock,
   HardDrive,
@@ -24,7 +21,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +47,6 @@ import {
   folderApi,
   documentApi,
   type Folder,
-  type FolderTreeNode,
   type Document,
   type DocumentType,
   formatFileSize,
@@ -108,7 +103,6 @@ function UploadProgress({ fileName, progress, onCancel }: { fileName: string; pr
 }
 
 export default function DocumentsPage() {
-  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -138,17 +132,17 @@ export default function DocumentsPage() {
         documentApi.getStatistics(),
       ]);
 
-      if (foldersRes.data.success) {
-        setFolders(foldersRes.data.data);
+      if (foldersRes.success) {
+        setFolders(foldersRes.data);
       }
 
-      if (docsRes.data.success) {
-        setDocuments(docsRes.data.data.data);
-        setTotalDocuments(docsRes.data.data.total);
+      if (docsRes.success) {
+        setDocuments(docsRes.data.data);
+        setTotalDocuments(docsRes.data.total);
       }
 
-      if (statsRes.data.success) {
-        setStatistics(statsRes.data.data);
+      if (statsRes.success) {
+        setStatistics(statsRes.data);
       }
     } catch (error) {
       toast.error('加载数据失败');
@@ -166,9 +160,9 @@ export default function DocumentsPage() {
 
     try {
       const res = await folderApi.getById(currentFolderId);
-      if (res.data.success && res.data.data.parentId) {
+      if (res.success && res.data.parentId) {
         // 这里简化处理，实际应该递归加载完整路径
-        setFolderPath([res.data.data]);
+        setFolderPath([res.data]);
       }
     } catch (error) {
       console.error('加载文件夹路径失败', error);
@@ -197,7 +191,7 @@ export default function DocumentsPage() {
         setUploadProgress({ fileName: file.name, progress });
       });
 
-      if (res.data.success) {
+      if (res.success) {
         toast.success('文件上传成功');
         loadData();
       }
@@ -236,8 +230,7 @@ export default function DocumentsPage() {
   // 处理文档下载
   const handleDownload = async (doc: Document) => {
     try {
-      const res = await documentApi.download(doc.id);
-      const blob = new Blob([res.data]);
+      const blob = await documentApi.download(doc.id) as unknown as Blob;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -258,7 +251,7 @@ export default function DocumentsPage() {
 
     try {
       const res = await documentApi.rename(selectedDocument.id, { name: newName });
-      if (res.data.success) {
+      if (res.success) {
         toast.success('重命名成功');
         loadData();
         setIsRenameDialogOpen(false);
@@ -275,7 +268,7 @@ export default function DocumentsPage() {
 
     try {
       const res = await documentApi.delete(selectedDocument.id);
-      if (res.data.success) {
+      if (res.success) {
         toast.success('已移至回收站');
         loadData();
         setIsDeleteDialogOpen(false);
@@ -397,7 +390,7 @@ export default function DocumentsPage() {
                       : 'flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50'
                   }`}
                 >
-                  <Folder className={`${viewMode === 'grid' ? 'w-12 h-12' : 'w-8 h-8'} text-yellow-500`} />
+                  <FolderIcon className={`${viewMode === 'grid' ? 'w-12 h-12' : 'w-8 h-8'} text-yellow-500`} />
                   <span className={`text-sm font-medium text-gray-700 truncate ${viewMode === 'grid' ? 'mt-2 text-center w-full' : ''}`}>
                     {folder.name}
                   </span>

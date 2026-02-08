@@ -310,6 +310,7 @@ export enum ChartType {
   DOUGHNUT = 'doughnut',
   RADAR = 'radar',
   AREA = 'area',
+  TABLE = 'table',
 }
 
 // 报表模板

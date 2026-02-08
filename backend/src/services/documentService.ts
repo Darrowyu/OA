@@ -41,24 +41,6 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
-// 文档存储目录
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'documents')
-
-// 确保目录存在
-function ensureDirectoryExists(dir: string): void {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
-}
-
-// 生成存储路径
-function generateStoragePath(): string {
-  const now = new Date()
-  const year = now.getFullYear().toString()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return path.join(year, month)
-}
-
 // 获取文件类型
 function getFileType(filename: string): DocumentType {
   const ext = path.extname(filename).toLowerCase()

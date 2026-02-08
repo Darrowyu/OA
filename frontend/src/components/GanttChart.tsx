@@ -38,7 +38,7 @@ const statusColors: Record<TaskStatus, string> = {
 
 export function GanttChart({ tasks, onTaskClick, isLoading }: GanttChartProps) {
   // 计算时间范围
-  const { days, startDate, endDate } = useMemo(() => {
+  const { days, startDate } = useMemo(() => {
     if (tasks.length === 0) {
       const today = new Date()
       const start = startOfMonth(today)
@@ -65,6 +65,7 @@ export function GanttChart({ tasks, onTaskClick, isLoading }: GanttChartProps) {
     return {
       days: eachDayOfInterval({ start, end }),
       startDate: start,
+      endDate: end,
     }
   }, [tasks])
 

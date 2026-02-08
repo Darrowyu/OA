@@ -13,7 +13,6 @@ import {
   ReactFlowProvider,
   useReactFlow,
   Panel,
-  useStoreApi,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
@@ -40,8 +39,7 @@ const edgeTypes = {
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
-  const isHorizontal = direction === 'LR';
+const getLayoutedElements = (nodes: Node<FlowNodeData>[], edges: Edge[], direction = 'TB') => {
   dagreGraph.setGraph({ rankdir: direction, ranksep: 80, nodesep: 40 });
 
   nodes.forEach((node) => {
@@ -80,7 +78,7 @@ function WorkflowCanvasInner({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const { project } = useReactFlow();
+  const { screenToFlowPosition } = useReactFlow();
   
   // 连接节点
   const onConnect = useCallback(
@@ -133,7 +131,7 @@ function WorkflowCanvasInner({
       const wrapperBounds = reactFlowWrapper.current?.getBoundingClientRect();
       if (!wrapperBounds) return;
 
-      const position = project({
+      const position = screenToFlowPosition({
         x: event.clientX - wrapperBounds.left,
         y: event.clientY - wrapperBounds.top,
       });
@@ -166,7 +164,7 @@ function WorkflowCanvasInner({
         return updated;
       });
     },
-    [project, setNodes, edges, onChange, onNodeSelect, readOnly]
+    [screenToFlowPosition, setNodes, edges, onChange, onNodeSelect, readOnly]
   );
 
   // 节点点击
@@ -258,7 +256,7 @@ function WorkflowCanvasInner({
         fitView
         attributionPosition="bottom-right"
         deleteKeyCode={readOnly ? null : 'Delete'}
-        connectionMode="loose"
+        connectionMode={undefined}
         defaultEdgeOptions={{
           type: 'default',
           animated: true,

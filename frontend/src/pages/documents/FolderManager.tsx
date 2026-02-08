@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Folder,
-  FolderPlus,
   MoreVertical,
   ChevronRight,
   ChevronDown,
@@ -166,8 +165,8 @@ export function FolderManager({ isOpen, onClose, onSelect }: FolderManagerProps)
     setLoading(true);
     try {
       const res = await folderApi.getTree();
-      if (res.data.success) {
-        setFolderTree(res.data.data);
+      if (res.success) {
+        setFolderTree(res.data);
       }
     } catch (error) {
       toast.error('加载文件夹失败');
@@ -205,7 +204,7 @@ export function FolderManager({ isOpen, onClose, onSelect }: FolderManagerProps)
         name: newFolderName,
         parentId: parentFolderId,
       });
-      if (res.data.success) {
+      if (res.success) {
         toast.success('文件夹创建成功');
         loadFolderTree();
         setIsCreateDialogOpen(false);
@@ -224,7 +223,7 @@ export function FolderManager({ isOpen, onClose, onSelect }: FolderManagerProps)
       const res = await folderApi.update(selectedFolder.id, {
         name: newFolderName,
       });
-      if (res.data.success) {
+      if (res.success) {
         toast.success('文件夹重命名成功');
         loadFolderTree();
         setIsEditDialogOpen(false);
@@ -241,7 +240,7 @@ export function FolderManager({ isOpen, onClose, onSelect }: FolderManagerProps)
 
     try {
       const res = await folderApi.delete(selectedFolder.id);
-      if (res.data.success) {
+      if (res.success) {
         toast.success('文件夹删除成功');
         loadFolderTree();
         setIsDeleteDialogOpen(false);

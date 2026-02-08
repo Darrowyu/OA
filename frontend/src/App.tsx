@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { PanelLeft, PanelRight } from "lucide-react"
-import { Header } from "@/components/Header"
 import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
 import { ApplicationsModule } from "@/pages/applications"
@@ -100,18 +99,6 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
-// 占位页面布局
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <>
-      <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)]">
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <p className="text-gray-500 mt-4">模块开发中...</p>
-      </main>
-    </>
-  )
-}
 
 function App() {
   return (
