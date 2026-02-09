@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Header } from '@/components/Header'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttChart } from '@/components/GanttChart'
-import { tasksApi, type Task, type KanbanColumn, type GanttTask, TaskStatus } from '@/services/tasks'
+import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus } from '@/services/tasks'
 import { Plus, Layout, List, BarChart3, Calendar } from 'lucide-react'
 
 export function TasksPage() {
@@ -113,11 +113,17 @@ export function TasksPage() {
     }
   }
 
-  // 点击任务
-  const handleTaskClick = (task: Task) => {
+  // 点击看板任务
+  const handleKanbanTaskClick = useCallback((task: { id: string; title: string }) => {
     // TODO: 打开任务详情侧边栏
     toast.info(`打开任务: ${task.title}`)
-  }
+  }, [])
+
+  // 点击甘特图任务
+  const handleGanttTaskClick = useCallback((task: GanttTask) => {
+    // TODO: 打开任务详情侧边栏
+    toast.info(`打开任务: ${task.title}`)
+  }, [])
 
   // 添加任务
   const handleAddTask = (status: TaskStatus) => {
@@ -196,7 +202,7 @@ export function TasksPage() {
               <KanbanBoard
                 columns={kanbanColumns}
                 onDragEnd={handleDragEnd}
-                onTaskClick={handleTaskClick}
+                onTaskClick={handleKanbanTaskClick}
                 onAddTask={handleAddTask}
                 isLoading={isLoading}
               />
@@ -212,7 +218,7 @@ export function TasksPage() {
           <TabsContent value="gantt" className="mt-4">
             <GanttChart
               tasks={ganttTasks}
-              onTaskClick={handleTaskClick}
+              onTaskClick={handleGanttTaskClick}
               isLoading={isLoading}
             />
           </TabsContent>

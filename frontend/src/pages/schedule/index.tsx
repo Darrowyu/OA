@@ -27,10 +27,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Plus, Calendar as CalendarIcon, Users, Clock, MapPin, Tag, Trash2, Edit } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
   calendarApi,
@@ -154,7 +153,6 @@ const EventForm: React.FC<EventFormProps> = ({
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
-                  initialFocus
                 />
                 <div className="flex gap-2">
                   <Input
@@ -196,7 +194,6 @@ const EventForm: React.FC<EventFormProps> = ({
                   mode="single"
                   selected={endDate}
                   onSelect={setEndDate}
-                  initialFocus
                 />
                 <div className="flex gap-2">
                   <Input
@@ -300,7 +297,7 @@ const SchedulePage: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarViewType>('month');
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | undefined>();

@@ -5,17 +5,20 @@ import { cn } from "@/lib/utils"
 interface AccordionProps {
   children: React.ReactNode
   className?: string
+  type?: 'single' | 'multiple'
 }
 
 const AccordionContext = React.createContext<{
   openItems: Set<string>
   toggleItem: (id: string) => void
+  type: 'single' | 'multiple'
 }>({
   openItems: new Set(),
   toggleItem: () => {},
+  type: 'multiple',
 })
 
-function Accordion({ children, className }: AccordionProps) {
+function Accordion({ children, className, type = 'multiple' }: AccordionProps) {
   const [openItems, setOpenItems] = React.useState<Set<string>>(new Set())
 
   const toggleItem = (id: string) => {
@@ -31,7 +34,7 @@ function Accordion({ children, className }: AccordionProps) {
   }
 
   return (
-    <AccordionContext.Provider value={{ openItems, toggleItem }}>
+    <AccordionContext.Provider value={{ openItems, toggleItem, type }}>
       <div className={cn("space-y-1", className)}>{children}</div>
     </AccordionContext.Provider>
   )
@@ -57,13 +60,22 @@ interface AccordionTriggerProps {
 }
 
 function AccordionTrigger({ children, className }: AccordionTriggerProps) {
-  const { openItems, toggleItem } = React.useContext(AccordionContext)
+  const { openItems, toggleItem, type } = React.useContext(AccordionContext)
   const itemValue = React.useContext(AccordionItemContext)
   const isOpen = openItems.has(itemValue)
 
+  const handleClick = () => {
+    if (type === 'single' && isOpen) {
+      // 单模式下点击已打开的项，关闭它
+      toggleItem(itemValue)
+    } else {
+      toggleItem(itemValue)
+    }
+  }
+
   return (
     <button
-      onClick={() => toggleItem(itemValue)}
+      onClick={handleClick}
       className={cn(
         "flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left",
         "hover:bg-gray-50 transition-colors",

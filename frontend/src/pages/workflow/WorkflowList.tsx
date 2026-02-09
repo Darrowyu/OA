@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -9,7 +9,6 @@ import {
   Trash2,
   Play,
   CheckCircle,
-  XCircle,
   FileText,
 } from 'lucide-react';
 import { Header } from '@/components/Header';

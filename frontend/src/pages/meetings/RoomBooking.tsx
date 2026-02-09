@@ -1,21 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
   Calendar,
   Clock,
   Users,
-  MapPin,
   AlertCircle,
-  Check,
-  X,
   Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
@@ -31,7 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Header } from '@/components/Header';
-import { meetingApi, MeetingRoom, RoomBooking as RoomBookingType, facilityIcons, facilityNames } from '@/services/meetings';
+import { meetingApi, MeetingRoom, RoomBooking as RoomBookingType, facilityIcons } from '@/services/meetings';
 import { toast } from 'sonner';
 
 // 时间槽配置
@@ -108,10 +103,10 @@ export function RoomBooking() {
   const loadRooms = useCallback(async () => {
     try {
       const res = await meetingApi.getAllRooms();
-      if (res.data.success) {
-        setRooms(res.data.data);
+      if (res.success) {
+        setRooms(res.data);
         if (roomId) {
-          const room = res.data.data.find(r => r.id === roomId);
+          const room = res.data.find((r: MeetingRoom) => r.id === roomId);
           if (room) setSelectedRoom(room);
         }
       }
@@ -128,8 +123,8 @@ export function RoomBooking() {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
       const res = await meetingApi.getRoomBookings(selectedRoom.id, dateStr);
-      if (res.data.success) {
-        setBookings(res.data.data);
+      if (res.success) {
+        setBookings(res.data);
       }
     } catch {
       toast.error('加载预订情况失败');
@@ -159,21 +154,6 @@ export function RoomBooking() {
       const bookingEnd = new Date(booking.endTime);
       return slotTime >= bookingStart && slotTime < bookingEnd;
     });
-  };
-
-  // 获取时间槽的预订信息
-  const getBookingAtTime = (time: string): RoomBookingType | null => {
-    if (!selectedDate) return null;
-
-    const [hours, minutes] = time.split(':').map(Number);
-    const slotTime = new Date(selectedDate);
-    slotTime.setHours(hours, minutes, 0, 0);
-
-    return bookings.find(booking => {
-      const bookingStart = new Date(booking.startTime);
-      const bookingEnd = new Date(booking.endTime);
-      return slotTime >= bookingStart && slotTime < bookingEnd;
-    }) || null;
   };
 
   // 处理时间选择

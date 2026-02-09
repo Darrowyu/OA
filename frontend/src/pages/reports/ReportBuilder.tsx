@@ -5,15 +5,10 @@ import {
   PieChart,
   LineChart,
   Table,
-  Filter,
   Plus,
   Trash2,
   Eye,
   Save,
-  Download,
-  Settings,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

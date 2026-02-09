@@ -24,19 +24,11 @@ import {
 // 搜索结果卡片
 function SearchResultCard({
   article,
-  query,
 }: {
   article: SearchArticleResult;
   query: string;
 }) {
   const navigate = useNavigate();
-
-  // 去除高亮标签显示纯文本
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
 
   return (
     <motion.div

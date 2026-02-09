@@ -76,7 +76,7 @@ function WorkflowCanvasInner({
   className,
 }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>(initialNodes as Node<FlowNodeData>[]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
   
@@ -158,7 +158,7 @@ function WorkflowCanvasInner({
         } as FlowNodeData,
       };
 
-      setNodes((nds) => {
+      setNodes((nds: Node<FlowNodeData>[]) => {
         const updated = [...nds, newNode];
         onChange?.(updated, edges);
         return updated;
@@ -182,9 +182,9 @@ function WorkflowCanvasInner({
       edges,
       'TB'
     );
-    setNodes(layoutedNodes);
+    setNodes(layoutedNodes as Node<FlowNodeData>[]);
     setEdges(layoutedEdges);
-    onChange?.(layoutedNodes, layoutedEdges);
+    onChange?.(layoutedNodes as Node<FlowNodeData>[], layoutedEdges);
   }, [nodes, edges, setNodes, setEdges, onChange]);
 
   // 清空画布
@@ -227,7 +227,7 @@ function WorkflowCanvasInner({
         node.type !== 'end' &&
         !connectedIds.has(node.id)
       ) {
-        errors.push(`节点 "${node.data?.label}" 未连接`);
+        errors.push(`节点 "${(node.data as FlowNodeData)?.label}" 未连接`);
       }
     });
 
@@ -333,7 +333,7 @@ interface WorkflowCanvasProps {
   initialNodes?: Node<FlowNodeData>[];
   initialEdges?: Edge[];
   readOnly?: boolean;
-  onChange?: (nodes: Node[], edges: Edge[]) => void;
+  onChange?: (nodes: Node<FlowNodeData>[], edges: Edge[]) => void;
   onNodeSelect?: (nodeId: string) => void;
   className?: string;
 }

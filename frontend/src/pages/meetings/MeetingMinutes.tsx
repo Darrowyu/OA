@@ -6,7 +6,6 @@ import {
   Clock,
   Users,
   MapPin,
-  Calendar,
   Save,
   Edit2,
   FileText,
@@ -42,15 +41,15 @@ export function MeetingMinutes() {
     setLoading(true);
     try {
       const res = await meetingApi.getMeetingById(id);
-      if (res.data.success) {
-        setMeeting(res.data.data);
-        setMinutes(res.data.data.minutes || '');
+      if (res.success) {
+        setMeeting(res.data);
+        setMinutes(res.data.minutes || '');
 
         // 检查当前用户是否是组织者
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const user = JSON.parse(userStr);
-          setIsOrganizer(res.data.data.organizerId === user.id || user.role === 'ADMIN');
+          setIsOrganizer(res.data.organizerId === user.id || user.role === 'ADMIN');
         }
       }
     } catch {

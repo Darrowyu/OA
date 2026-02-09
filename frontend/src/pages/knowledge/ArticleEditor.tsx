@@ -30,7 +30,6 @@ import { toast } from 'sonner';
 import {
   knowledgeApi,
   type CategoryTreeNode,
-  type KnowledgeArticle,
 } from '@/services/knowledge';
 import { uploadsApi } from '@/services/uploads';
 
@@ -121,13 +120,13 @@ export default function ArticleEditor() {
 
     setUploading(true);
     try {
-      const res = await uploadsApi.upload(file);
+      const res = await uploadsApi.uploadFile(file);
       if (res.success) {
         setAttachments([
           ...attachments,
           {
             name: file.name,
-            url: res.data.url,
+            url: res.data.path,
             size: file.size,
           },
         ]);

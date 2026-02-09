@@ -10,7 +10,7 @@ interface CalendarProps {
   className?: string
 }
 
-function Calendar({ mode = "single", selected, onSelect, className }: CalendarProps) {
+function Calendar({ mode: _mode = "single", selected, onSelect, className }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(new Date())
 
   const daysInMonth = new Date(

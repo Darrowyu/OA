@@ -23,8 +23,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
-  SheetFooter,
 } from '@/components/ui/sheet';
 import {
   Dialog,
@@ -37,6 +35,7 @@ import {
 import { WorkflowCanvas } from '@/components/WorkflowCanvas';
 import { workflowApi, Workflow, FlowNode, FlowEdge, SimulationResult } from '@/services/workflows';
 import { Node, Edge } from '@xyflow/react';
+import { FlowNodeData } from '@/components/FlowNode';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -61,7 +60,7 @@ export default function WorkflowDesigner() {
   const isCopy = searchParams.get('copy') === 'true';
 
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodes, setNodes] = useState<Node<FlowNodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -99,12 +98,19 @@ export default function WorkflowDesigner() {
         setWorkflow(data);
 
         // 转换节点格式
-        const flowNodes: Node[] = (data.nodes || []).map((n: FlowNode) => ({
+        const flowNodes: Node<FlowNodeData>[] = (data.nodes || []).map((n: FlowNode) => ({
           id: n.id,
           type: n.type,
           position: n.position,
           data: {
-            ...n.data,
+            label: n.data.label,
+            assignee: n.data.assignee,
+            assigneeType: n.data.assigneeType,
+            condition: n.data.condition,
+            parallelType: n.data.parallelType,
+            timeout: n.data.timeout,
+            reminder: n.data.reminder,
+            description: n.data.description,
             onClick: () => handleNodeSelect(n.id),
           },
         }));
@@ -114,7 +120,7 @@ export default function WorkflowDesigner() {
           id: e.id,
           source: e.source,
           target: e.target,
-          label: e.label,
+          label: e.label || '',
           type: 'default',
           animated: true,
           style: { stroke: '#94a3b8' },
@@ -133,7 +139,7 @@ export default function WorkflowDesigner() {
   };
 
   // 画布变化回调
-  const handleCanvasChange = (newNodes: Node[], newEdges: Edge[]) => {
+  const handleCanvasChange = (newNodes: Node<FlowNodeData>[], newEdges: Edge[]) => {
     setNodes(newNodes);
     setEdges(newEdges);
   };
@@ -189,7 +195,7 @@ export default function WorkflowDesigner() {
         type: n.type as FlowNode['type'],
         position: n.position,
         data: {
-          label: n.data.label,
+          label: n.data.label || '',
           assignee: n.data.assignee,
           assigneeType: n.data.assigneeType,
           condition: n.data.condition,
@@ -204,15 +210,15 @@ export default function WorkflowDesigner() {
         id: e.id,
         source: e.source,
         target: e.target,
-        label: e.label,
-        condition: e.data?.condition,
+        label: typeof e.label === 'string' ? e.label : undefined,
+        condition: e.data?.condition as string | undefined,
       }));
 
       if (isCopy || !workflow.id) {
         // 创建新工作流
         const response = await workflowApi.createWorkflow({
           name: workflow.name,
-          description: workflow.description,
+          description: workflow.description || undefined,
           entityType: workflow.entityType,
           nodes: saveNodes,
           edges: saveEdges,
@@ -225,7 +231,7 @@ export default function WorkflowDesigner() {
         // 更新现有工作流
         const response = await workflowApi.updateWorkflow(workflow.id, {
           name: workflow.name,
-          description: workflow.description,
+          description: workflow.description || undefined,
           nodes: saveNodes,
           edges: saveEdges,
         });
@@ -385,7 +391,7 @@ export default function WorkflowDesigner() {
         <SheetContent className="w-[400px] sm:w-[540px]">
           <SheetHeader>
             <SheetTitle>节点配置</SheetTitle>
-            <SheetDescription>配置当前节点的详细属性</SheetDescription>
+            <p className="text-sm text-gray-500 mt-1">配置当前节点的详细属性</p>
           </SheetHeader>
 
           {selectedNode && (
@@ -393,7 +399,7 @@ export default function WorkflowDesigner() {
               <div className="grid gap-2">
                 <Label>节点名称</Label>
                 <Input
-                  value={selectedNode.data?.label || ''}
+                  value={selectedNode.data.label || ''}
                   onChange={(e) => handleUpdateNode({ label: e.target.value })}
                 />
               </div>
@@ -403,7 +409,7 @@ export default function WorkflowDesigner() {
                   <div className="grid gap-2">
                     <Label>审批类型</Label>
                     <Select
-                      value={selectedNode.data?.assigneeType || 'user'}
+                      value={selectedNode.data.assigneeType || 'user'}
                       onValueChange={(value) =>
                         handleUpdateNode({ assigneeType: value as FlowNode['data']['assigneeType'] })
                       }
@@ -421,11 +427,11 @@ export default function WorkflowDesigner() {
                     </Select>
                   </div>
 
-                  {selectedNode.data?.assigneeType !== 'applicant' && (
+                  {selectedNode.data.assigneeType !== 'applicant' && (
                     <div className="grid gap-2">
                       <Label>审批人/角色/部门</Label>
                       <Input
-                        value={selectedNode.data?.assignee || ''}
+                        value={selectedNode.data.assignee || ''}
                         onChange={(e) => handleUpdateNode({ assignee: e.target.value })}
                         placeholder="输入用户ID、角色名或部门名"
                       />
@@ -436,7 +442,7 @@ export default function WorkflowDesigner() {
                     <div className="grid gap-2">
                       <Label>并行类型</Label>
                       <Select
-                        value={selectedNode.data?.parallelType || 'all'}
+                        value={selectedNode.data.parallelType || 'all'}
                         onValueChange={(value) =>
                           handleUpdateNode({ parallelType: value as 'all' | 'any' })
                         }
@@ -461,7 +467,7 @@ export default function WorkflowDesigner() {
                 <div className="grid gap-2">
                   <Label>条件表达式</Label>
                   <Textarea
-                    value={selectedNode.data?.condition || ''}
+                    value={selectedNode.data.condition || ''}
                     onChange={(e) => handleUpdateNode({ condition: e.target.value })}
                     placeholder="例如: amount > 1000"
                   />
@@ -475,7 +481,7 @@ export default function WorkflowDesigner() {
                 <Label>超时时间（小时）</Label>
                 <Input
                   type="number"
-                  value={selectedNode.data?.timeout || ''}
+                  value={selectedNode.data.timeout || ''}
                   onChange={(e) =>
                     handleUpdateNode({ timeout: parseInt(e.target.value) || undefined })
                   }
@@ -486,7 +492,7 @@ export default function WorkflowDesigner() {
               <div className="grid gap-2">
                 <Label>节点描述</Label>
                 <Textarea
-                  value={selectedNode.data?.description || ''}
+                  value={selectedNode.data.description || ''}
                   onChange={(e) => handleUpdateNode({ description: e.target.value })}
                   placeholder="节点说明（可选）"
                 />
@@ -494,7 +500,7 @@ export default function WorkflowDesigner() {
             </div>
           )}
 
-          <SheetFooter className="gap-2">
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
             <Button variant="outline" onClick={() => setNodeConfigOpen(false)}>
               关闭
             </Button>
@@ -503,7 +509,7 @@ export default function WorkflowDesigner() {
                 删除节点
               </Button>
             )}
-          </SheetFooter>
+          </div>
         </SheetContent>
       </Sheet>
 

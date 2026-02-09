@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, Routes, Route, NavLink } from 'react-router-dom';
+import { Routes, Route, NavLink } from 'react-router-dom';
 import {
   BarChart3,
-  PieChart,
   FileText,
   Settings,
   Users,
@@ -12,23 +11,11 @@ import {
   Filter,
   Download,
   Calendar,
-  ChevronDown,
   RefreshCw,
-  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DatePicker } from '@/components/ui/date-picker';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { reportsApi } from '@/services/reports';
 import {
@@ -43,7 +30,6 @@ import {
   BarChartWidget,
   PieChartWidget,
   DataTableWidget,
-  AlertListWidget,
 } from '@/components/DashboardWidgets';
 import { Header } from '@/components/Header';
 
@@ -90,15 +76,15 @@ function ApprovalReport() {
   const bottleneckColumns = [
     { key: 'stage', title: '审批阶段' },
     { key: 'pendingCount', title: '待处理数' },
-    { key: 'rejectionRate', title: '驳回率', render: (v: number) => `${v}%` },
-    { key: 'avgWaitTime', title: '平均等待(小时)', render: (v: number) => `${v}h` },
+    { key: 'rejectionRate', title: '驳回率', render: (value: unknown) => `${value}%` },
+    { key: 'avgWaitTime', title: '平均等待(小时)', render: (value: unknown) => `${value}h` },
   ];
 
   const approverColumns = [
     { key: 'approverName', title: '审批人' },
     { key: 'department', title: '部门' },
     { key: 'totalApprovals', title: '审批次数' },
-    { key: 'avgResponseTime', title: '平均响应(小时)', render: (v: number) => `${v}h` },
+    { key: 'avgResponseTime', title: '平均响应(小时)', render: (value: unknown) => `${value}h` },
   ];
 
   return (
@@ -269,7 +255,7 @@ function EquipmentReport() {
     { key: 'equipmentName', title: '设备名称' },
     { key: 'maintenanceCount', title: '保养次数' },
     { key: 'repairCount', title: '维修次数' },
-    { key: 'totalCost', title: '总费用', render: (v: number) => `¥${v.toLocaleString()}` },
+    { key: 'totalCost', title: '总费用', render: (value: unknown) => `¥${Number(value).toLocaleString()}` },
   ];
 
   return (
@@ -378,7 +364,7 @@ function AttendanceReport() {
   const departmentColumns = [
     { key: 'departmentName', title: '部门' },
     { key: 'userCount', title: '人数' },
-    { key: 'attendanceRate', title: '出勤率', render: (v: number) => `${v}%` },
+    { key: 'attendanceRate', title: '出勤率', render: (value: unknown) => `${value}%` },
     { key: 'lateCount', title: '迟到次数' },
     { key: 'absentCount', title: '缺勤次数' },
   ];
@@ -390,11 +376,14 @@ function AttendanceReport() {
     {
       key: 'type',
       title: '类型',
-      render: (v: string) => (
-        <Badge variant="secondary" className={v === 'LATE' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-600'}>
-          {v === 'LATE' ? '迟到' : v === 'EARLY_LEAVE' ? '早退' : '缺勤'}
-        </Badge>
-      ),
+      render: (value: unknown) => {
+        const v = value as string;
+        return (
+          <Badge variant="secondary" className={v === 'LATE' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-600'}>
+            {v === 'LATE' ? '迟到' : v === 'EARLY_LEAVE' ? '早退' : '缺勤'}
+          </Badge>
+        );
+      },
     },
   ];
 
@@ -603,7 +592,6 @@ function PerformanceReport() {
 // ============================================
 
 export default function ReportsCenter() {
-  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#F3F4F6]">

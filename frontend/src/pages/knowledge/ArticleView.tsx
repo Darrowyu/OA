@@ -19,7 +19,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/Header';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';

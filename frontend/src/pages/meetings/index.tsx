@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
@@ -9,12 +9,9 @@ import {
   MapPin,
   MoreVertical,
   Search,
-  Filter,
   Building2,
-  ChevronRight,
   X,
   Check,
-  AlertCircle,
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -228,8 +223,8 @@ function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }: Create
   const loadRooms = async () => {
     try {
       const res = await meetingApi.getAllRooms();
-      if (res.data.success) {
-        setRooms(res.data.data);
+      if (res.success) {
+        setRooms(res.data);
       }
     } catch {
       toast.error('加载会议室失败');
@@ -342,10 +337,9 @@ interface MeetingDetailDialogProps {
   meetingId: string | null;
   open: boolean;
   onClose: () => void;
-  onUpdate: () => void;
 }
 
-function MeetingDetailDialog({ meetingId, open, onClose, onUpdate }: MeetingDetailDialogProps) {
+function MeetingDetailDialog({ meetingId, open, onClose }: MeetingDetailDialogProps) {
   const [meeting, setMeeting] = useState<MeetingListItem | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -360,8 +354,8 @@ function MeetingDetailDialog({ meetingId, open, onClose, onUpdate }: MeetingDeta
     setLoading(true);
     try {
       const res = await meetingApi.getMeetingById(meetingId);
-      if (res.data.success) {
-        setMeeting(res.data.data);
+      if (res.success) {
+        setMeeting(res.data);
       }
     } catch {
       toast.error('加载会议详情失败');
@@ -413,8 +407,6 @@ function MeetingDetailDialog({ meetingId, open, onClose, onUpdate }: MeetingDeta
 // ==================== 主页面组件 ====================
 
 export function MeetingsPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState('rooms');
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
   const [meetings, setMeetings] = useState<MeetingListItem[]>([]);
@@ -429,8 +421,8 @@ export function MeetingsPage() {
     setLoading(true);
     try {
       const res = await meetingApi.getRooms({ pageSize: 100 });
-      if (res.data.success) {
-        setRooms(res.data.data.items);
+      if (res.success) {
+        setRooms(res.data.items);
       }
     } catch {
       toast.error('加载会议室失败');
@@ -443,8 +435,8 @@ export function MeetingsPage() {
     setLoading(true);
     try {
       const res = await meetingApi.getMeetings({ type, pageSize: 50 });
-      if (res.data.success) {
-        setMeetings(res.data.data.items);
+      if (res.success) {
+        setMeetings(res.data.items);
       }
     } catch {
       toast.error('加载会议列表失败');
@@ -651,9 +643,6 @@ export function MeetingsPage() {
         onClose={() => {
           setDetailDialogOpen(false);
           setSelectedMeetingId(null);
-        }}
-        onUpdate={() => {
-          loadMeetings(activeTab === 'organized' ? 'organized' : 'attending');
         }}
       />
     </>
