@@ -77,7 +77,7 @@ export const uploadMultiple = (fieldName: string, maxCount: number = 10) =>
 export const uploadFields = (fields: multer.Field[]) => upload.fields(fields);
 
 // 错误处理中间件
-export function handleUploadError(err: Error & { code?: string }, _req: Request, res: any, next: any): void {
+export function handleUploadError(err: Error & { code?: string }, _req: Request, res: Response, next: NextFunction): void {
   if (err instanceof multer.MulterError) {
     // Multer错误
     if (err.code === 'LIMIT_FILE_SIZE') {

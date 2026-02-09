@@ -67,20 +67,49 @@ export interface AuditStats {
   }>;
 }
 
+// 敏感字段列表
+const SENSITIVE_FIELDS = ['password', 'twoFactorSecret', 'token', 'refreshToken', 'secret', 'apiKey', 'privateKey'];
+
+/**
+ * 过滤敏感数据字段
+ * 在记录审计日志前移除敏感信息
+ */
+function filterSensitiveData(data: Record<string, unknown> | null | undefined): Record<string, unknown> | null | undefined {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  return Object.fromEntries(
+    Object.entries(data).filter(([key]) => {
+      const isSensitive = SENSITIVE_FIELDS.some(field =>
+        key.toLowerCase().includes(field.toLowerCase())
+      );
+      if (isSensitive) {
+        logger.debug(`审计日志过滤敏感字段: ${key}`);
+      }
+      return !isSensitive;
+    })
+  );
+}
+
 /**
  * 创建审计日志
  * 失败不应影响主业务流程
  */
 export async function createAuditLog(data: CreateAuditLogData): Promise<void> {
   try {
+    // 过滤敏感字段
+    const filteredOldValues = filterSensitiveData(data.oldValues);
+    const filteredNewValues = filterSensitiveData(data.newValues);
+
     await prisma.auditLog.create({
       data: {
         userId: data.userId,
         action: data.action,
         entityType: data.entityType,
         entityId: data.entityId,
-        oldValues: data.oldValues ? (data.oldValues as Prisma.InputJsonValue) : undefined,
-        newValues: data.newValues ? (data.newValues as Prisma.InputJsonValue) : undefined,
+        oldValues: filteredOldValues ? (filteredOldValues as Prisma.InputJsonValue) : undefined,
+        newValues: filteredNewValues ? (filteredNewValues as Prisma.InputJsonValue) : undefined,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         description: data.description,
@@ -90,7 +119,12 @@ export async function createAuditLog(data: CreateAuditLogData): Promise<void> {
     // 审计日志失败不应影响主业务流程，仅记录错误
     logger.error('创建审计日志失败', {
       error: error instanceof Error ? error.message : '未知错误',
-      data,
+      data: {
+        userId: data.userId,
+        action: data.action,
+        entityType: data.entityType,
+        entityId: data.entityId,
+      }, // 不记录完整的oldValues/newValues避免敏感信息泄露
     });
   }
 }
@@ -106,8 +140,8 @@ export async function createAuditLogs(dataList: CreateAuditLogData[]): Promise<v
         action: data.action,
         entityType: data.entityType,
         entityId: data.entityId,
-        oldValues: data.oldValues ? (data.oldValues as Prisma.InputJsonValue) : undefined,
-        newValues: data.newValues ? (data.newValues as Prisma.InputJsonValue) : undefined,
+        oldValues: filterSensitiveData(data.oldValues) as Prisma.InputJsonValue | undefined,
+        newValues: filterSensitiveData(data.newValues) as Prisma.InputJsonValue | undefined,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         description: data.description,

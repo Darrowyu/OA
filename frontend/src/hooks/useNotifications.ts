@@ -3,14 +3,17 @@ import { Notification, WebSocketStatus } from '@/types';
 import { notificationsApi } from '@/services/notifications';
 import { toast } from 'sonner';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Socket = {
+// Socket事件回调类型
+type SocketEventCallback = (...args: unknown[]) => void;
+
+// Socket类型定义
+interface Socket {
   connected: boolean;
   disconnect(): void;
   emit(event: string, ...args: unknown[]): void;
-  on(event: string, callback: (...args: any[]) => void): Socket;
+  on(event: string, callback: SocketEventCallback): Socket;
   join?(room: string): void;
-};
+}
 
 // 动态导入 socket.io-client
 let io: (url: string, opts?: Record<string, unknown>) => Socket;
@@ -75,12 +78,12 @@ export function useNotifications(): UseNotificationsReturn {
       reconnectAttemptsRef.current = 0;
     });
 
-    socket.on('connect_error', (error: Error) => {
+    socket.on('connect_error', (error: unknown) => {
       console.error('WebSocket 连接错误:', error);
       setWsStatus('error');
     });
 
-    socket.on('disconnect', (reason: string) => {
+    socket.on('disconnect', (reason: unknown) => {
       console.log('WebSocket 断开连接:', reason);
       setWsStatus('disconnected');
     });
@@ -89,29 +92,32 @@ export function useNotifications(): UseNotificationsReturn {
       console.log('服务器确认连接:', data);
     });
 
-    socket.on('notification:new', (notification: Notification) => {
-      console.log('收到新通知:', notification);
-      setNotifications((prev) => [notification, ...prev]);
+    socket.on('notification:new', (notification: unknown) => {
+      const newNotification = notification as Notification;
+      console.log('收到新通知:', newNotification);
+      setNotifications((prev) => [newNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
 
-      toast.info(notification.title, {
-        description: notification.content,
+      toast.info(newNotification.title, {
+        description: newNotification.content,
         duration: 5000,
       });
     });
 
-    socket.on('notification:broadcast', (notification: Notification) => {
-      console.log('收到广播通知:', notification);
-      setNotifications((prev) => [notification, ...prev]);
+    socket.on('notification:broadcast', (notification: unknown) => {
+      const broadcastNotification = notification as Notification;
+      console.log('收到广播通知:', broadcastNotification);
+      setNotifications((prev) => [broadcastNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
 
-      toast.info(notification.title, {
-        description: notification.content,
+      toast.info(broadcastNotification.title, {
+        description: broadcastNotification.content,
         duration: 5000,
       });
     });
 
-    socket.on('notification:unreadCount', ({ count }: { count: number }) => {
+    socket.on('notification:unreadCount', (data: unknown) => {
+      const { count } = data as { count: number };
       setUnreadCount(count);
     });
 

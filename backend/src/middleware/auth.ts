@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
 import { verifyAccessToken, extractTokenFromHeader, JwtPayload } from '../utils/jwt';
 import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 
 // 文件类型定义
 interface UploadedFile {
@@ -303,7 +304,7 @@ export async function optionalAuthMiddleware(
     next();
   } catch (error) {
     // 可选认证，错误不影响请求继续，但记录日志
-    console.warn('可选认证失败:', error instanceof Error ? error.message : '未知错误');
+    logger.warn('可选认证失败', { error: error instanceof Error ? error.message : '未知错误' });
     next();
   }
 }

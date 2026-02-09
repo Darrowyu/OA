@@ -224,16 +224,16 @@ export class TaskService {
     })
   }
 
-  // 批量更新任务顺序
+  // 批量更新任务顺序（使用事务保证原子性）
   async updateTaskOrders(updates: { id: string; order: number; status: TaskStatus }[]): Promise<void> {
-    await Promise.all(
-      updates.map(({ id, order, status }) =>
-        prisma.task.update({
+    await prisma.$transaction(async (tx) => {
+      for (const { id, order, status } of updates) {
+        await tx.task.update({
           where: { id },
           data: { order, status },
         })
-      )
-    )
+      }
+    })
   }
 
   // 获取看板数据

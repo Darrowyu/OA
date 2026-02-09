@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config';
+import logger from '../lib/logger';
 
 // 邮件传输器配置
 const transporter = nodemailer.createTransport({
@@ -144,16 +145,20 @@ export async function sendEmailNotification(
 
       const info = await transporter.sendMail(mailOptions);
       const logPrefix = applicationCode ? `申请 ${applicationCode}: ` : '';
-      console.log(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送成功:`, info.messageId);
+      logger.info(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送成功: ${info.messageId}`);
       return true;
     } catch (error) {
       if (!hasLoggedFailure) {
         const logPrefix = applicationCode ? `申请 ${applicationCode}: ` : '';
-        console.error(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败，开始重试中...`, (error as Error).message);
+        logger.error(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败，开始重试中...`, { error: (error as Error).message });
         hasLoggedFailure = true;
       }
 
       retryCount++;
+      // 检查是否超过最大重试次数
+      if (retryCount >= config.email.maxRetries) {
+        throw new Error('邮件发送失败，超过最大重试次数');
+      }
       await new Promise(resolve => setTimeout(resolve, config.email.retryDelay));
       return await sendMail();
     }

@@ -22,8 +22,8 @@ export function ApplicationNew() {
           usersApi.getFactoryManagers(),
           usersApi.getManagers(),
         ])
-        setFactoryManagers((factoryRes as any).data || [])
-        setManagers((managerRes as any).data || [])
+        setFactoryManagers(factoryRes.data || [])
+        setManagers(managerRes.data || [])
       } catch (error) {
         console.error("加载审批人失败:", error)
         toast.error("加载审批人列表失败")

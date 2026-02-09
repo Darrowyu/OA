@@ -211,41 +211,43 @@ export async function publishWorkflow(id: string, userId: string): Promise<Workf
   const edges = workflow.edges as unknown as FlowEdge[]
   validateWorkflow(nodes, edges)
 
-  // 如果当前流程是已发布状态，创建新版本
+  // 如果当前流程是已发布状态，在事务中创建新版本（保证原子性）
   if (workflow.status === WorkflowStatus.PUBLISHED) {
-    // 取消原版本的默认状态
-    if (workflow.isDefault) {
-      await prisma.workflow.update({
-        where: { id },
-        data: { isDefault: false }
-      })
-    }
+    return await prisma.$transaction(async (tx) => {
+      // 取消原版本的默认状态
+      if (workflow.isDefault) {
+        await tx.workflow.update({
+          where: { id },
+          data: { isDefault: false }
+        })
+      }
 
-    // 创建新版本
-    const newVersion = await prisma.workflow.create({
-      data: {
-        name: workflow.name,
-        description: workflow.description,
-        entityType: workflow.entityType,
-        nodes: workflow.nodes as Prisma.InputJsonValue,
-        edges: workflow.edges as Prisma.InputJsonValue,
-        version: workflow.version + 1,
-        status: WorkflowStatus.PUBLISHED,
-        isDefault: workflow.isDefault,
-        createdBy: userId
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            username: true
+      // 创建新版本
+      const newVersion = await tx.workflow.create({
+        data: {
+          name: workflow.name,
+          description: workflow.description,
+          entityType: workflow.entityType,
+          nodes: workflow.nodes as Prisma.InputJsonValue,
+          edges: workflow.edges as Prisma.InputJsonValue,
+          version: workflow.version + 1,
+          status: WorkflowStatus.PUBLISHED,
+          isDefault: workflow.isDefault,
+          createdBy: userId
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              username: true
+            }
           }
         }
-      }
-    })
+      })
 
-    return newVersion as WorkflowWithCreator
+      return newVersion as WorkflowWithCreator
+    })
   }
 
   // 发布当前草稿

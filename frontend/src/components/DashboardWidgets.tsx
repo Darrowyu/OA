@@ -423,9 +423,18 @@ export function AreaChartWidget({ data, xKey, yKey, title, color = '#3b82f6', is
 // 数据表格组件
 // ============================================
 
+// 数据表格列定义 - 使用泛型支持更灵活的类型
+interface DataTableColumn {
+  key: string;
+  title: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  render?: (value: any, record: Record<string, unknown>) => React.ReactNode;
+}
+
 interface DataTableProps {
-  columns: Array<{ key: string; title: string; render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode }>;
-  data: Array<Record<string, unknown>>;
+  columns: DataTableColumn[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>[];
   title?: string;
   isLoading?: boolean;
   pagination?: {

@@ -15,13 +15,28 @@ export interface LoginResponse {
   };
 }
 
+interface LogoutResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface CurrentUserResponse {
+  success: boolean;
+  data: User;
+}
+
+interface ChangePasswordResponse {
+  success: boolean;
+  message?: string;
+}
+
 export const authApi = {
   login: (data: LoginRequest): Promise<LoginResponse> =>
-    apiClient.post<LoginResponse>('/auth/login', data).then((res: unknown) => res as LoginResponse),
-  logout: (): Promise<{ success: boolean; message?: string }> =>
-    apiClient.post('/auth/logout').then((res: unknown) => res as { success: boolean; message?: string }),
-  getCurrentUser: (): Promise<{ success: boolean; data: User }> =>
-    apiClient.get('/auth/me').then((res: unknown) => res as { success: boolean; data: User }),
-  changePassword: (oldPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> =>
-    apiClient.post('/auth/change-password', { oldPassword, newPassword }).then((res: unknown) => res as { success: boolean; message?: string }),
+    apiClient.post<LoginResponse>('/auth/login', data),
+  logout: (): Promise<LogoutResponse> =>
+    apiClient.post('/auth/logout'),
+  getCurrentUser: (): Promise<CurrentUserResponse> =>
+    apiClient.get('/auth/me'),
+  changePassword: (oldPassword: string, newPassword: string): Promise<ChangePasswordResponse> =>
+    apiClient.post('/auth/change-password', { oldPassword, newPassword }),
 };

@@ -1,12 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { uploadSingle, handleUploadError, getFileUrl, UPLOAD_CONFIG } from '../middleware/upload';
+import prisma from '../lib/prisma';
 import path from 'path';
 import fs from 'fs';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // 上传文件
 router.post(

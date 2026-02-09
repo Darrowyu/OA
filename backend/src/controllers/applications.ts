@@ -526,19 +526,17 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
         },
       });
 
-      // 为每个厂长创建审批记录
-      for (const managerId of existingApp.factoryManagerIds) {
-        const manager = await tx.user.findUnique({ where: { employeeId: managerId } });
-        if (manager) {
-          await tx.factoryApproval.create({
-            data: {
-              applicationId: id,
-              approverId: manager.id,
-              action: 'PENDING',
-            },
-          });
-        }
-      }
+      // 为每个厂长创建审批记录（批量查询+批量创建，避免N+1）
+      const managers = await tx.user.findMany({
+        where: { employeeId: { in: existingApp.factoryManagerIds } }
+      });
+      await tx.factoryApproval.createMany({
+        data: managers.map(manager => ({
+          applicationId: id,
+          approverId: manager.id,
+          action: 'PENDING',
+        })),
+      });
     });
 
     res.json({ success: true, message: '申请提交成功' });

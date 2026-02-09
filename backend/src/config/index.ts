@@ -35,6 +35,7 @@ export const config = {
     },
     from: process.env.EMAIL_FROM || 'OA System <oa@example.com>',
     retryDelay: int(process.env.EMAIL_RETRY_DELAY, '3000'),
+    maxRetries: int(process.env.EMAIL_MAX_RETRIES, '3'),
   },
 
   server: {

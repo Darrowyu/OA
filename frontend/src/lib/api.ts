@@ -114,6 +114,11 @@ axiosInstance.interceptors.response.use(
 );
 
 // 类型安全的 API 客户端封装
+// 使用类型谓词确保类型安全
+const isAxiosResponse = <T>(value: unknown): value is T => {
+  return value !== null && typeof value === 'object';
+};
+
 interface ApiClient {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
   post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
@@ -123,16 +128,41 @@ interface ApiClient {
 }
 
 const apiClient: ApiClient = {
-  get: <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
-    axiosInstance.get(url, config) as unknown as Promise<T>,
-  post: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
-    axiosInstance.post(url, data, config) as unknown as Promise<T>,
-  put: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
-    axiosInstance.put(url, data, config) as unknown as Promise<T>,
-  patch: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
-    axiosInstance.patch(url, data, config) as unknown as Promise<T>,
-  delete: <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
-    axiosInstance.delete(url, config) as unknown as Promise<T>,
+  get: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await axiosInstance.get(url, config);
+    if (isAxiosResponse<T>(response)) {
+      return response;
+    }
+    throw new Error('Invalid response format');
+  },
+  post: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await axiosInstance.post(url, data, config);
+    if (isAxiosResponse<T>(response)) {
+      return response;
+    }
+    throw new Error('Invalid response format');
+  },
+  put: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await axiosInstance.put(url, data, config);
+    if (isAxiosResponse<T>(response)) {
+      return response;
+    }
+    throw new Error('Invalid response format');
+  },
+  patch: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await axiosInstance.patch(url, data, config);
+    if (isAxiosResponse<T>(response)) {
+      return response;
+    }
+    throw new Error('Invalid response format');
+  },
+  delete: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    const response = await axiosInstance.delete(url, config);
+    if (isAxiosResponse<T>(response)) {
+      return response;
+    }
+    throw new Error('Invalid response format');
+  },
 };
 
 export default apiClient;

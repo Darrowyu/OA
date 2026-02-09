@@ -77,21 +77,22 @@ model Department {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  password     String
-  name         String
-  email        String   @unique
+  id           String    @id @default(cuid())
+  username     String    @unique
+  password     String    // 已哈希存储，请勿明文存储
+  name         String    @db.VarChar(100)
+  email        String    @unique @db.VarChar(255)
   role         UserRole
   departmentId String? // 关联部门ID
-  employeeId   String   @unique
-  isActive     Boolean  @default(true)
+  employeeId   String    @unique
+  isActive     Boolean   @default(true)
   avatar       String? // 头像图片 URL
   phone        String? // 手机号
   position     String? // 职位
   signature    String? // 签名图片 Base64
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime? // 软删除字段
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // 关联字段
   applications       Application[]
@@ -127,6 +128,7 @@ model User {
   @@index([departmentId])
   @@index([role])
   @@index([isActive])
+  @@index([deletedAt])
 }
 
 model Application {
@@ -147,6 +149,7 @@ model Application {
   rejectReason      String?
   submittedAt       DateTime?
   completedAt       DateTime?
+  deletedAt         DateTime? // 软删除字段
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -164,6 +167,7 @@ model Application {
   @@index([priority])
   @@index([submittedAt])
   @@index([applicantId])
+  @@index([deletedAt])
 }
 
 model FactoryApproval {
@@ -400,7 +404,7 @@ model Equipment {
   manufacturer      String? // 制造商
   location          String // 存放位置
   status            EquipmentStatus @default(RUNNING)
-  healthScore       Int?            @db.SmallInt // 健康度 0-100
+  healthScore       Int?            @db.SmallInt // 健康度 0-100（应用层验证范围）
   purchaseDate      DateTime? // 购买日期
   warrantyDate      DateTime? // 保修到期日
   purchasePrice     Decimal?        @db.Decimal(15, 2) // 购买价格
@@ -409,6 +413,7 @@ model Equipment {
   lastMaintenanceAt DateTime? // 上次保养时间
   nextMaintenanceAt DateTime? // 下次保养时间
   totalWorkHours    Int?            @default(0) // 累计工作时长
+  deletedAt         DateTime? // 软删除字段
   createdBy         String // 创建人ID
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -422,6 +427,7 @@ model Equipment {
   @@index([code])
   @@index([category])
   @@index([location])
+  @@index([deletedAt])
 }
 
 // 维修/保养记录
@@ -695,7 +701,7 @@ model UserPreference {
 
   // 2FA 设置
   twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String? // 2FA 密钥（加密存储）
+  twoFactorSecret  String? // 2FA 密钥（需应用层加密存储）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

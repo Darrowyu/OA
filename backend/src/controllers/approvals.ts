@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApplicationStatus, ApprovalAction, UserRole } from '@prisma/client';
+import { ApplicationStatus, ApprovalAction, UserRole, FactoryApproval, DirectorApproval, ManagerApproval, CeoApproval } from '@prisma/client';
 import {
   getNextStatus,
   isSpecialManager,
@@ -202,20 +202,18 @@ export async function directorApprove(req: Request, res: Response): Promise<void
           },
         });
 
-        // 如果不跳过经理，创建经理审批记录
-        if (!skipManager && selectedManagerIds) {
-          for (const managerId of selectedManagerIds) {
-            const manager = await tx.user.findUnique({ where: { employeeId: managerId } });
-            if (manager) {
-              await tx.managerApproval.create({
-                data: {
-                  applicationId,
-                  approverId: manager.id,
-                  action: ApprovalAction.PENDING,
-                },
-              });
-            }
-          }
+        // 如果不跳过经理，批量创建经理审批记录（避免N+1）
+        if (!skipManager && selectedManagerIds && selectedManagerIds.length > 0) {
+          const managers = await tx.user.findMany({
+            where: { employeeId: { in: selectedManagerIds } }
+          });
+          await tx.managerApproval.createMany({
+            data: managers.map(manager => ({
+              applicationId,
+              approverId: manager.id,
+              action: ApprovalAction.PENDING,
+            })),
+          });
         }
       }
     });
@@ -496,14 +494,15 @@ async function handleReadonlyNotification(applicationId: string, amount: number 
       where: { role: 'READONLY', isActive: true },
     });
 
-    for (const user of readonlyUsers) {
-      await prisma.reminderLog.create({
-        data: {
+    // 批量创建提醒记录（避免N+1）
+    if (readonlyUsers.length > 0) {
+      await prisma.reminderLog.createMany({
+        data: readonlyUsers.map(user => ({
           applicationId,
           recipientId: user.id,
           reminderType: 'SYSTEM',
           reminderCount: 1,
-        },
+        })),
       });
     }
 
@@ -631,7 +630,7 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
 
     // 检查用户是否有该级别的审批记录
     let hasApproved = false;
-    let approvalRecord: any = null;
+    let approvalRecord: FactoryApproval | DirectorApproval | ManagerApproval | CeoApproval | null = null;
 
     switch (level) {
       case 'FACTORY':

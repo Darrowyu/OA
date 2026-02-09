@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import prisma from '../lib/prisma';
+import logger from '../lib/logger';
 
 // 归档配置
 const ARCHIVE_CONFIG = {
@@ -34,7 +34,7 @@ export interface ArchiveResult {
 }
 
 // 获取申请完整数据快照
-async function getApplicationSnapshot(applicationId: string): Promise<any> {
+async function getApplicationSnapshot(applicationId: string): Promise<Record<string, unknown>> {
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
     include: {
@@ -82,13 +82,13 @@ async function getApplicationSnapshot(applicationId: string): Promise<any> {
 function copyFileSync(source: string, target: string): boolean {
   try {
     if (!fs.existsSync(source)) {
-      console.error(`源文件不存在: ${source}`);
+      logger.error(`源文件不存在: ${source}`);
       return false;
     }
     fs.copyFileSync(source, target);
     return true;
   } catch (error) {
-    console.error(`复制文件失败: ${source} -> ${target}`, error);
+    logger.error(`复制文件失败: ${source} -> ${target}`, { error: error instanceof Error ? error.message : '未知错误' });
     return false;
   }
 }
@@ -157,7 +157,7 @@ export async function archiveApplication(applicationId: string, tx?: Prisma.Tran
       },
     });
 
-    console.log(`申请 ${application.applicationNo} 归档成功，路径: ${fullPath}`);
+    logger.info(`申请 ${application.applicationNo} 归档成功，路径: ${fullPath}`);
 
     return {
       success: true,
@@ -165,7 +165,7 @@ export async function archiveApplication(applicationId: string, tx?: Prisma.Tran
       archivePath: fullPath,
     };
   } catch (error) {
-    console.error('归档申请失败:', error);
+    logger.error('归档申请失败', { error: error instanceof Error ? error.message : '未知错误' });
     return {
       success: false,
       error: error instanceof Error ? error.message : '归档失败',
