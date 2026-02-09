@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { UserRole, Prisma } from '@prisma/client';
 import logger from '../lib/logger';
+import { success, fail } from '../utils/response';
 
 // 查询参数类型
 interface UserQueryParams {
@@ -48,8 +49,7 @@ interface ImportUserRequest {
   }>;
 }
 
-const success = <T>(data: T, meta?: Record<string, unknown>) => ({ success: true, data, ...(meta && { meta }) });
-const fail = (code: string, message: string, details?: unknown) => ({ success: false, error: { code, message, details } });
+
 
 /**
  * 获取用户列表

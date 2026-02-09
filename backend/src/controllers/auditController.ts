@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { getAuditLogs, getAuditStats, getAuditLogById, AuditLogQueryParams } from '../services/auditService';
 import logger from '../lib/logger';
-
-const success = <T>(data: T, meta?: Record<string, unknown>) => ({ success: true, data, ...(meta && { meta }) });
-const fail = (code: string, message: string, details?: unknown) => ({ success: false, error: { code, message, details } });
+import { success, fail } from '../utils/response';
 
 /**
  * 获取审计日志列表

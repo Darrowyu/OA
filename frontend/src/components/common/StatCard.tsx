@@ -30,18 +30,6 @@ const trendConfig: Record<TrendType, { color: string; icon: typeof TrendingUp }>
 
 /**
  * 统计卡片组件
- *
- * 用于展示统计数据，支持趋势指示器和加载状态
- *
- * @example
- * ```tsx
- * <StatCard
- *   title="总收入"
- *   value="¥128,000"
- *   icon={DollarSign}
- *   trend={{ value: 12.5, type: 'up', label: '较上月' }}
- * />
- * ```
  */
 export function StatCard({
   title,
@@ -68,6 +56,9 @@ export function StatCard({
     );
   }
 
+  const TrendIcon = trend ? trendConfig[trend.type].icon : null;
+  const trendColor = trend ? trendConfig[trend.type].color : '';
+
   return (
     <Card className={cn('transition-all duration-200 hover:shadow-md', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -85,26 +76,16 @@ export function StatCard({
       <CardContent>
         <div className="text-2xl font-bold text-gray-900">{value}</div>
         <div className="flex items-center gap-2 mt-1">
-          {trend && (
+          {trend && TrendIcon && (
             <div className="flex items-center gap-1">
-              {(() => {
-                const TrendIcon = trendConfig[trend.type].icon;
-                return (
-                  <TrendIcon
-                    className={cn(
-                      'h-3 w-3',
-                      trendConfig[trend.type].color,
-                      trend.type === 'neutral' && 'rotate-90'
-                    )}
-                  />
-                );
-              })()}
-              <span
+              <TrendIcon
                 className={cn(
-                  'text-xs font-medium',
-                  trendConfig[trend.type].color
+                  'h-3 w-3',
+                  trendColor,
+                  trend.type === 'neutral' && 'rotate-90'
                 )}
-              >
+              />
+              <span className={cn('text-xs font-medium', trendColor)}>
                 {trend.value > 0 && trend.type !== 'down' ? '+' : ''}
                 {trend.value}%
               </span>
@@ -133,8 +114,6 @@ interface MiniStatCardProps {
 
 /**
  * 迷你统计卡片
- *
- * 紧凑的统计卡片，用于仪表盘小部件
  */
 export function MiniStatCard({
   value,
@@ -185,25 +164,23 @@ interface StatCardGroupProps {
   columns?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
+const columnStyles: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+  5: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5',
+  6: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6',
+};
+
 /**
  * 统计卡片组
- *
- * 用于排列多个统计卡片，自动处理响应式布局
  */
 export function StatCardGroup({
   children,
   className,
   columns = 4,
 }: StatCardGroupProps) {
-  const columnStyles: Record<number, string> = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-    5: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5',
-    6: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6',
-  };
-
   return (
     <div className={cn('grid gap-4', columnStyles[columns], className)}>
       {children}
@@ -211,5 +188,4 @@ export function StatCardGroup({
   );
 }
 
-// 导出组件
 export type { StatCardProps, MiniStatCardProps, StatCardGroupProps, TrendType };

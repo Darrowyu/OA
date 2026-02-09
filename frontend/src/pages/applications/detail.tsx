@@ -16,6 +16,7 @@ import { approvalsApi } from "@/services/approvals"
 import { uploadsApi } from "@/services/uploads"
 import { useAuth } from "@/contexts/AuthContext"
 import { formatDate, formatFileSize } from "@/lib/utils"
+import { statusConfig, priorityConfig } from "@/config/status"
 import {
   ArrowLeft,
   User as UserIcon,
@@ -28,67 +29,8 @@ import {
   Download,
   Loader2,
   AlertCircle,
-  FileText,
   Clock,
 } from "lucide-react"
-
-const statusConfig: Record<ApplicationStatus, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
-  [ApplicationStatus.DRAFT]: {
-    label: "草稿",
-    color: "text-gray-600",
-    bgColor: "bg-gray-100",
-    icon: <FileText className="h-4 w-4" />,
-  },
-  [ApplicationStatus.PENDING_FACTORY]: {
-    label: "待厂长审核",
-    color: "text-amber-700",
-    bgColor: "bg-amber-100",
-    icon: <Clock className="h-4 w-4" />,
-  },
-  [ApplicationStatus.PENDING_DIRECTOR]: {
-    label: "待总监审批",
-    color: "text-blue-700",
-    bgColor: "bg-blue-100",
-    icon: <Clock className="h-4 w-4" />,
-  },
-  [ApplicationStatus.PENDING_MANAGER]: {
-    label: "待经理审批",
-    color: "text-purple-700",
-    bgColor: "bg-purple-100",
-    icon: <Clock className="h-4 w-4" />,
-  },
-  [ApplicationStatus.PENDING_CEO]: {
-    label: "待CEO审批",
-    color: "text-coral",
-    bgColor: "bg-coral-light",
-    icon: <Clock className="h-4 w-4" />,
-  },
-  [ApplicationStatus.APPROVED]: {
-    label: "已通过",
-    color: "text-emerald-700",
-    bgColor: "bg-emerald-100",
-    icon: <CheckCircle className="h-4 w-4" />,
-  },
-  [ApplicationStatus.REJECTED]: {
-    label: "已拒绝",
-    color: "text-red-700",
-    bgColor: "bg-red-100",
-    icon: <XCircle className="h-4 w-4" />,
-  },
-  [ApplicationStatus.ARCHIVED]: {
-    label: "已归档",
-    color: "text-gray-600",
-    bgColor: "bg-gray-100",
-    icon: <FileText className="h-4 w-4" />,
-  },
-}
-
-const priorityConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  LOW: { label: "低", color: "text-gray-600", bgColor: "bg-gray-100" },
-  NORMAL: { label: "普通", color: "text-blue-600", bgColor: "bg-blue-100" },
-  HIGH: { label: "高", color: "text-amber-600", bgColor: "bg-amber-100" },
-  URGENT: { label: "紧急", color: "text-red-600", bgColor: "bg-red-100" },
-}
 
 export const ApplicationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()

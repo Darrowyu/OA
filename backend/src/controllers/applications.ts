@@ -91,64 +91,49 @@ export async function getApplications(req: Request, res: Response): Promise<void
     }
 
     // 权限过滤
-    if (myApplications === 'true') {
+    if (myApplications === 'true' || user.role === 'USER') {
       // 只看自己的申请
       where.applicantId = user.id;
-    } else {
-      // 根据角色过滤可见申请
-      switch (user.role) {
-        case 'USER':
-          // 普通用户只能看自己的
-          where.applicantId = user.id;
-          break;
-        case 'FACTORY_MANAGER':
-          // 厂长看待自己审批的和已审批的
-          if (!status || status === 'all') {
-            where.OR = [
-              { status: ApplicationStatus.PENDING_FACTORY, factoryManagerIds: { has: user.employeeId } },
-              { factoryApprovals: { some: { approverId: user.id } } },
-              { applicantId: user.id },
-            ];
-          }
-          break;
-        case 'DIRECTOR':
-          // 总监看待审批的和已审批的
-          if (!status || status === 'all') {
-            where.OR = [
-              { status: ApplicationStatus.PENDING_DIRECTOR },
-              { directorApprovals: { some: { approverId: user.id } } },
-              { applicantId: user.id },
-            ];
-          }
-          break;
-        case 'MANAGER':
-          // 经理看待自己审批的和已审批的
-          if (!status || status === 'all') {
-            where.OR = [
-              { status: ApplicationStatus.PENDING_MANAGER, managerIds: { has: user.employeeId } },
-              { managerApprovals: { some: { approverId: user.id } } },
-              { applicantId: user.id },
-            ];
-          }
-          break;
-        case 'CEO':
-          // CEO看所有待审批和已审批的
-          if (!status || status === 'all') {
-            where.OR = [
-              { status: ApplicationStatus.PENDING_CEO },
-              { ceoApprovals: { some: { approverId: user.id } } },
-              { applicantId: user.id },
-            ];
-          }
-          break;
-        case 'READONLY':
-          // 只读用户只能看已完成的
-          where.status = { in: [ApplicationStatus.APPROVED, ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED] };
-          break;
-        case 'ADMIN':
-          // 管理员可以看所有
-          break;
+    } else if (!status || status === 'all') {
+      // 根据角色过滤可见申请（使用配置对象替代switch）
+      const roleFilters: Record<string, Prisma.ApplicationWhereInput> = {
+        FACTORY_MANAGER: {
+          OR: [
+            { status: ApplicationStatus.PENDING_FACTORY, factoryManagerIds: { has: user.employeeId } },
+            { factoryApprovals: { some: { approverId: user.id } } },
+            { applicantId: user.id },
+          ],
+        },
+        DIRECTOR: {
+          OR: [
+            { status: ApplicationStatus.PENDING_DIRECTOR },
+            { directorApprovals: { some: { approverId: user.id } } },
+            { applicantId: user.id },
+          ],
+        },
+        MANAGER: {
+          OR: [
+            { status: ApplicationStatus.PENDING_MANAGER, managerIds: { has: user.employeeId } },
+            { managerApprovals: { some: { approverId: user.id } } },
+            { applicantId: user.id },
+          ],
+        },
+        CEO: {
+          OR: [
+            { status: ApplicationStatus.PENDING_CEO },
+            { ceoApprovals: { some: { approverId: user.id } } },
+            { applicantId: user.id },
+          ],
+        },
+        READONLY: {
+          status: { in: [ApplicationStatus.APPROVED, ApplicationStatus.REJECTED, ApplicationStatus.ARCHIVED] },
+        },
+      };
+
+      if (roleFilters[user.role]) {
+        Object.assign(where, roleFilters[user.role]);
       }
+      // ADMIN不需要额外过滤，可以看所有
     }
 
     // 并行查询总数和数据

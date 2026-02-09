@@ -3,12 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import * as profileService from '../services/profileService';
-
-const success = <T>(data: T) => ({ success: true, data });
-const fail = (code: string, message: string, details?: unknown) => ({
-  success: false,
-  error: { code, message, details },
-});
+import { success, fail } from '../utils/response';
 
 /**
  * 获取当前用户完整个人资料

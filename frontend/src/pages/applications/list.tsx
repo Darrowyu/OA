@@ -14,6 +14,7 @@ import {
 } from "@/types"
 import { applicationsApi, GetApplicationsParams } from "@/services/applications"
 import { usersApi } from "@/services/users"
+import { getStatusLabel } from "@/config/status"
 import {
   Plus,
   Search,
@@ -40,67 +41,6 @@ const statusOptions: SelectOption[] = [
   { value: ApplicationStatus.DRAFT, label: "草稿" },
 ]
 
-// 统计卡片组件
-interface StatCardProps {
-  title: string
-  value: string | number
-  subtitle?: string
-  icon: React.ReactNode
-  trend?: {
-    value: number
-    isPositive: boolean
-    label: string
-  }
-  variant: "coral" | "blue" | "green" | "amber"
-}
-
-// 统计卡片组件 - 新设计风格
-const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, trend, variant }) => {
-  const variantStyles = {
-    coral: "bg-white",
-    blue: "bg-white",
-    green: "bg-white",
-    amber: "bg-white",
-  }
-
-  const iconStyles = {
-    coral: "bg-gray-900 text-white",
-    blue: "bg-blue-500 text-white",
-    green: "bg-emerald-500 text-white",
-    amber: "bg-amber-500 text-white",
-  }
-
-  return (
-    <div className={`relative overflow-hidden rounded-xl ${variantStyles[variant]} p-5 shadow-sm hover:shadow-md transition-all duration-200 group`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-gray-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
-          {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
-          {trend && (
-            <div className="flex items-center gap-1 mt-2">
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                trend.isPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-              }`}>
-                {trend.isPositive ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                <span>{trend.isPositive ? "+" : ""}{trend.value}%</span>
-              </div>
-              <span className="text-xs text-gray-400">{trend.label}</span>
-            </div>
-          )}
-        </div>
-        <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${iconStyles[variant]} transition-transform duration-200 group-hover:scale-105`}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // 分类统计进度条组件
 interface CategoryStatProps {
   label: string
@@ -124,6 +64,59 @@ const CategoryStat: React.FC<CategoryStatProps> = ({ label, value, total, color 
             className={`h-full rounded-full transition-all duration-500 ${color}`}
             style={{ width: `${percentage}%` }}
           />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 内联统计卡片组件
+interface InlineStatCardProps {
+  title: string
+  value: string | number
+  subtitle?: string
+  icon: React.ReactNode
+  trend?: {
+    value: number
+    isPositive: boolean
+    label: string
+  }
+  variant: "coral" | "blue" | "green" | "amber"
+}
+
+const InlineStatCard: React.FC<InlineStatCardProps> = ({ title, value, subtitle, icon, trend, variant }) => {
+  const iconStyles = {
+    coral: "bg-gray-900 text-white",
+    blue: "bg-blue-500 text-white",
+    green: "bg-emerald-500 text-white",
+    amber: "bg-amber-500 text-white",
+  }
+
+  return (
+    <div className={`relative overflow-hidden rounded-xl bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 group`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-sm text-gray-500 mb-1">{title}</p>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
+          {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+          {trend && (
+            <div className="flex items-center gap-1 mt-2">
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                trend.isPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+              }`}>
+                {trend.isPositive ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>{trend.isPositive ? "+" : ""}{trend.value}%</span>
+              </div>
+              <span className="text-xs text-gray-400">{trend.label}</span>
+            </div>
+          )}
+        </div>
+        <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${iconStyles[variant]} transition-transform duration-200 group-hover:scale-105`}>
+          {icon}
         </div>
       </div>
     </div>
@@ -262,20 +255,6 @@ export function ApplicationList() {
     link.click()
   }
 
-  const getStatusLabel = (status: ApplicationStatus): string => {
-    const map: Record<ApplicationStatus, string> = {
-      [ApplicationStatus.DRAFT]: "草稿",
-      [ApplicationStatus.PENDING_FACTORY]: "待厂长审核",
-      [ApplicationStatus.PENDING_DIRECTOR]: "待总监审批",
-      [ApplicationStatus.PENDING_MANAGER]: "待经理审批",
-      [ApplicationStatus.PENDING_CEO]: "待CEO审批",
-      [ApplicationStatus.APPROVED]: "已通过",
-      [ApplicationStatus.REJECTED]: "已拒绝",
-      [ApplicationStatus.ARCHIVED]: "已归档",
-    }
-    return map[status] || status
-  }
-
   const formatDate = (date: Date) => {
     return date.toLocaleString("zh-CN", {
       month: "short",
@@ -326,7 +305,7 @@ export function ApplicationList() {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard
+        <InlineStatCard
           title="总申请金额"
           value={`¥${(stats.totalRMB + stats.totalUSD * 7).toLocaleString()}`}
           subtitle="人民币等值"
@@ -334,7 +313,7 @@ export function ApplicationList() {
           trend={{ value: 12.5, isPositive: true, label: "vs 上月" }}
           variant="coral"
         />
-        <StatCard
+        <InlineStatCard
           title="本月增长率"
           value="+8.3%"
           subtitle="较上月同期"
@@ -342,7 +321,7 @@ export function ApplicationList() {
           trend={{ value: 2.1, isPositive: true, label: "vs 去年同期" }}
           variant="blue"
         />
-        <StatCard
+        <InlineStatCard
           title="待审核申请"
           value={stats.pendingCount}
           subtitle={`¥${stats.pendingRMB.toLocaleString()}`}
@@ -350,7 +329,7 @@ export function ApplicationList() {
           trend={{ value: 5.2, isPositive: false, label: "vs 上周" }}
           variant="amber"
         />
-        <StatCard
+        <InlineStatCard
           title="已通过申请"
           value={stats.approvedCount}
           subtitle={`¥${stats.approvedRMB.toLocaleString()}`}
@@ -358,7 +337,7 @@ export function ApplicationList() {
           trend={{ value: 18.7, isPositive: true, label: "vs 上月" }}
           variant="green"
         />
-        <StatCard
+        <InlineStatCard
           title="总申请数"
           value={stats.totalCount}
           subtitle="本月累计"

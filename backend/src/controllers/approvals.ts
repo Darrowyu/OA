@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApplicationStatus, ApprovalAction, UserRole, FactoryApproval, DirectorApproval, ManagerApproval, CeoApproval } from '@prisma/client';
+import { ApplicationStatus, ApprovalAction, UserRole, Prisma } from '@prisma/client';
 import {
   getNextStatus,
   isSpecialManager,
@@ -9,21 +9,79 @@ import {
 import { archiveApplication } from '../services/archive';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
+import { ok, fail } from '../utils/response';
+
+// 审批级别配置
+type ApprovalLevel = 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
+
+interface ApprovalConfig {
+  level: ApprovalLevel;
+  requiredRole: UserRole;
+  statusField: keyof Prisma.ApplicationWhereInput;
+  statusValue: ApplicationStatus;
+  approverIdField: string;
+  txModel: {
+    findFirst: (args: unknown) => Promise<unknown | null>;
+    update: (args: unknown) => Promise<unknown>;
+    create: (args: unknown) => Promise<unknown>;
+  };
+}
+
+// 根据级别获取审批配置
+function getApprovalConfig(level: ApprovalLevel, tx: Prisma.TransactionClient): ApprovalConfig {
+  const configs: Record<ApprovalLevel, Omit<ApprovalConfig, 'txModel'> & { txModelKey: keyof typeof tx }> = {
+    FACTORY: {
+      level: 'FACTORY',
+      requiredRole: 'FACTORY_MANAGER',
+      statusField: 'factoryManagerIds',
+      statusValue: ApplicationStatus.PENDING_FACTORY,
+      approverIdField: 'approverId',
+      txModelKey: 'factoryApproval',
+    },
+    DIRECTOR: {
+      level: 'DIRECTOR',
+      requiredRole: 'DIRECTOR',
+      statusField: 'status',
+      statusValue: ApplicationStatus.PENDING_DIRECTOR,
+      approverIdField: 'approverId',
+      txModelKey: 'directorApproval',
+    },
+    MANAGER: {
+      level: 'MANAGER',
+      requiredRole: 'MANAGER',
+      statusField: 'managerIds',
+      statusValue: ApplicationStatus.PENDING_MANAGER,
+      approverIdField: 'approverId',
+      txModelKey: 'managerApproval',
+    },
+    CEO: {
+      level: 'CEO',
+      requiredRole: 'CEO',
+      statusField: 'status',
+      statusValue: ApplicationStatus.PENDING_CEO,
+      approverIdField: 'approverId',
+      txModelKey: 'ceoApproval',
+    },
+  };
+  const config = configs[level];
+  return {
+    ...config,
+    txModel: tx[config.txModelKey] as unknown as ApprovalConfig['txModel'],
+  };
+}
 
 /**
- * 厂长审批
- * POST /api/approvals/factory/:applicationId
+ * 通用审批处理
  */
-export async function factoryApprove(req: Request, res: Response): Promise<void> {
+async function processApproval(
+  level: ApprovalLevel,
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
-
-    if (user.role !== 'FACTORY_MANAGER') {
-      res.status(403).json({ error: '管理员没有审批权限' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
@@ -31,57 +89,73 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
     const { action, comment } = req.body;
 
     if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json({ error: '无效的审批操作' });
+      res.status(400).json(fail('INVALID_ACTION', '无效的审批操作'));
       return;
     }
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
-      include: { factoryApprovals: true },
     });
 
     if (!application) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
-
-    if (application.status !== ApplicationStatus.PENDING_FACTORY) {
-      res.status(400).json({ error: '申请状态不正确' });
-      return;
-    }
-
-    // 检查是否为指定厂长
-    if (!user.employeeId || !application.factoryManagerIds.includes(user.employeeId)) {
-      res.status(403).json({ error: '您不是该申请的指定审批人' });
-      return;
-    }
-
-    const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-    const newStatus = getNextStatus(application.status, action);
 
     await prisma.$transaction(async (tx) => {
+      const config = getApprovalConfig(level, tx);
+
+      // 角色权限检查
+      if (user.role !== config.requiredRole) {
+        throw new Error('权限不足');
+      }
+
+      // 状态检查
+      const statusChecks: Record<ApprovalLevel, boolean> = {
+        FACTORY: application.status === ApplicationStatus.PENDING_FACTORY,
+        DIRECTOR: application.status === ApplicationStatus.PENDING_DIRECTOR,
+        MANAGER: application.status === ApplicationStatus.PENDING_MANAGER,
+        CEO: application.status === ApplicationStatus.PENDING_CEO,
+      };
+
+      if (!statusChecks[level]) {
+        throw new Error('申请状态不正确');
+      }
+
+      // 特定级别检查
+      if (level === 'FACTORY' && (!user.employeeId || !application.factoryManagerIds.includes(user.employeeId))) {
+        throw new Error('您不是该申请的指定审批人');
+      }
+      if (level === 'MANAGER' && (!user.employeeId || !application.managerIds.includes(user.employeeId))) {
+        throw new Error('您不是该申请的指定审批人');
+      }
+
+      const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
+      const isSpecial = level === 'MANAGER' ? isSpecialManager(user.employeeId || '') : false;
+      const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
+
       // 更新或创建审批记录
-      const existingApproval = await tx.factoryApproval.findFirst({
+      const existingApproval = await config.txModel.findFirst({
         where: { applicationId, approverId: user.id },
       });
 
+      const approvalData = {
+        action: approvalAction,
+        comment: comment?.trim() || null,
+        approvedAt: new Date(),
+      };
+
       if (existingApproval) {
-        await tx.factoryApproval.update({
-          where: { id: existingApproval.id },
-          data: {
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
-          },
+        await config.txModel.update({
+          where: { id: (existingApproval as { id: string }).id },
+          data: approvalData,
         });
       } else {
-        await tx.factoryApproval.create({
+        await config.txModel.create({
           data: {
             applicationId,
             approverId: user.id,
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
+            ...approvalData,
           },
         });
       }
@@ -98,25 +172,67 @@ export async function factoryApprove(req: Request, res: Response): Promise<void>
           },
         });
       } else {
+        const updateData: Prisma.ApplicationUpdateInput = { status: newStatus };
+
+        // CEO审批通过时设置完成时间
+        if (level === 'CEO') {
+          updateData.completedAt = new Date();
+        }
+
         await tx.application.update({
           where: { id: applicationId },
-          data: { status: newStatus },
+          data: updateData,
         });
+
+        // 非特殊经理审批通过后创建CEO审批记录
+        if (level === 'MANAGER' && !isSpecial) {
+          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+          if (ceo) {
+            await tx.ceoApproval.create({
+              data: {
+                applicationId,
+                approverId: ceo.id,
+                action: ApprovalAction.PENDING,
+              },
+            });
+          }
+        }
+
+        // 最终审批通过后处理归档
+        if ((level === 'CEO' || (level === 'MANAGER' && isSpecial))) {
+          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+          const archiveResult = await archiveApplication(applicationId, tx);
+          if (!archiveResult.success) {
+            throw new Error(`归档失败: ${archiveResult.error}`);
+          }
+        }
       }
+
+      return { newStatus, isSpecial };
     });
 
-    res.json({
-      success: true,
+    const isSpecial = level === 'MANAGER' ? isSpecialManager(user.employeeId || '') : false;
+    const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
+
+    res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      data: {
-        status: newStatus,
-        statusText: getStatusText(newStatus),
-      },
-    });
+      status: newStatus,
+      statusText: getStatusText(newStatus),
+      ...(level === 'MANAGER' && { isSpecialManager: isSpecial }),
+    }));
   } catch (error) {
-    logger.error('厂长审批失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '审批失败' });
+    const msg = error instanceof Error ? error.message : '审批失败';
+    logger.error(`${level}审批失败`, { error: msg });
+    res.status(500).json(fail('INTERNAL_ERROR', msg));
   }
+}
+
+/**
+ * 厂长审批
+ * POST /api/approvals/factory/:applicationId
+ */
+export function factoryApprove(req: Request, res: Response): Promise<void> {
+  return processApproval('FACTORY', req, res);
 }
 
 /**
@@ -128,12 +244,12 @@ export async function directorApprove(req: Request, res: Response): Promise<void
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     if (user.role !== 'DIRECTOR') {
-      res.status(403).json({ error: '管理员没有审批权限' });
+      res.status(403).json(fail('FORBIDDEN', '管理员没有审批权限'));
       return;
     }
 
@@ -141,7 +257,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
     const { action, comment, selectedManagerIds, skipManager = false } = req.body;
 
     if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json({ error: '无效的审批操作' });
+      res.status(400).json(fail('INVALID_ACTION', '无效的审批操作'));
       return;
     }
 
@@ -150,18 +266,18 @@ export async function directorApprove(req: Request, res: Response): Promise<void
     });
 
     if (!application) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
     if (application.status !== ApplicationStatus.PENDING_DIRECTOR) {
-      res.status(400).json({ error: '申请状态不正确' });
+      res.status(400).json(fail('INVALID_STATUS', '申请状态不正确'));
       return;
     }
 
     // 如果选择通过且未跳过经理，必须选择经理
     if (action === 'APPROVE' && !skipManager && (!selectedManagerIds || selectedManagerIds.length === 0)) {
-      res.status(400).json({ error: '请选择审批经理' });
+      res.status(400).json(fail('MISSING_MANAGERS', '请选择审批经理'));
       return;
     }
 
@@ -218,18 +334,15 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       }
     });
 
-    res.json({
-      success: true,
+    res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      data: {
-        status: newStatus,
-        statusText: getStatusText(newStatus),
-        skipManager,
-      },
-    });
+      status: newStatus,
+      statusText: getStatusText(newStatus),
+      skipManager,
+    }));
   } catch (error) {
     logger.error('总监审批失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '审批失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '审批失败'));
   }
 }
 
@@ -238,248 +351,16 @@ export async function directorApprove(req: Request, res: Response): Promise<void
  * POST /api/approvals/manager/:applicationId
  * E10002特殊规则: 审批后直接通过，跳过CEO
  */
-export async function managerApprove(req: Request, res: Response): Promise<void> {
-  try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
-
-    if (user.role !== 'MANAGER') {
-      res.status(403).json({ error: '管理员没有审批权限' });
-      return;
-    }
-
-    const { applicationId } = req.params;
-    const { action, comment } = req.body;
-
-    if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json({ error: '无效的审批操作' });
-      return;
-    }
-
-    const application = await prisma.application.findUnique({
-      where: { id: applicationId },
-    });
-
-    if (!application) {
-      res.status(404).json({ error: '申请不存在' });
-      return;
-    }
-
-    if (application.status !== ApplicationStatus.PENDING_MANAGER) {
-      res.status(400).json({ error: '申请状态不正确' });
-      return;
-    }
-
-    // 检查是否为指定经理
-    if (!user.employeeId || !application.managerIds.includes(user.employeeId)) {
-      res.status(403).json({ error: '您不是该申请的指定审批人' });
-      return;
-    }
-
-    // 检查是否为特殊经理(E10002)
-    const isSpecial = isSpecialManager(user.employeeId || '');
-    const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-    const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
-
-    await prisma.$transaction(async (tx) => {
-      // 更新或创建审批记录
-      const existingApproval = await tx.managerApproval.findFirst({
-        where: { applicationId, approverId: user.id },
-      });
-
-      if (existingApproval) {
-        await tx.managerApproval.update({
-          where: { id: existingApproval.id },
-          data: {
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
-          },
-        });
-      } else {
-        await tx.managerApproval.create({
-          data: {
-            applicationId,
-            approverId: user.id,
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
-          },
-        });
-      }
-
-      if (action === 'REJECT') {
-        await tx.application.update({
-          where: { id: applicationId },
-          data: {
-            status: newStatus,
-            rejectedBy: user.id,
-            rejectedAt: new Date(),
-            rejectReason: comment?.trim() || null,
-          },
-        });
-      } else {
-        // 更新申请状态
-        await tx.application.update({
-          where: { id: applicationId },
-          data: { status: newStatus },
-        });
-
-        // 如果不是特殊经理，创建CEO审批记录
-        if (!isSpecial) {
-          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
-          if (ceo) {
-            await tx.ceoApproval.create({
-              data: {
-                applicationId,
-                approverId: ceo.id,
-                action: ApprovalAction.PENDING,
-              },
-            });
-          }
-        } else {
-          // 特殊经理审批通过，检查是否需要通知只读用户
-          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
-
-          // 归档申请数据
-          const archiveResult = await archiveApplication(applicationId, tx);
-          if (!archiveResult.success) {
-            throw new Error(`归档失败: ${archiveResult.error}`);
-          }
-        }
-      }
-    });
-
-    res.json({
-      success: true,
-      message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      data: {
-        status: newStatus,
-        statusText: getStatusText(newStatus),
-        isSpecialManager: isSpecial,
-      },
-    });
-  } catch (error) {
-    logger.error('经理审批失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '审批失败' });
-  }
+export function managerApprove(req: Request, res: Response): Promise<void> {
+  return processApproval('MANAGER', req, res);
 }
 
 /**
  * CEO审批
  * POST /api/approvals/ceo/:applicationId
  */
-export async function ceoApprove(req: Request, res: Response): Promise<void> {
-  try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
-
-    if (user.role !== 'CEO') {
-      res.status(403).json({ error: '管理员没有审批权限' });
-      return;
-    }
-
-    const { applicationId } = req.params;
-    const { action, comment } = req.body;
-
-    if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json({ error: '无效的审批操作' });
-      return;
-    }
-
-    const application = await prisma.application.findUnique({
-      where: { id: applicationId },
-    });
-
-    if (!application) {
-      res.status(404).json({ error: '申请不存在' });
-      return;
-    }
-
-    if (application.status !== ApplicationStatus.PENDING_CEO) {
-      res.status(400).json({ error: '申请状态不正确' });
-      return;
-    }
-
-    const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-    const newStatus = getNextStatus(application.status, action);
-
-    await prisma.$transaction(async (tx) => {
-      // 更新或创建审批记录
-      const existingApproval = await tx.ceoApproval.findFirst({
-        where: { applicationId, approverId: user.id },
-      });
-
-      if (existingApproval) {
-        await tx.ceoApproval.update({
-          where: { id: existingApproval.id },
-          data: {
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
-          },
-        });
-      } else {
-        await tx.ceoApproval.create({
-          data: {
-            applicationId,
-            approverId: user.id,
-            action: approvalAction,
-            comment: comment?.trim() || null,
-            approvedAt: new Date(),
-          },
-        });
-      }
-
-      if (action === 'REJECT') {
-        await tx.application.update({
-          where: { id: applicationId },
-          data: {
-            status: newStatus,
-            rejectedBy: user.id,
-            rejectedAt: new Date(),
-            rejectReason: comment?.trim() || null,
-          },
-        });
-      } else {
-        // 审批通过
-        await tx.application.update({
-          where: { id: applicationId },
-          data: {
-            status: newStatus,
-            completedAt: new Date(),
-          },
-        });
-
-        // 检查是否需要通知只读用户
-        await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
-
-        // 归档申请数据
-        const archiveResult = await archiveApplication(applicationId, tx);
-        if (!archiveResult.success) {
-          throw new Error(`归档失败: ${archiveResult.error}`);
-        }
-      }
-    });
-
-    res.json({
-      success: true,
-      message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      data: {
-        status: newStatus,
-        statusText: getStatusText(newStatus),
-      },
-    });
-  } catch (error) {
-    logger.error('CEO审批失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '审批失败' });
-  }
+export function ceoApprove(req: Request, res: Response): Promise<void> {
+  return processApproval('CEO', req, res);
 }
 
 /**
@@ -512,6 +393,13 @@ async function handleReadonlyNotification(applicationId: string, amount: number 
   }
 }
 
+// 审批记录类型
+interface ApprovalWithApprover {
+  approver: { id: string; name: string; employeeId: string; role: UserRole };
+  createdAt: Date;
+  [key: string]: unknown;
+}
+
 /**
  * 获取审批历史
  * GET /api/approvals/:applicationId/history
@@ -520,7 +408,7 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
@@ -549,15 +437,8 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
     });
 
     if (!application) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
-    }
-
-    // 审批记录类型
-    interface ApprovalWithApprover {
-      approver: { id: string; name: string; employeeId: string; role: UserRole };
-      createdAt: Date;
-      [key: string]: unknown;
     }
 
     // 权限检查
@@ -570,7 +451,7 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
       application.ceoApprovals.some((a: ApprovalWithApprover) => a.approver.id === user.id);
 
     if (!canView) {
-      res.status(403).json({ error: '无权查看审批历史' });
+      res.status(403).json(fail('FORBIDDEN', '无权查看审批历史'));
       return;
     }
 
@@ -582,15 +463,28 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
       ...application.ceoApprovals.map((a: ApprovalWithApprover) => ({ ...a, level: 'CEO' as const })),
     ].sort((a: ApprovalWithApprover, b: ApprovalWithApprover) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    res.json({
-      success: true,
-      data: allApprovals,
-    });
+    res.json(ok(allApprovals));
   } catch (error) {
     logger.error('获取审批历史失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取审批历史失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取审批历史失败'));
   }
 }
+
+// 撤回审批配置
+const approvalLevelConfig: Record<string, { role: UserRole; modelName: string; pendingStatus: ApplicationStatus }> = {
+  FACTORY: { role: 'FACTORY_MANAGER', modelName: 'factoryApproval', pendingStatus: ApplicationStatus.PENDING_FACTORY },
+  DIRECTOR: { role: 'DIRECTOR', modelName: 'directorApproval', pendingStatus: ApplicationStatus.PENDING_DIRECTOR },
+  MANAGER: { role: 'MANAGER', modelName: 'managerApproval', pendingStatus: ApplicationStatus.PENDING_MANAGER },
+  CEO: { role: 'CEO', modelName: 'ceoApproval', pendingStatus: ApplicationStatus.PENDING_CEO },
+};
+
+// 允许撤回的状态
+const allowedWithdrawStatuses: Record<string, ApplicationStatus[]> = {
+  FACTORY: [ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+  DIRECTOR: [ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+  MANAGER: [ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
+  CEO: [ApplicationStatus.APPROVED],
+};
 
 /**
  * 撤回审批
@@ -601,158 +495,73 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     const { applicationId } = req.params;
-    const { level } = req.body; // 'FACTORY', 'DIRECTOR', 'MANAGER', 'CEO'
+    const { level } = req.body;
 
-    if (!level || !['FACTORY', 'DIRECTOR', 'MANAGER', 'CEO'].includes(level)) {
-      res.status(400).json({ error: '无效的审批级别' });
+    if (!level || !approvalLevelConfig[level]) {
+      res.status(400).json(fail('INVALID_LEVEL', '无效的审批级别'));
+      return;
+    }
+
+    const config = approvalLevelConfig[level];
+
+    if (user.role !== config.role) {
+      res.status(403).json(fail('FORBIDDEN', `无权撤回${level === 'FACTORY' ? '厂长' : level === 'DIRECTOR' ? '总监' : level === 'MANAGER' ? '经理' : 'CEO'}审批`));
       return;
     }
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
       include: {
-        factoryApprovals: { where: { approverId: user.id } },
-        directorApprovals: { where: { approverId: user.id } },
-        managerApprovals: { where: { approverId: user.id } },
-        ceoApprovals: { where: { approverId: user.id } },
-      },
+        [config.modelName]: { where: { approverId: user.id } },
+      } as Prisma.ApplicationInclude,
     });
 
     if (!application) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
-    // 检查用户是否有该级别的审批记录
-    let hasApproved = false;
-    let approvalRecord: FactoryApproval | DirectorApproval | ManagerApproval | CeoApproval | null = null;
-
-    switch (level) {
-      case 'FACTORY':
-        if (user.role !== 'FACTORY_MANAGER') {
-          res.status(403).json({ error: '无权撤回厂长审批' });
-          return;
-        }
-        approvalRecord = application.factoryApprovals[0];
-        hasApproved = !!approvalRecord;
-        break;
-      case 'DIRECTOR':
-        if (user.role !== 'DIRECTOR') {
-          res.status(403).json({ error: '无权撤回总监审批' });
-          return;
-        }
-        approvalRecord = application.directorApprovals[0];
-        hasApproved = !!approvalRecord;
-        break;
-      case 'MANAGER':
-        if (user.role !== 'MANAGER') {
-          res.status(403).json({ error: '无权撤回经理审批' });
-          return;
-        }
-        approvalRecord = application.managerApprovals[0];
-        hasApproved = !!approvalRecord;
-        break;
-      case 'CEO':
-        if (user.role !== 'CEO') {
-          res.status(403).json({ error: '无权撤回CEO审批' });
-          return;
-        }
-        approvalRecord = application.ceoApprovals[0];
-        hasApproved = !!approvalRecord;
-        break;
-    }
-
-    if (!hasApproved) {
-      res.status(400).json({ error: '您没有该申请的审批记录，无法撤回' });
+    // 检查是否有审批记录
+    const approvals = (application as unknown as Record<string, unknown[]>)[config.modelName] || [];
+    if (approvals.length === 0) {
+      res.status(400).json(fail('NO_APPROVAL', '您没有该申请的审批记录，无法撤回'));
       return;
     }
 
     // 检查申请状态是否允许撤回
-    // 只允许撤回已通过或待下一级审批的申请
-    const currentStatus = application.status;
-    const allowedStatuses: Record<string, ApplicationStatus[]> = {
-      'FACTORY': [ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
-      'DIRECTOR': [ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
-      'MANAGER': [ApplicationStatus.PENDING_CEO, ApplicationStatus.APPROVED],
-      'CEO': [ApplicationStatus.APPROVED],
-    };
-
-    if (!allowedStatuses[level]?.includes(currentStatus)) {
-      res.status(400).json({ error: '当前申请状态不允许撤回审批' });
+    if (!allowedWithdrawStatuses[level]?.includes(application.status)) {
+      res.status(400).json(fail('INVALID_STATUS', '当前申请状态不允许撤回审批'));
       return;
     }
 
     // 撤回审批
     await prisma.$transaction(async (tx) => {
       // 删除审批记录
-      switch (level) {
-        case 'FACTORY':
-          await tx.factoryApproval.deleteMany({
-            where: { applicationId, approverId: user.id },
-          });
-          break;
-        case 'DIRECTOR':
-          await tx.directorApproval.deleteMany({
-            where: { applicationId, approverId: user.id },
-          });
-          break;
-        case 'MANAGER':
-          await tx.managerApproval.deleteMany({
-            where: { applicationId, approverId: user.id },
-          });
-          break;
-        case 'CEO':
-          await tx.ceoApproval.deleteMany({
-            where: { applicationId, approverId: user.id },
-          });
-          break;
-      }
+      await ((tx as unknown) as Record<string, { deleteMany: (args: unknown) => Promise<unknown> }>)[config.modelName].deleteMany({
+        where: { applicationId, approverId: user.id },
+      });
 
       // 回退申请状态
-      let newStatus: ApplicationStatus;
-      switch (level) {
-        case 'FACTORY':
-          newStatus = ApplicationStatus.PENDING_FACTORY;
-          break;
-        case 'DIRECTOR':
-          newStatus = ApplicationStatus.PENDING_DIRECTOR;
-          break;
-        case 'MANAGER':
-          newStatus = ApplicationStatus.PENDING_MANAGER;
-          break;
-        case 'CEO':
-          newStatus = ApplicationStatus.PENDING_CEO;
-          break;
-        default:
-          newStatus = currentStatus;
-      }
-
       await tx.application.update({
         where: { id: applicationId },
         data: {
-          status: newStatus,
-          completedAt: null, // 清除完成时间
+          status: config.pendingStatus,
+          completedAt: null,
         },
       });
     });
 
-    res.json({
-      success: true,
+    res.json(ok({
       message: '审批已撤回',
-      data: {
-        status: level === 'FACTORY' ? ApplicationStatus.PENDING_FACTORY :
-                level === 'DIRECTOR' ? ApplicationStatus.PENDING_DIRECTOR :
-                level === 'MANAGER' ? ApplicationStatus.PENDING_MANAGER :
-                ApplicationStatus.PENDING_CEO,
-      },
-    });
+      status: config.pendingStatus,
+    }));
   } catch (error) {
     logger.error('撤回审批失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '撤回审批失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '撤回审批失败'));
   }
 }

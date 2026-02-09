@@ -13,22 +13,9 @@ import { usersApi } from "@/services/users"
 import { formatDate, formatAmount, cn } from "@/lib/utils"
 import { useSignature } from "@/hooks/useSignature"
 import { SignatureDialog } from "@/components/SignatureDialog"
-import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle, Clock } from "lucide-react"
+import { statusConfig, priorityConfig } from "@/config/status"
+import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
-
-const statusMap: Record<string, { label: string; color: string; bgColor: string }> = {
-  [ApplicationStatus.PENDING_FACTORY]: { label: "待厂长审批", color: "text-amber-700", bgColor: "bg-amber-100" },
-  [ApplicationStatus.PENDING_DIRECTOR]: { label: "待总监审批", color: "text-blue-700", bgColor: "bg-blue-100" },
-  [ApplicationStatus.PENDING_MANAGER]: { label: "待经理审批", color: "text-purple-700", bgColor: "bg-purple-100" },
-  [ApplicationStatus.PENDING_CEO]: { label: "待CEO审批", color: "text-coral", bgColor: "bg-coral-light" },
-}
-
-const priorityMap: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
-  [Priority.LOW]: { label: "低", color: "text-gray-600", bgColor: "bg-gray-100", icon: null },
-  [Priority.NORMAL]: { label: "普通", color: "text-blue-600", bgColor: "bg-blue-100", icon: null },
-  [Priority.HIGH]: { label: "高", color: "text-amber-600", bgColor: "bg-amber-100", icon: <AlertCircle className="h-3 w-3" /> },
-  [Priority.URGENT]: { label: "紧急", color: "text-red-600", bgColor: "bg-red-100", icon: <AlertTriangle className="h-3 w-3" /> },
-}
 
 const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
   switch (role) {
@@ -148,19 +135,23 @@ export function PendingList() {
   }
 
   const renderPriorityBadge = (priority: Priority) => {
-    const config = priorityMap[priority] || priorityMap[Priority.NORMAL]
+    const config = priorityConfig[priority] || priorityConfig[Priority.NORMAL]
+    const isHigh = priority === Priority.HIGH
+    const isUrgent = priority === Priority.URGENT
     return (
       <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
-        {config.icon}{config.label}
+        {isHigh && <AlertCircle className="h-3 w-3" />}
+        {isUrgent && <AlertTriangle className="h-3 w-3" />}
+        {config.label}
       </span>
     )
   }
 
   const renderStatusBadge = (status: ApplicationStatus) => {
-    const config = statusMap[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-100" }
+    const config = statusConfig[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-100", icon: null }
     return (
       <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
-        <Clock className="h-3 w-3" />{config.label}
+        {config.icon}{config.label}
       </span>
     )
   }

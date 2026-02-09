@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as workflowService from '../services/workflowService'
+import { prisma } from '../lib/prisma'
 // import { WorkflowStatus, InstanceStatus } from '@prisma/client'
 
 /**
@@ -284,6 +285,3 @@ export async function getEntityInstances(req: Request, res: Response): Promise<v
     res.status(500).json({ success: false, message: '获取流程实例列表失败' })
   }
 }
-
-// 导入 prisma 用于查询
-import { prisma } from '../lib/prisma'

@@ -11,18 +11,7 @@ import {
   getAllDepartments,
   DepartmentData,
 } from '../services/departmentService';
-
-// 响应辅助函数
-const success = <T>(data: T, meta?: Record<string, unknown>) => ({
-  success: true,
-  data,
-  ...(meta && { meta }),
-});
-
-const fail = (code: string, message: string, details?: unknown) => ({
-  success: false,
-  error: { code, message, details },
-});
+import { success, fail } from '../utils/response';
 
 /**
  * 获取部门树形结构

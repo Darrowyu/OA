@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { UserRole } from '@prisma/client';
 import logger from '../lib/logger';
+import { ok, fail } from '../utils/response';
 
 // 请求类型定义
 interface LoginRequest {
@@ -30,9 +31,7 @@ interface ChangePasswordRequest {
   newPassword: string;
 }
 
-const ok = <T>(data: T) => ({ success: true, data });
-const fail = (code: string, message: string, details?: unknown) =>
-  ({ success: false, error: { code, message, details } });
+
 
 /**
  * 用户登录
@@ -137,32 +136,24 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // 检查用户名是否已存在
-    const existingUsername = await prisma.user.findUnique({
-      where: { username },
-    });
+    // 并行检查用户名、邮箱、工号是否已存在
+    const [byUsername, byEmail, byEmployeeId] = await Promise.all([
+      prisma.user.findUnique({ where: { username }, select: { username: true } }),
+      prisma.user.findUnique({ where: { email }, select: { email: true } }),
+      prisma.user.findUnique({ where: { employeeId }, select: { employeeId: true } }),
+    ]);
 
-    if (existingUsername) {
+    if (byUsername) {
       res.status(409).json(fail('USERNAME_EXISTS', '用户名已被使用'));
       return;
     }
 
-    // 检查邮箱是否已存在
-    const existingEmail = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingEmail) {
+    if (byEmail) {
       res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被注册'));
       return;
     }
 
-    // 检查工号是否已存在
-    const existingEmployeeId = await prisma.user.findUnique({
-      where: { employeeId },
-    });
-
-    if (existingEmployeeId) {
+    if (byEmployeeId) {
       res.status(409).json(fail('EMPLOYEE_ID_EXISTS', '工号已被使用'));
       return;
     }
