@@ -26,9 +26,23 @@ export interface ClientNotification {
  * 初始化 Socket.io 服务
  */
 export function initializeSocket(httpServer: HttpServer): SocketIOServer {
+  // CORS 动态验证：开发环境允许所有 localhost 端口，生产环境读取配置
+  const isDev = process.env.NODE_ENV !== 'production';
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(s => s.trim()) || [];
+
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // 无 origin（如移动端）或开发环境 localhost 自动通过
+        if (!origin || (isDev && origin.startsWith('http://localhost:'))) {
+          return callback(null, true);
+        }
+        // 检查配置的允许列表
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        callback(new Error('CORS 策略拒绝'));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

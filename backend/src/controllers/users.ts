@@ -129,7 +129,13 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
 
     const totalPages = Math.ceil(total / size);
 
-    res.json(success(users, {
+    // 格式化返回数据，将 department 对象转换为字符串
+    const formattedUsers = users.map(user => ({
+      ...user,
+      department: user.department?.name || '',
+    }));
+
+    res.json(success(formattedUsers, {
       pagination: {
         page: pageNum,
         pageSize: size,
@@ -160,7 +166,7 @@ export async function getUser(req: Request, res: Response): Promise<void> {
         name: true,
         email: true,
         role: true,
-        department: true,
+        department: { select: { name: true } },
         employeeId: true,
         isActive: true,
         createdAt: true,
@@ -173,7 +179,13 @@ export async function getUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    res.json(success(user));
+    // 格式化返回数据
+    const formattedUser = {
+      ...user,
+      department: user.department?.name || '',
+    };
+
+    res.json(success(formattedUser));
   } catch (error) {
     logger.error('获取用户信息失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '获取用户信息时发生错误'));
@@ -269,15 +281,19 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         updatedAt: true,
         department: {
           select: {
-            id: true,
             name: true,
-            code: true,
           }
         }
       },
     });
 
-    res.status(201).json(success(user));
+    // 格式化返回数据
+    const formattedUser = {
+      ...user,
+      department: user.department?.name || '',
+    };
+
+    res.status(201).json(success(formattedUser));
   } catch (error) {
     logger.error('创建用户失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '创建用户时发生错误'));
@@ -334,15 +350,19 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
         updatedAt: true,
         department: {
           select: {
-            id: true,
             name: true,
-            code: true,
           }
         }
       },
     });
 
-    res.json(success(user));
+    // 格式化返回数据
+    const formattedUser = {
+      ...user,
+      department: user.department?.name || '',
+    };
+
+    res.json(success(formattedUser));
   } catch (error) {
     logger.error('更新用户失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '更新用户时发生错误'));
@@ -511,9 +531,7 @@ async function createSingleUser(userData: ImportUserData) {
       departmentId: true,
       department: {
         select: {
-          id: true,
           name: true,
-          code: true,
         }
       },
       employeeId: true,
@@ -582,8 +600,14 @@ export async function importUsers(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // 格式化返回数据
+    const formattedUsers = createdUsers.map(user => ({
+      ...user,
+      department: user.department?.name || '',
+    }));
+
     res.status(201).json(success({
-      imported: createdUsers,
+      imported: formattedUsers,
       summary: { total: users.length, success: results.success, failed: results.failed },
       errors: results.errors,
     }));
@@ -615,13 +639,21 @@ export async function getFactoryManagers(req: Request, res: Response): Promise<v
         username: true,
         name: true,
         employeeId: true,
-        department: true,
+        department: {
+          select: { name: true }
+        },
         email: true,
       },
       orderBy: { name: 'asc' },
     });
 
-    res.json(success(managers));
+    // 格式化返回数据
+    const formattedManagers = managers.map(manager => ({
+      ...manager,
+      department: manager.department?.name || '',
+    }));
+
+    res.json(success(formattedManagers));
   } catch (error) {
     logger.error('获取厂长列表失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '获取厂长列表失败'));
@@ -650,13 +682,21 @@ export async function getManagers(req: Request, res: Response): Promise<void> {
         username: true,
         name: true,
         employeeId: true,
-        department: true,
+        department: {
+          select: { name: true }
+        },
         email: true,
       },
       orderBy: { name: 'asc' },
     });
 
-    res.json(success(managers));
+    // 格式化返回数据
+    const formattedManagers = managers.map(manager => ({
+      ...manager,
+      department: manager.department?.name || '',
+    }));
+
+    res.json(success(formattedManagers));
   } catch (error) {
     logger.error('获取经理列表失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '获取经理列表失败'));

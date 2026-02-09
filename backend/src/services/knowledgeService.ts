@@ -385,7 +385,7 @@ export class KnowledgeService {
         include: {
           category: true,
           author: {
-            select: { id: true, name: true, avatar: true, department: true },
+            select: { id: true, name: true, avatar: true, department: { select: { name: true } } },
           },
           _count: {
             select: { feedbacks: true },
@@ -423,8 +423,14 @@ export class KnowledgeService {
         });
       }
 
+      // 格式化返回数据
+      const { author, ...rest } = article;
       return {
-        ...article,
+        ...rest,
+        author: {
+          ...author,
+          department: author.department?.name || '',
+        },
         userFeedback,
       };
     } catch (error) {

@@ -44,7 +44,7 @@ export async function getFullProfile(userId: string) {
       email: true,
       phone: true,
       role: true,
-      department: true,
+      department: { select: { name: true } },
       position: true,
       employeeId: true,
       avatar: true,
@@ -67,7 +67,11 @@ export async function getFullProfile(userId: string) {
     });
   }
 
-  return user;
+  // 格式化返回数据
+  return {
+    ...user,
+    department: user.department?.name || '',
+  };
 }
 
 /**
@@ -102,7 +106,7 @@ export async function updateBasicInfo(userId: string, data: UpdateBasicInfoData)
       email: true,
       phone: true,
       role: true,
-      department: true,
+      department: { select: { name: true } },
       position: true,
       employeeId: true,
       avatar: true,
@@ -110,7 +114,11 @@ export async function updateBasicInfo(userId: string, data: UpdateBasicInfoData)
     },
   });
 
-  return user;
+  // 格式化返回数据
+  return {
+    ...user,
+    department: user.department?.name || '',
+  };
 }
 
 /**

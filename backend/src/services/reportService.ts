@@ -934,7 +934,7 @@ export class ReportService {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { department: true },
+      select: { id: true, name: true, department: { select: { name: true } } },
     });
 
     if (!user) {
@@ -1346,7 +1346,7 @@ export class ReportService {
 
     const users = await prisma.user.findMany({
       where: filters as Record<string, unknown>,
-      include: { department: true },
+      select: { id: true, name: true, department: { select: { name: true } } },
       skip,
       take: pageSize,
     });

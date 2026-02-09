@@ -39,7 +39,7 @@ async function getApplicationSnapshot(applicationId: string): Promise<Record<str
     where: { id: applicationId },
     include: {
       applicant: {
-        select: { id: true, name: true, email: true, department: true, employeeId: true, role: true },
+        select: { id: true, name: true, email: true, department: { select: { name: true } }, employeeId: true, role: true },
       },
       attachments: {
         select: { id: true, filename: true, storedName: true, path: true, size: true, mimeType: true, createdAt: true },

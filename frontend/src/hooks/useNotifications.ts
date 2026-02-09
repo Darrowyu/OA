@@ -16,10 +16,8 @@ interface Socket {
 }
 
 // 动态导入 socket.io-client
-let io: (url: string, opts?: Record<string, unknown>) => Socket;
-if (typeof window !== 'undefined') {
-  io = require('socket.io-client').io;
-}
+import { io as socketIo } from 'socket.io-client';
+const io: (url: string, opts?: Record<string, unknown>) => Socket = socketIo;
 
 // Socket.io 服务器地址
 const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
@@ -73,7 +71,6 @@ export function useNotifications(): UseNotificationsReturn {
     });
 
     socket.on('connect', () => {
-      console.log('WebSocket 连接成功');
       setWsStatus('connected');
       reconnectAttemptsRef.current = 0;
     });
@@ -83,18 +80,12 @@ export function useNotifications(): UseNotificationsReturn {
       setWsStatus('error');
     });
 
-    socket.on('disconnect', (reason: unknown) => {
-      console.log('WebSocket 断开连接:', reason);
+    socket.on('disconnect', () => {
       setWsStatus('disconnected');
-    });
-
-    socket.on('connected', (data: unknown) => {
-      console.log('服务器确认连接:', data);
     });
 
     socket.on('notification:new', (notification: unknown) => {
       const newNotification = notification as Notification;
-      console.log('收到新通知:', newNotification);
       setNotifications((prev) => [newNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
 
@@ -106,7 +97,6 @@ export function useNotifications(): UseNotificationsReturn {
 
     socket.on('notification:broadcast', (notification: unknown) => {
       const broadcastNotification = notification as Notification;
-      console.log('收到广播通知:', broadcastNotification);
       setNotifications((prev) => [broadcastNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
 
@@ -128,15 +118,21 @@ export function useNotifications(): UseNotificationsReturn {
     socketRef.current = socket;
   }, []);
 
-  const disconnectSocket = useCallback(() => {
+  const disconnectSocket = useCallback((isUnmount = false) => {
     if (socketRef.current) {
+      // 组件卸载时使用静默断开，避免控制台输出错误
+      if (isUnmount) {
+        const socket = socketRef.current;
+        // 移除所有监听器后断开，避免触发错误日志
+        socket.on('disconnect', () => {});
+      }
       socketRef.current.disconnect();
       socketRef.current = null;
     }
   }, []);
 
   const reconnect = useCallback(() => {
-    disconnectSocket();
+    disconnectSocket(false);
     reconnectAttemptsRef.current = 0;
     connectSocket();
   }, [connectSocket, disconnectSocket]);
@@ -269,7 +265,7 @@ export function useNotifications(): UseNotificationsReturn {
 
     return () => {
       clearInterval(heartbeatInterval);
-      disconnectSocket();
+      disconnectSocket(true); // 组件卸载时静默断开
     };
   }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount]);
 
@@ -280,7 +276,7 @@ export function useNotifications(): UseNotificationsReturn {
           reconnect();
           refresh();
         } else {
-          disconnectSocket();
+          disconnectSocket(false);
           setNotifications([]);
           setUnreadCount(0);
         }

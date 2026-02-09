@@ -164,7 +164,7 @@ export async function exportUsers(req: Request, res: Response): Promise<void> {
       orderBy: { createdAt: 'desc' },
       select: {
         username: true, name: true, employeeId: true, email: true,
-        department: true, role: true, isActive: true, createdAt: true,
+        department: { select: { name: true } }, role: true, isActive: true, createdAt: true,
       },
     });
 
@@ -185,7 +185,7 @@ export async function exportUsers(req: Request, res: Response): Promise<void> {
     users.forEach((u) => {
       worksheet.addRow({
         username: u.username, name: u.name, employeeId: u.employeeId,
-        email: u.email, department: u.department,
+        email: u.email, department: u.department?.name || '',
         role: roleMap[u.role] || u.role,
         status: u.isActive ? '启用' : '禁用',
         createdAt: u.createdAt.toLocaleDateString('zh-CN'),

@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils';
 
 // 业务类型选项
 const entityTypeOptions = [
-  { value: '', label: '全部类型' },
+  { value: 'all', label: '全部类型' },
   { value: 'Application', label: '审批申请' },
   { value: 'LeaveRequest', label: '请假申请' },
   { value: 'Equipment', label: '设备管理' },
@@ -61,7 +61,7 @@ export default function WorkflowList() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [entityType, setEntityType] = useState('');
+  const [entityType, setEntityType] = useState('all');
 
   // 删除对话框
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -82,7 +82,7 @@ export default function WorkflowList() {
   const loadWorkflows = async () => {
     setLoading(true);
     try {
-      const response = await workflowApi.getWorkflows(entityType || undefined);
+      const response = await workflowApi.getWorkflows(entityType === 'all' ? undefined : entityType);
       if (response.success) {
         setWorkflows(response.data);
       }

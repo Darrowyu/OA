@@ -260,7 +260,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
         name: true,
         email: true,
         role: true,
-        department: true,
+        department: { select: { name: true } },
         employeeId: true,
         isActive: true,
         createdAt: true,
@@ -273,7 +273,13 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       return;
     }
 
-    res.json(ok(user));
+    // 格式化返回数据
+    const formattedUser = {
+      ...user,
+      department: user.department?.name || '',
+    };
+
+    res.json(ok(formattedUser));
   } catch (error) {
     logger.error('获取当前用户失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '获取用户信息时发生错误'));
