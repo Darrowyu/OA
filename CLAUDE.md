@@ -340,6 +340,198 @@ cp frontend/.env.example frontend/.env
 
 ---
 
+## 常见问题与解决方案
+
+### 问题1: API 响应类型不匹配
+
+**现象**: `Property 'success' does not exist on type 'XXX'`
+
+**原因**: axios 拦截器直接返回 `response.data`，但代码中多访问了一层 `.data`
+
+**错误代码**:
+```typescript
+// ❌ 错误
+const res = await api.get('/users');
+if (res.data.success) { ... }  // res 已经是 response.data
+```
+
+**正确代码**:
+```typescript
+// ✅ 正确
+const res = await api.get('/users');
+if (res.success) { ... }  // 直接使用 res
+```
+
+**预防措施**:
+- 统一使用 `ApiResponse<T>` 类型
+- 理解 axios 拦截器的行为
+
+---
+
+### 问题2: 组件文件过大
+
+**现象**: 单个组件超过 200 行，维护困难
+
+**解决方案**:
+- 按功能拆分为子组件
+- 提取通用逻辑到 Hooks
+- 使用目录组织相关组件
+
+**拆分示例**:
+```
+Sidebar/
+├── index.tsx          # 主组件（布局逻辑）
+├── NavItem.tsx        # 导航项
+├── NavSection.tsx     # 导航区块
+└── types.ts           # 类型定义
+```
+
+---
+
+### 问题3: N+1 查询性能问题
+
+**现象**: 循环中进行数据库查询，性能随数据量线性下降
+
+**错误代码**:
+```typescript
+// ❌ 错误：N+1 查询
+for (const id of ids) {
+  await prisma.user.findUnique({ where: { id } });
+}
+```
+
+**正确代码**:
+```typescript
+// ✅ 正确：批量查询
+await prisma.user.findMany({
+  where: { id: { in: ids } }
+});
+// 或使用 createMany 批量创建
+await prisma.user.createMany({ data: users });
+```
+
+---
+
+### 问题4: PrismaClient 非单例
+
+**现象**: 数据库连接数过多，连接泄漏
+
+**原因**: 在多个文件中创建 `new PrismaClient()`
+
+**解决方案**: 统一从 `lib/prisma.ts` 导入
+```typescript
+// ✅ 正确
+import prisma from '@/lib/prisma';
+
+// ❌ 错误
+const prisma = new PrismaClient();
+```
+
+---
+
+### 问题5: 依赖缺失
+
+**现象**: `Cannot find module '@xyflow/react'` 等错误
+
+**解决方案**:
+```bash
+npm install @xyflow/react @hello-pangea/dnd dagre
+npm install -D @types/dagre
+```
+
+**预防措施**: 提交时检查 package.json 是否包含新依赖
+
+---
+
+### 问题6: useEffect 依赖问题
+
+**现象**: 无限循环或依赖警告
+
+**错误代码**:
+```typescript
+// ❌ 错误：函数作为依赖
+const loadData = useCallback(() => { ... }, []);
+useEffect(() => {
+  loadData();
+}, [loadData]);
+```
+
+**正确代码**:
+```typescript
+// ✅ 正确：依赖原始值
+useEffect(() => {
+  loadData();
+}, [page, pageSize]); // 依赖原始值而非函数
+```
+
+---
+
+### 问题7: 重复代码
+
+**现象**: 相同逻辑在多个地方重复实现
+
+**常见重复**:
+- 状态配置（statusConfig）
+- 响应函数（ok/fail）
+- 分页逻辑
+- 日期格式化
+
+**解决方案**: 提取到共享文件
+```typescript
+// config/status.ts
+export const statusConfig = { ... };
+
+// utils/response.ts
+export const ok = <T>(data: T) => ({ success: true, data });
+export const fail = (code: string, message: string) => ({ ... });
+```
+
+---
+
+### 问题8: 类型定义重复
+
+**现象**: 多个文件重复定义相同的接口
+
+**解决方案**: 统一类型定义
+```typescript
+// types/api.ts
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+// 各服务文件导入使用
+import type { ApiResponse } from '@/types/api';
+```
+
+---
+
+### 问题9: 过度抽象的 Hooks
+
+**现象**: 简单的逻辑被包装成复杂的 Hook
+
+**示例**: useApi 原本 214 行，实际只需要 21 行
+
+**简化原则**:
+- Hook 只做一件事
+- 避免过度设计
+- 简单逻辑直接内联
+
+---
+
+### 问题10: 构建警告
+
+**现象**: `Some chunks are larger than 500 kB`
+
+**原因**: 大型依赖库（如 pdfjs-dist）被打包到主 chunk
+
+**解决方案**:
+- 使用动态导入 `import()` 延迟加载
+- 配置 manualChunks 分离大型依赖
+
+---
+
 ## 强制性 Skill 规则（1% 规则）
 
 **核心原则**: 如果任何一个 skill 有哪怕 1% 的可能性适用于当前任务，**必须立即调用**。
