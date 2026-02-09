@@ -135,7 +135,7 @@ export function TasksPage() {
     <div className="min-h-screen bg-[#F3F4F6]">
       <Header />
 
-      <main className="p-6">
+      <main className="p-4 md:p-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -149,7 +149,7 @@ export function TasksPage() {
         </div>
 
         {/* 统计卡片 */}
-        <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="text-sm text-gray-500">总任务</div>
             <div className="text-2xl font-bold text-gray-900">{stats.total}</div>

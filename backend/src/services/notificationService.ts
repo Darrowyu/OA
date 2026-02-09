@@ -1,5 +1,6 @@
 import { NotificationType, Notification, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import * as logger from '../lib/logger';
 import {
   sendNotificationToUser,
   broadcastNotification,
@@ -56,7 +57,7 @@ export async function createNotification(
   const unreadCount = await getUnreadCount(data.userId);
   await updateUnreadCount(data.userId, unreadCount);
 
-  console.log(`通知创建成功: ${notification.id}`);
+  logger.info(`通知创建成功: ${notification.id}`);
   return notification;
 }
 
@@ -177,7 +178,7 @@ export async function markAllAsRead(userId: string): Promise<number> {
   // 更新未读数量
   await updateUnreadCount(userId, 0);
 
-  console.log(`用户 ${userId} 标记 ${result.count} 条通知为已读`);
+  logger.info(`用户 ${userId} 标记 ${result.count} 条通知为已读`);
   return result.count;
 }
 
@@ -225,7 +226,7 @@ export async function deleteAllRead(userId: string): Promise<number> {
     },
   });
 
-  console.log(`用户 ${userId} 删除 ${result.count} 条已读通知`);
+  logger.info(`用户 ${userId} 删除 ${result.count} 条已读通知`);
   return result.count;
 }
 
@@ -251,7 +252,7 @@ export async function sendSystemBroadcast(
   // 广播给所有在线用户
   const onlineCount = await broadcastNotification(notification);
 
-  console.log(`系统广播发送成功: ${title}, 在线用户数: ${onlineCount}`);
+  logger.info(`系统广播发送成功: ${title}, 在线用户数: ${onlineCount}`);
   return onlineCount;
 }
 

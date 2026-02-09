@@ -74,7 +74,7 @@ interface StatCardProps {
   variant: "blue" | "green" | "red"
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, amount, count, icon, variant }) => {
+function StatCard({ title, amount, count, icon, variant }: StatCardProps) {
   const variantStyles = {
     blue: "from-blue-50 to-indigo-50",
     green: "from-emerald-50 to-green-50",
@@ -103,7 +103,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, amount, count, icon, variant
   )
 }
 
-export const ApprovedList: React.FC = () => {
+export function ApprovedList() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [applications, setApplications] = React.useState<Application[]>([])

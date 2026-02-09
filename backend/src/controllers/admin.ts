@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ApplicationStatus, ApprovalAction, UserRole } from '@prisma/client';
+import { ApplicationStatus, ApprovalAction, UserRole } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 import { sendEmailNotification, generateEmailTemplate } from '../services/email';
 import { config } from '../config';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
+import * as logger from '../lib/logger';
 
 // 归档目录
 const ARCHIVE_DIR = path.join(process.cwd(), 'archive');
@@ -13,6 +13,41 @@ const ARCHIVE_DIR = path.join(process.cwd(), 'archive');
 // 确保归档目录存在
 if (!fs.existsSync(ARCHIVE_DIR)) {
   fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+}
+
+// 统一响应辅助函数
+function errorResponse(res: Response, code: string, message: string, status = 500): void {
+  res.status(status).json({ success: false, error: { code, message } });
+}
+
+function successResponse<T>(res: Response, message: string, data?: T): void {
+  res.json({ success: true, message, data });
+}
+
+// 验证用户登录
+function requireAuth(req: Request, res: Response): User | null {
+  const user = req.user;
+  if (!user) {
+    errorResponse(res, 'UNAUTHORIZED', '未登录', 401);
+    return null;
+  }
+  return user as User;
+}
+
+// 定义用户类型
+interface User {
+  id: string;
+  username: string;
+  role: UserRole;
+}
+
+// 验证管理员权限
+function requireAdmin(user: User, res: Response): boolean {
+  if (user.role !== UserRole.ADMIN) {
+    errorResponse(res, 'FORBIDDEN', '权限不足', 403);
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -23,16 +58,12 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
   try {
     const { id } = req.params;
     const { comment } = req.body;
-    const user = req.user;
+    const user = requireAuth(req, res);
+    if (!user) return;
 
-    if (!user) {
-      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: '未登录' } });
-      return;
-    }
-
-    // 只有总监可以撤销审批
+    // 只有总监或管理员可以撤销审批
     if (user.role !== UserRole.DIRECTOR && user.role !== UserRole.ADMIN) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '只有总监可以撤回审批' } });
+      errorResponse(res, 'FORBIDDEN', '只有总监可以撤回审批', 403);
       return;
     }
 
@@ -47,13 +78,13 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
     });
 
     if (!application) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '申请不存在' } });
+      errorResponse(res, 'NOT_FOUND', '申请不存在', 404);
       return;
     }
 
     // 验证申请状态：已通过，且是总监直接通过的（未经过经理和CEO）
     if (application.status !== ApplicationStatus.APPROVED) {
-      res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: '只能撤回已通过的申请' } });
+      errorResponse(res, 'INVALID_STATUS', '只能撤回已通过的申请', 400);
       return;
     }
 
@@ -62,25 +93,16 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
     const hasCeoApproval = application.ceoApprovals.some(a => a.action === ApprovalAction.APPROVE);
 
     if (hasManagerApproval || hasCeoApproval) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'CANNOT_WITHDRAW', message: '只能撤回由总监直接通过且未经过经理和CEO审批的申请' },
-      });
+      errorResponse(res, 'CANNOT_WITHDRAW', '只能撤回由总监直接通过且未经过经理和CEO审批的申请', 400);
       return;
     }
 
     // 更新申请状态
     await prisma.$transaction(async (tx) => {
-      // 重置申请状态为待总监审批
       await tx.application.update({
         where: { id },
-        data: {
-          status: ApplicationStatus.PENDING_DIRECTOR,
-          completedAt: null,
-        },
+        data: { status: ApplicationStatus.PENDING_DIRECTOR, completedAt: null },
       });
-
-      // 重置总监审批状态
       await tx.directorApproval.updateMany({
         where: { applicationId: id },
         data: {
@@ -115,10 +137,10 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
       );
     }
 
-    res.json({ success: true, message: '审批撤回成功' });
+    successResponse(res, '审批撤回成功');
   } catch (error) {
-    console.error('撤销审批失败:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '撤销审批失败' } });
+    logger.error('撤销审批失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '撤销审批失败');
   }
 }
 
@@ -128,11 +150,8 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
  */
 export async function archiveOldApplications(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user || user.role !== UserRole.ADMIN) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '权限不足' } });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user || !requireAdmin(user, res)) return;
 
     const { months = 3 } = req.body;
 
@@ -140,7 +159,7 @@ export async function archiveOldApplications(req: Request, res: Response): Promi
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - months);
 
-    // 查找需要归档的申请（已完成的旧申请）
+    // 查找需要归档的申请
     const applicationsToArchive = await prisma.application.findMany({
       where: {
         status: { in: [ApplicationStatus.APPROVED, ApplicationStatus.REJECTED] },
@@ -157,7 +176,7 @@ export async function archiveOldApplications(req: Request, res: Response): Promi
     });
 
     if (applicationsToArchive.length === 0) {
-      res.json({ success: true, message: '没有需要归档的申请', data: { archived: 0 } });
+      successResponse(res, '没有需要归档的申请', { archived: 0 });
       return;
     }
 
@@ -183,19 +202,15 @@ export async function archiveOldApplications(req: Request, res: Response): Promi
       data: { status: ApplicationStatus.ARCHIVED },
     });
 
-    console.log(`归档了 ${applicationsToArchive.length} 个申请到 ${archiveFileName}`);
+    logger.info(`归档了 ${applicationsToArchive.length} 个申请到 ${archiveFileName}`);
 
-    res.json({
-      success: true,
-      message: `成功归档 ${applicationsToArchive.length} 个申请`,
-      data: {
-        archived: applicationsToArchive.length,
-        fileName: archiveFileName,
-      },
+    successResponse(res, `成功归档 ${applicationsToArchive.length} 个申请`, {
+      archived: applicationsToArchive.length,
+      fileName: archiveFileName,
     });
   } catch (error) {
-    console.error('归档申请失败:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '归档申请失败' } });
+    logger.error('归档申请失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '归档申请失败');
   }
 }
 
@@ -205,11 +220,8 @@ export async function archiveOldApplications(req: Request, res: Response): Promi
  */
 export async function getArchiveStats(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user || user.role !== UserRole.ADMIN) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '权限不足' } });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user || !requireAdmin(user, res)) return;
 
     // 读取归档目录中的所有文件
     const archiveFiles = fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.json'));
@@ -240,8 +252,8 @@ export async function getArchiveStats(req: Request, res: Response): Promise<void
       },
     });
   } catch (error) {
-    console.error('获取归档统计失败:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '获取归档统计失败' } });
+    logger.error('获取归档统计失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '获取归档统计失败');
   }
 }
 
@@ -251,16 +263,13 @@ export async function getArchiveStats(req: Request, res: Response): Promise<void
  */
 export async function recoverApplications(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user || user.role !== UserRole.ADMIN) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '权限不足' } });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user || !requireAdmin(user, res)) return;
 
     const { applicationIds } = req.body;
 
     if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
-      res.status(400).json({ success: false, error: { code: 'INVALID_DATA', message: '请指定要恢复的申请ID' } });
+      errorResponse(res, 'INVALID_DATA', '请指定要恢复的申请ID', 400);
       return;
     }
 
@@ -273,16 +282,12 @@ export async function recoverApplications(req: Request, res: Response): Promise<
       data: { status: ApplicationStatus.APPROVED },
     });
 
-    console.log(`恢复了 ${result.count} 个申请`);
+    logger.info(`恢复了 ${result.count} 个申请`);
 
-    res.json({
-      success: true,
-      message: `成功恢复 ${result.count} 个申请`,
-      data: { recovered: result.count },
-    });
+    successResponse(res, `成功恢复 ${result.count} 个申请`, { recovered: result.count });
   } catch (error) {
-    console.error('恢复申请失败:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '恢复申请失败' } });
+    logger.error('恢复申请失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '恢复申请失败');
   }
 }
 
@@ -292,69 +297,37 @@ export async function recoverApplications(req: Request, res: Response): Promise<
  */
 export async function checkDataIntegrity(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user || user.role !== UserRole.ADMIN) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '权限不足' } });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user || !requireAdmin(user, res)) return;
 
     const issues: string[] = [];
 
-    // 检查1: 查找没有申请人的申请
-    const orphanedApplications = await prisma.application.findMany({
-      where: { applicantId: '' },
-    });
+    // 并行执行数据检查
+    const [orphanedApplications, attachments, inconsistentApps, stats] = await Promise.all([
+      // 检查1: 查找没有申请人的申请
+      prisma.application.findMany({ where: { applicantId: '' } }),
+      // 检查2: 查找没有附件记录的孤立文件
+      prisma.attachment.findMany(),
+      // 检查3: 查找状态不一致的申请
+      prisma.application.findMany({
+        where: { status: ApplicationStatus.APPROVED, completedAt: null },
+      }),
+      // 统计信息
+      getDatabaseStats(),
+    ]);
+
     if (orphanedApplications.length > 0) {
       issues.push(`发现 ${orphanedApplications.length} 个没有申请人的申请`);
     }
 
-    // 检查2: 查找没有附件记录的孤立文件
-    const attachments = await prisma.attachment.findMany();
-    const orphanedFiles = attachments.filter(att => {
-      return !fs.existsSync(att.path);
-    });
+    const orphanedFiles = attachments.filter(att => !fs.existsSync(att.path));
     if (orphanedFiles.length > 0) {
       issues.push(`发现 ${orphanedFiles.length} 个丢失物理文件的附件记录`);
     }
 
-    // 检查3: 查找状态不一致的申请
-    const inconsistentApps = await prisma.application.findMany({
-      where: {
-        status: ApplicationStatus.APPROVED,
-        completedAt: null,
-      },
-    });
     if (inconsistentApps.length > 0) {
       issues.push(`发现 ${inconsistentApps.length} 个状态为已通过但缺少完成时间的申请`);
     }
-
-    // 统计信息
-    const stats = {
-      totalUsers: await prisma.user.count(),
-      totalApplications: await prisma.application.count(),
-      pendingApplications: await prisma.application.count({
-        where: {
-          status: {
-            in: [
-              ApplicationStatus.PENDING_FACTORY,
-              ApplicationStatus.PENDING_DIRECTOR,
-              ApplicationStatus.PENDING_MANAGER,
-              ApplicationStatus.PENDING_CEO,
-            ],
-          },
-        },
-      }),
-      approvedApplications: await prisma.application.count({
-        where: { status: ApplicationStatus.APPROVED },
-      }),
-      rejectedApplications: await prisma.application.count({
-        where: { status: ApplicationStatus.REJECTED },
-      }),
-      archivedApplications: await prisma.application.count({
-        where: { status: ApplicationStatus.ARCHIVED },
-      }),
-      totalAttachments: await prisma.attachment.count(),
-    };
 
     res.json({
       success: true,
@@ -365,7 +338,49 @@ export async function checkDataIntegrity(req: Request, res: Response): Promise<v
       },
     });
   } catch (error) {
-    console.error('数据完整性检查失败:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '数据完整性检查失败' } });
+    logger.error('数据完整性检查失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '数据完整性检查失败');
   }
+}
+
+// 获取数据库统计信息
+async function getDatabaseStats() {
+  const [
+    totalUsers,
+    totalApplications,
+    pendingApplications,
+    approvedApplications,
+    rejectedApplications,
+    archivedApplications,
+    totalAttachments,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.application.count(),
+    prisma.application.count({
+      where: {
+        status: {
+          in: [
+            ApplicationStatus.PENDING_FACTORY,
+            ApplicationStatus.PENDING_DIRECTOR,
+            ApplicationStatus.PENDING_MANAGER,
+            ApplicationStatus.PENDING_CEO,
+          ],
+        },
+      },
+    }),
+    prisma.application.count({ where: { status: ApplicationStatus.APPROVED } }),
+    prisma.application.count({ where: { status: ApplicationStatus.REJECTED } }),
+    prisma.application.count({ where: { status: ApplicationStatus.ARCHIVED } }),
+    prisma.attachment.count(),
+  ]);
+
+  return {
+    totalUsers,
+    totalApplications,
+    pendingApplications,
+    approvedApplications,
+    rejectedApplications,
+    archivedApplications,
+    totalAttachments,
+  };
 }

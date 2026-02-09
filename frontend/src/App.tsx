@@ -34,7 +34,10 @@ import SearchResults from "@/pages/knowledge/SearchResults"
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
-  const { isCollapsed, setIsCollapsed } = useSidebar()
+  const { isCollapsed, setIsCollapsed, isMobile } = useSidebar()
+
+  // 移动端不显示此切换按钮
+  if (isMobile) return null
 
   return (
     <motion.button
@@ -42,7 +45,7 @@ function SidebarToggle() {
       animate={{ left: isCollapsed ? '80px' : '268px' }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       onClick={() => setIsCollapsed(!isCollapsed)}
-      className="fixed top-4 z-[60] p-2 bg-transparent rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+      className="fixed top-4 z-[60] p-2 bg-transparent rounded-lg hover:bg-gray-100 text-gray-500 transition-colors hidden md:block"
     >
       <AnimatePresence mode="wait">
         {isCollapsed ? (
@@ -73,15 +76,35 @@ function SidebarToggle() {
 
 // 带侧边栏的布局组件 - 使用pl来适配动态宽度的侧边栏
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isCollapsed } = useSidebar()
+  const { isCollapsed, isMobile, isMobileOpen, setIsMobileOpen } = useSidebar()
+
   return (
     <div className="min-h-screen bg-[#F3F4F6] flex">
-      <Sidebar />
+      {/* 桌面端侧边栏 */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* 移动端侧边栏遮罩 */}
+      {isMobile && isMobileOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setIsMobileOpen(false)}
+          />
+          <div className="fixed left-0 top-0 h-full z-50 md:hidden">
+            <Sidebar />
+          </div>
+        </>
+      )}
+
       <SidebarToggle />
+
+      {/* 主内容区 */}
       <div
-        className="flex-1 h-screen overflow-auto transition-all duration-350"
+        className="flex-1 h-screen overflow-auto transition-all duration-350 w-full"
         style={{
-          marginLeft: isCollapsed ? '72px' : '260px',
+          marginLeft: isMobile ? 0 : (isCollapsed ? '72px' : '260px'),
           transition: 'margin-left 0.35s cubic-bezier(0.22, 1, 0.36, 1)'
         }}
       >

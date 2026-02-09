@@ -176,7 +176,7 @@ export function MeetingsPage() {
   return (
     <>
       <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
         <div className="max-w-7xl mx-auto">
           {/* 页面标题 */}
           <div className="flex items-center justify-between mb-6">

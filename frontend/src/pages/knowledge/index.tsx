@@ -182,7 +182,7 @@ export default function KnowledgePage() {
   return (
     <>
       <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
         {/* 页面标题和搜索 */}
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-6">

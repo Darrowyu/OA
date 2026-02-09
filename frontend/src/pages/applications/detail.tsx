@@ -32,7 +32,7 @@ import {
   Clock,
 } from "lucide-react"
 
-export const ApplicationDetail: React.FC = () => {
+export function ApplicationDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()

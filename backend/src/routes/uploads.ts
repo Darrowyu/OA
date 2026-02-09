@@ -4,6 +4,7 @@ import { uploadSingle, handleUploadError, getFileUrl, UPLOAD_CONFIG } from '../m
 import prisma from '../lib/prisma';
 import path from 'path';
 import fs from 'fs';
+import * as logger from '../lib/logger';
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.post(
         },
       });
     } catch (error) {
-      console.error('文件上传失败:', error);
+      logger.error('文件上传失败', { error });
       // 清理上传的文件
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -102,7 +103,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 
     res.json({ data: attachmentsWithUrl });
   } catch (error) {
-    console.error('获取文件列表失败:', error);
+    logger.error('获取文件列表失败', { error });
     res.status(500).json({ error: '获取文件列表失败' });
   }
 });
@@ -136,7 +137,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('获取文件信息失败:', error);
+    logger.error('获取文件信息失败', { error });
     res.status(500).json({ error: '获取文件信息失败' });
   }
 });
@@ -179,7 +180,7 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
 
     res.json({ message: '文件删除成功' });
   } catch (error) {
-    console.error('删除文件失败:', error);
+    logger.error('删除文件失败', { error });
     res.status(500).json({ error: '删除文件失败' });
   }
 });
@@ -210,7 +211,7 @@ router.get('/:id/download', authenticate, async (req: Request, res: Response) =>
     // 发送文件
     res.sendFile(path.resolve(attachment.path));
   } catch (error) {
-    console.error('下载文件失败:', error);
+    logger.error('下载文件失败', { error });
     res.status(500).json({ error: '下载文件失败' });
   }
 });

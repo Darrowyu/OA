@@ -1,5 +1,6 @@
 import { Announcement, AnnouncementType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import * as logger from '../lib/logger';
 
 // 附件类型
 export interface Attachment {
@@ -83,7 +84,7 @@ export async function createAnnouncement(
     },
   });
 
-  console.log(`公告创建成功: ${announcement.id}`);
+  logger.info(`公告创建成功: ${announcement.id}`);
   return announcement;
 }
 
@@ -259,7 +260,7 @@ export async function recordRead(
     });
   } catch (error) {
     // 忽略重复阅读记录的错误
-    console.log(`记录阅读状态: ${announcementId}, 用户: ${userId}`);
+    logger.info(`记录阅读状态: ${announcementId}, 用户: ${userId}`);
   }
 }
 
@@ -298,7 +299,7 @@ export async function updateAnnouncement(
     data: updateData,
   });
 
-  console.log(`公告更新成功: ${id}`);
+  logger.info(`公告更新成功: ${id}`);
   return updated;
 }
 
@@ -318,7 +319,7 @@ export async function deleteAnnouncement(id: string): Promise<boolean> {
     where: { id },
   });
 
-  console.log(`公告删除成功: ${id}`);
+  logger.info(`公告删除成功: ${id}`);
   return true;
 }
 

@@ -46,7 +46,7 @@ export function QuickActions() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-4 gap-4"
+      className="grid grid-cols-2 md:grid-cols-4 gap-4"
     >
       {quickActions.map((action) => {
         const Icon = iconMap[action.icon] || FileCheck

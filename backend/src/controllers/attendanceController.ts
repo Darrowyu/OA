@@ -12,6 +12,43 @@ type AuthRequest = Request & {
   }
 }
 
+// 统一响应辅助函数
+function successResponse<T>(res: Response, data: T): void {
+  res.json({ success: true, data })
+}
+
+function errorResponse(res: Response, code: string, message: string, status = 500): void {
+  res.status(status).json({ success: false, error: { code, message } })
+}
+
+function validationError(res: Response, message: string): void {
+  errorResponse(res, 'VALIDATION_ERROR', message, 400)
+}
+
+// 处理Zod验证错误
+function handleZodError(res: Response, error: unknown): void {
+  if (error instanceof z.ZodError) {
+    validationError(res, error.errors[0].message)
+    return
+  }
+  throw error
+}
+
+// 解析分页参数
+function parsePagination(query: Record<string, unknown>): { page: number; pageSize: number } {
+  return {
+    page: query.page ? parseInt(query.page as string, 10) : 1,
+    pageSize: query.pageSize ? parseInt(query.pageSize as string, 10) : 20,
+  }
+}
+
+// 解析日期参数
+function parseDate(value: string | undefined): Date | undefined {
+  return value ? new Date(value) : undefined
+}
+
+// ============ Schema Definitions ============
+
 const clockInSchema = z.object({
   type: z.enum(['GPS', 'WIFI', 'MANUAL']),
   location: z.object({
@@ -21,8 +58,6 @@ const clockInSchema = z.object({
   }).optional(),
   notes: z.string().optional(),
 })
-
-const clockOutSchema = clockInSchema
 
 const createLeaveRequestSchema = z.object({
   type: z.enum(['ANNUAL', 'SICK', 'PERSONAL', 'MARRIAGE', 'MATERNITY', 'PATERNITY', 'FUNERAL', 'OTHER']),
@@ -53,296 +88,12 @@ const leaveRequestQuerySchema = z.object({
   pageSize: z.string().optional(),
 })
 
-const statisticsQuerySchema = z.object({
-  userId: z.string().optional(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-})
-
 const correctAttendanceSchema = z.object({
   clockIn: z.string().datetime().optional(),
   clockOut: z.string().datetime().optional(),
   status: z.enum(['NORMAL', 'LATE', 'EARLY_LEAVE', 'ABSENT', 'ON_LEAVE']).optional(),
   notes: z.string().optional(),
 })
-
-// 上班打卡
-export const clockIn = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = clockInSchema.parse(req.body)
-    const userId = req.user!.id
-
-    const record = await attendanceService.clockIn(userId, {
-      type: data.type as ClockInType,
-      location: data.location,
-      notes: data.notes,
-    })
-
-    res.json({
-      success: true,
-      data: record,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CLOCK_IN_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 下班打卡
-export const clockOut = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = clockOutSchema.parse(req.body)
-    const userId = req.user!.id
-
-    const record = await attendanceService.clockOut(userId, {
-      type: data.type as ClockInType,
-      location: data.location,
-      notes: data.notes,
-    })
-
-    res.json({
-      success: true,
-      data: record,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CLOCK_OUT_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 获取今日考勤
-export const getTodayAttendance = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user!.id
-    const record = await attendanceService.getTodayAttendance(userId)
-
-    res.json({
-      success: true,
-      data: record,
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 获取考勤列表
-export const getAttendanceList = async (req: AuthRequest, res: Response) => {
-  try {
-    const query = attendanceQuerySchema.parse(req.query)
-    const isAdmin = req.user!.role === 'ADMIN'
-
-    const result = await attendanceService.getAttendanceList({
-      startDate: query.startDate ? new Date(query.startDate) : undefined,
-      endDate: query.endDate ? new Date(query.endDate) : undefined,
-      userId: isAdmin ? query.userId : req.user!.id,
-      status: query.status as AttendanceStatus,
-      page: query.page ? parseInt(query.page) : 1,
-      pageSize: query.pageSize ? parseInt(query.pageSize) : 20,
-    })
-
-    res.json({
-      success: true,
-      data: result,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 创建请假申请
-export const createLeaveRequest = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = createLeaveRequestSchema.parse(req.body)
-    const userId = req.user!.id
-
-    const request = await attendanceService.createLeaveRequest(userId, {
-      type: data.type as LeaveType,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      days: data.days,
-      reason: data.reason,
-    })
-
-    res.json({
-      success: true,
-      data: request,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CREATE_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 获取请假列表
-export const getLeaveRequests = async (req: AuthRequest, res: Response) => {
-  try {
-    const query = leaveRequestQuerySchema.parse(req.query)
-    const isAdmin = req.user!.role === 'ADMIN'
-
-    const result = await attendanceService.getLeaveRequests({
-      userId: isAdmin ? query.userId : req.user!.id,
-      status: query.status as LeaveRequestStatus,
-      page: query.page ? parseInt(query.page) : 1,
-      pageSize: query.pageSize ? parseInt(query.pageSize) : 20,
-    })
-
-    res.json({
-      success: true,
-      data: result,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 审批请假
-export const approveLeaveRequest = async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params
-    const data = approveLeaveSchema.parse(req.body)
-    const approverId = req.user!.id
-
-    const request = await attendanceService.approveLeaveRequest(
-      id,
-      approverId,
-      data.approved,
-      data.rejectReason
-    )
-
-    res.json({
-      success: true,
-      data: request,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'APPROVE_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 获取考勤统计
-export const getStatistics = async (req: AuthRequest, res: Response) => {
-  try {
-    const query = statisticsQuerySchema.parse(req.query)
-    const isAdmin = req.user!.role === 'ADMIN'
-    const userId = isAdmin && query.userId ? query.userId : req.user!.id
-
-    const stats = await attendanceService.getStatistics(
-      userId,
-      new Date(query.startDate),
-      new Date(query.endDate)
-    )
-
-    res.json({
-      success: true,
-      data: stats,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// 修正考勤（管理员）
-export const correctAttendance = async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params
-    const data = correctAttendanceSchema.parse(req.body)
-
-    const record = await attendanceService.correctAttendance(id, {
-      clockIn: data.clockIn ? new Date(data.clockIn) : undefined,
-      clockOut: data.clockOut ? new Date(data.clockOut) : undefined,
-      status: data.status as AttendanceStatus,
-      notes: data.notes,
-    })
-
-    res.json({
-      success: true,
-      data: record,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CORRECT_FAILED', message: (error as Error).message },
-    })
-  }
-}
-
-// ============ 排班管理 ============
 
 const createShiftSchema = z.object({
   name: z.string().min(1, '班次名称不能为空'),
@@ -359,99 +110,224 @@ const createScheduleSchema = z.object({
   isRestDay: z.boolean().optional(),
 })
 
-const scheduleQuerySchema = z.object({
-  userId: z.string().optional(),
-  month: z.string().datetime(),
-})
+// ============ Attendance Controllers ============
+
+// 上班打卡
+export async function clockIn(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const data = clockInSchema.parse(req.body)
+    const record = await attendanceService.clockIn(req.user!.id, {
+      type: data.type as ClockInType,
+      location: data.location,
+      notes: data.notes,
+    })
+    successResponse(res, record)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'CLOCK_IN_FAILED', (error as Error).message, 400)
+  }
+}
+
+// 下班打卡
+export async function clockOut(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const data = clockInSchema.parse(req.body)
+    const record = await attendanceService.clockOut(req.user!.id, {
+      type: data.type as ClockInType,
+      location: data.location,
+      notes: data.notes,
+    })
+    successResponse(res, record)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'CLOCK_OUT_FAILED', (error as Error).message, 400)
+  }
+}
+
+// 获取今日考勤
+export async function getTodayAttendance(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const record = await attendanceService.getTodayAttendance(req.user!.id)
+    successResponse(res, record)
+  } catch (error) {
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
+  }
+}
+
+// 获取考勤列表
+export async function getAttendanceList(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const query = attendanceQuerySchema.parse(req.query)
+    const isAdmin = req.user!.role === 'ADMIN'
+    const { page, pageSize } = parsePagination(query)
+
+    const result = await attendanceService.getAttendanceList({
+      startDate: parseDate(query.startDate),
+      endDate: parseDate(query.endDate),
+      userId: isAdmin ? query.userId : req.user!.id,
+      status: query.status as AttendanceStatus,
+      page,
+      pageSize,
+    })
+
+    successResponse(res, result)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
+  }
+}
+
+// 创建请假申请
+export async function createLeaveRequest(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const data = createLeaveRequestSchema.parse(req.body)
+    const request = await attendanceService.createLeaveRequest(req.user!.id, {
+      type: data.type as LeaveType,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      days: data.days,
+      reason: data.reason,
+    })
+    successResponse(res, request)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
+  }
+}
+
+// 获取请假列表
+export async function getLeaveRequests(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const query = leaveRequestQuerySchema.parse(req.query)
+    const isAdmin = req.user!.role === 'ADMIN'
+    const { page, pageSize } = parsePagination(query)
+
+    const result = await attendanceService.getLeaveRequests({
+      userId: isAdmin ? query.userId : req.user!.id,
+      status: query.status as LeaveRequestStatus,
+      page,
+      pageSize,
+    })
+
+    successResponse(res, result)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
+  }
+}
+
+// 审批请假
+export async function approveLeaveRequest(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params
+    const data = approveLeaveSchema.parse(req.body)
+    const request = await attendanceService.approveLeaveRequest(
+      id,
+      req.user!.id,
+      data.approved,
+      data.rejectReason
+    )
+    successResponse(res, request)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'APPROVE_FAILED', (error as Error).message, 400)
+  }
+}
+
+// 获取考勤统计
+export async function getStatistics(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const query = z.object({
+      userId: z.string().optional(),
+      startDate: z.string().datetime(),
+      endDate: z.string().datetime(),
+    }).parse(req.query)
+
+    const isAdmin = req.user!.role === 'ADMIN'
+    const userId = isAdmin && query.userId ? query.userId : req.user!.id
+
+    const stats = await attendanceService.getStatistics(
+      userId,
+      new Date(query.startDate),
+      new Date(query.endDate)
+    )
+
+    successResponse(res, stats)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
+  }
+}
+
+// 修正考勤（管理员）
+export async function correctAttendance(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params
+    const data = correctAttendanceSchema.parse(req.body)
+    const record = await attendanceService.correctAttendance(id, {
+      clockIn: data.clockIn ? new Date(data.clockIn) : undefined,
+      clockOut: data.clockOut ? new Date(data.clockOut) : undefined,
+      status: data.status as AttendanceStatus,
+      notes: data.notes,
+    })
+    successResponse(res, record)
+  } catch (error) {
+    handleZodError(res, error)
+    errorResponse(res, 'CORRECT_FAILED', (error as Error).message, 400)
+  }
+}
+
+// ============ Schedule Controllers ============
 
 // 创建班次
-export const createShift = async (req: AuthRequest, res: Response) => {
+export async function createShift(req: AuthRequest, res: Response): Promise<void> {
   try {
     const data = createShiftSchema.parse(req.body)
     const shift = await scheduleService.createShift(data)
-
-    res.json({
-      success: true,
-      data: shift,
-    })
+    successResponse(res, shift)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CREATE_FAILED', message: (error as Error).message },
-    })
+    handleZodError(res, error)
+    errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
   }
 }
 
 // 获取班次列表
-export const getShifts = async (req: AuthRequest, res: Response) => {
+export async function getShifts(_req: AuthRequest, res: Response): Promise<void> {
   try {
-    const includeInactive = req.query.includeInactive === 'true'
+    const includeInactive = _req.query.includeInactive === 'true'
     const shifts = await scheduleService.getShifts(includeInactive)
-
-    res.json({
-      success: true,
-      data: shifts,
-    })
+    successResponse(res, shifts)
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
 
 // 更新班次
-export const updateShift = async (req: AuthRequest, res: Response) => {
+export async function updateShift(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params
     const data = createShiftSchema.partial().parse(req.body)
     const shift = await scheduleService.updateShift(id, data)
-
-    res.json({
-      success: true,
-      data: shift,
-    })
+    successResponse(res, shift)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'UPDATE_FAILED', message: (error as Error).message },
-    })
+    handleZodError(res, error)
+    errorResponse(res, 'UPDATE_FAILED', (error as Error).message, 400)
   }
 }
 
 // 删除班次
-export const deleteShift = async (req: AuthRequest, res: Response) => {
+export async function deleteShift(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params
     await scheduleService.deleteShift(id)
-
-    res.json({
-      success: true,
-    })
+    successResponse(res, null)
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: { code: 'DELETE_FAILED', message: (error as Error).message },
-    })
+    errorResponse(res, 'DELETE_FAILED', (error as Error).message, 400)
   }
 }
 
 // 创建排班
-export const createSchedule = async (req: AuthRequest, res: Response) => {
+export async function createSchedule(req: AuthRequest, res: Response): Promise<void> {
   try {
     const data = createScheduleSchema.parse(req.body)
     const schedule = await scheduleService.createSchedule({
@@ -460,76 +336,45 @@ export const createSchedule = async (req: AuthRequest, res: Response) => {
       shiftId: data.shiftId,
       isRestDay: data.isRestDay,
     })
-
-    res.json({
-      success: true,
-      data: schedule,
-    })
+    successResponse(res, schedule)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'CREATE_FAILED', message: (error as Error).message },
-    })
+    handleZodError(res, error)
+    errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
   }
 }
 
 // 获取排班列表
-export const getSchedules = async (req: AuthRequest, res: Response) => {
+export async function getSchedules(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const query = scheduleQuerySchema.parse(req.query)
+    const query = z.object({
+      userId: z.string().optional(),
+      month: z.string().datetime(),
+    }).parse(req.query)
+
     const isAdmin = req.user!.role === 'ADMIN'
     const userId = isAdmin && query.userId ? query.userId : req.user!.id
+    const schedules = await scheduleService.getUserSchedules(userId, new Date(query.month))
 
-    const schedules = await scheduleService.getUserSchedules(
-      userId,
-      new Date(query.month)
-    )
-
-    res.json({
-      success: true,
-      data: schedules,
-    })
+    successResponse(res, schedules)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(500).json({
-      success: false,
-      error: { code: 'FETCH_FAILED', message: (error as Error).message },
-    })
+    handleZodError(res, error)
+    errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
 
 // 删除排班
-export const deleteSchedule = async (req: AuthRequest, res: Response) => {
+export async function deleteSchedule(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params
     await scheduleService.deleteSchedule(id)
-
-    res.json({
-      success: true,
-    })
+    successResponse(res, null)
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: { code: 'DELETE_FAILED', message: (error as Error).message },
-    })
+    errorResponse(res, 'DELETE_FAILED', (error as Error).message, 400)
   }
 }
 
 // 设置休息日
-export const setRestDay = async (req: AuthRequest, res: Response) => {
+export async function setRestDay(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { userId, date, isRestDay } = z.object({
       userId: z.string(),
@@ -537,27 +382,10 @@ export const setRestDay = async (req: AuthRequest, res: Response) => {
       isRestDay: z.boolean(),
     }).parse(req.body)
 
-    const schedule = await scheduleService.setRestDay(
-      userId,
-      new Date(date),
-      isRestDay
-    )
-
-    res.json({
-      success: true,
-      data: schedule,
-    })
+    const schedule = await scheduleService.setRestDay(userId, new Date(date), isRestDay)
+    successResponse(res, schedule)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.errors[0].message },
-      })
-      return
-    }
-    res.status(400).json({
-      success: false,
-      error: { code: 'UPDATE_FAILED', message: (error as Error).message },
-    })
+    handleZodError(res, error)
+    errorResponse(res, 'UPDATE_FAILED', (error as Error).message, 400)
   }
 }

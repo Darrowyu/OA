@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
+import * as logger from '../lib/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -42,7 +43,7 @@ router.get('/', authMiddleware, async (_req: Request, res: Response) => {
       data: signatures,
     });
   } catch (error) {
-    console.error('获取签名列表失败:', error);
+    logger.error('获取签名列表失败', { error });
     res.status(500).json({
       success: false,
       error: {
@@ -92,7 +93,7 @@ router.get('/:username', authMiddleware, async (req: Request, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('获取用户签名失败:', error);
+    logger.error('获取用户签名失败', { error });
     res.status(500).json({
       success: false,
       error: {
@@ -143,7 +144,7 @@ router.post('/batch', authMiddleware, async (req: Request, res: Response) => {
       data: signatures,
     });
   } catch (error) {
-    console.error('批量获取签名失败:', error);
+    logger.error('批量获取签名失败', { error });
     res.status(500).json({
       success: false,
       error: {
@@ -221,7 +222,7 @@ router.put('/:username', authMiddleware, async (req: Request, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('更新签名失败:', error);
+    logger.error('更新签名失败', { error });
     res.status(500).json({
       success: false,
       error: {
@@ -275,7 +276,7 @@ router.delete('/:username', authMiddleware, async (req: Request, res: Response) 
       message: '签名删除成功',
     });
   } catch (error) {
-    console.error('删除签名失败:', error);
+    logger.error('删除签名失败', { error });
     res.status(500).json({
       success: false,
       error: {

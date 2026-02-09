@@ -1,7 +1,48 @@
 import { Request, Response } from 'express'
 import * as workflowService from '../services/workflowService'
 import { prisma } from '../lib/prisma'
-// import { WorkflowStatus, InstanceStatus } from '@prisma/client'
+import * as logger from '../lib/logger'
+
+// 统一响应辅助函数
+function successResponse<T>(res: Response, data: T, statusCode = 200): void {
+  res.status(statusCode).json({ success: true, data })
+}
+
+function errorResponse(res: Response, message: string, statusCode = 500): void {
+  res.status(statusCode).json({ success: false, message })
+}
+
+// 获取错误消息
+function getErrorMessage(error: unknown, defaultMessage: string): string {
+  return error instanceof Error ? error.message : defaultMessage
+}
+
+// 验证用户登录
+function requireAuth(req: Request, res: Response): { userId: string; username: string } | null {
+  const userId = req.user?.id
+  const username = req.user?.name || req.user?.username
+
+  if (!userId || !username) {
+    errorResponse(res, '未登录', 401)
+    return null
+  }
+
+  return { userId, username }
+}
+
+// 验证必填参数
+function validateRequiredParams(
+  params: Record<string, unknown>,
+  required: string[],
+  res: Response
+): boolean {
+  const missing = required.filter(key => !params[key])
+  if (missing.length > 0) {
+    errorResponse(res, `缺少必要参数: ${missing.join(', ')}`, 400)
+    return false
+  }
+  return true
+}
 
 /**
  * 获取工作流列表
@@ -9,13 +50,11 @@ import { prisma } from '../lib/prisma'
 export async function getWorkflows(req: Request, res: Response): Promise<void> {
   try {
     const { entityType } = req.query
-    const workflows = await workflowService.getWorkflows(
-      entityType as string | undefined
-    )
-    res.json({ success: true, data: workflows })
+    const workflows = await workflowService.getWorkflows(entityType as string | undefined)
+    successResponse(res, workflows)
   } catch (error) {
-    console.error('获取工作流列表失败:', error)
-    res.status(500).json({ success: false, message: '获取工作流列表失败' })
+    logger.error('获取工作流列表失败', { error })
+    errorResponse(res, '获取工作流列表失败')
   }
 }
 
@@ -28,14 +67,14 @@ export async function getWorkflowById(req: Request, res: Response): Promise<void
     const workflow = await workflowService.getWorkflowById(id)
 
     if (!workflow) {
-      res.status(404).json({ success: false, message: '工作流不存在' })
+      errorResponse(res, '工作流不存在', 404)
       return
     }
 
-    res.json({ success: true, data: workflow })
+    successResponse(res, workflow)
   } catch (error) {
-    console.error('获取工作流详情失败:', error)
-    res.status(500).json({ success: false, message: '获取工作流详情失败' })
+    logger.error('获取工作流详情失败', { error })
+    errorResponse(res, '获取工作流详情失败')
   }
 }
 
@@ -44,32 +83,21 @@ export async function getWorkflowById(req: Request, res: Response): Promise<void
  */
 export async function createWorkflow(req: Request, res: Response): Promise<void> {
   try {
-    const userId = req.user?.id
-    if (!userId) {
-      res.status(401).json({ success: false, message: '未登录' })
-      return
-    }
+    const auth = requireAuth(req, res)
+    if (!auth) return
 
     const { name, description, entityType, nodes, edges } = req.body
-
-    if (!name || !entityType || !nodes || !edges) {
-      res.status(400).json({
-        success: false,
-        message: '缺少必要参数: name, entityType, nodes, edges'
-      })
-      return
-    }
+    if (!validateRequiredParams({ name, entityType, nodes, edges }, ['name', 'entityType', 'nodes', 'edges'], res)) return
 
     const workflow = await workflowService.createWorkflow(
       { name, description, entityType, nodes, edges },
-      userId
+      auth.userId
     )
 
-    res.status(201).json({ success: true, data: workflow })
+    successResponse(res, workflow, 201)
   } catch (error) {
-    console.error('创建工作流失败:', error)
-    const message = error instanceof Error ? error.message : '创建工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('创建工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '创建工作流失败'), 400)
   }
 }
 
@@ -81,19 +109,11 @@ export async function updateWorkflow(req: Request, res: Response): Promise<void>
     const { id } = req.params
     const { name, description, entityType, nodes, edges } = req.body
 
-    const workflow = await workflowService.updateWorkflow(id, {
-      name,
-      description,
-      entityType,
-      nodes,
-      edges
-    })
-
-    res.json({ success: true, data: workflow })
+    const workflow = await workflowService.updateWorkflow(id, { name, description, entityType, nodes, edges })
+    successResponse(res, workflow)
   } catch (error) {
-    console.error('更新工作流失败:', error)
-    const message = error instanceof Error ? error.message : '更新工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('更新工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '更新工作流失败'), 400)
   }
 }
 
@@ -104,11 +124,10 @@ export async function deleteWorkflow(req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params
     await workflowService.deleteWorkflow(id)
-    res.json({ success: true, message: '删除成功' })
+    successResponse(res, { message: '删除成功' })
   } catch (error) {
-    console.error('删除工作流失败:', error)
-    const message = error instanceof Error ? error.message : '删除工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('删除工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '删除工作流失败'), 400)
   }
 }
 
@@ -118,19 +137,14 @@ export async function deleteWorkflow(req: Request, res: Response): Promise<void>
 export async function publishWorkflow(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
-    const userId = req.user?.id
+    const auth = requireAuth(req, res)
+    if (!auth) return
 
-    if (!userId) {
-      res.status(401).json({ success: false, message: '未登录' })
-      return
-    }
-
-    const workflow = await workflowService.publishWorkflow(id, userId)
-    res.json({ success: true, data: workflow })
+    const workflow = await workflowService.publishWorkflow(id, auth.userId)
+    successResponse(res, workflow)
   } catch (error) {
-    console.error('发布工作流失败:', error)
-    const message = error instanceof Error ? error.message : '发布工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('发布工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '发布工作流失败'), 400)
   }
 }
 
@@ -141,11 +155,10 @@ export async function setDefaultWorkflow(req: Request, res: Response): Promise<v
   try {
     const { id } = req.params
     const workflow = await workflowService.setDefaultWorkflow(id)
-    res.json({ success: true, data: workflow })
+    successResponse(res, workflow)
   } catch (error) {
-    console.error('设置默认工作流失败:', error)
-    const message = error instanceof Error ? error.message : '设置默认工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('设置默认工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '设置默认工作流失败'), 400)
   }
 }
 
@@ -158,11 +171,10 @@ export async function simulateWorkflow(req: Request, res: Response): Promise<voi
     const { testData } = req.body
 
     const result = await workflowService.simulateWorkflow(id, testData || {})
-    res.json({ success: true, data: result })
+    successResponse(res, result)
   } catch (error) {
-    console.error('模拟工作流失败:', error)
-    const message = error instanceof Error ? error.message : '模拟工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('模拟工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '模拟工作流失败'), 400)
   }
 }
 
@@ -174,28 +186,16 @@ export async function simulateWorkflow(req: Request, res: Response): Promise<voi
 export async function startWorkflow(req: Request, res: Response): Promise<void> {
   try {
     const { workflowId, entityId, entityType, variables, contextData } = req.body
-
-    if (!workflowId || !entityId || !entityType) {
-      res.status(400).json({
-        success: false,
-        message: '缺少必要参数: workflowId, entityId, entityType'
-      })
-      return
-    }
+    if (!validateRequiredParams({ workflowId, entityId, entityType }, ['workflowId', 'entityId', 'entityType'], res)) return
 
     const instance = await workflowService.startWorkflow(
-      workflowId,
-      entityId,
-      entityType,
-      variables,
-      contextData
+      workflowId, entityId, entityType, variables, contextData
     )
 
-    res.status(201).json({ success: true, data: instance })
+    successResponse(res, instance, 201)
   } catch (error) {
-    console.error('启动工作流失败:', error)
-    const message = error instanceof Error ? error.message : '启动工作流失败'
-    res.status(400).json({ success: false, message })
+    logger.error('启动工作流失败', { error })
+    errorResponse(res, getErrorMessage(error, '启动工作流失败'), 400)
   }
 }
 
@@ -208,14 +208,14 @@ export async function getWorkflowInstance(req: Request, res: Response): Promise<
     const instance = await workflowService.getWorkflowInstance(id)
 
     if (!instance) {
-      res.status(404).json({ success: false, message: '工作流实例不存在' })
+      errorResponse(res, '工作流实例不存在', 404)
       return
     }
 
-    res.json({ success: true, data: instance })
+    successResponse(res, instance)
   } catch (error) {
-    console.error('获取工作流实例失败:', error)
-    res.status(500).json({ success: false, message: '获取工作流实例失败' })
+    logger.error('获取工作流实例失败', { error })
+    errorResponse(res, '获取工作流实例失败')
   }
 }
 
@@ -226,32 +226,22 @@ export async function processNode(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
     const { action, comment } = req.body
-    const userId = req.user?.id
-    const username = req.user?.name || req.user?.username
-
-    if (!userId || !username) {
-      res.status(401).json({ success: false, message: '未登录' })
-      return
-    }
+    const auth = requireAuth(req, res)
+    if (!auth) return
 
     if (!action || !['approve', 'reject'].includes(action)) {
-      res.status(400).json({ success: false, message: '无效的操作类型' })
+      errorResponse(res, '无效的操作类型', 400)
       return
     }
 
     const instance = await workflowService.processNode(
-      id,
-      action,
-      userId,
-      username,
-      comment
+      id, action, auth.userId, auth.username, comment
     )
 
-    res.json({ success: true, data: instance })
+    successResponse(res, instance)
   } catch (error) {
-    console.error('处理流程节点失败:', error)
-    const message = error instanceof Error ? error.message : '处理流程节点失败'
-    res.status(400).json({ success: false, message })
+    logger.error('处理流程节点失败', { error })
+    errorResponse(res, getErrorMessage(error, '处理流程节点失败'), 400)
   }
 }
 
@@ -263,25 +253,18 @@ export async function getEntityInstances(req: Request, res: Response): Promise<v
     const { entityType, entityId } = req.params
 
     const instances = await prisma.workflowInstance.findMany({
-      where: {
-        entityType,
-        entityId
-      },
+      where: { entityType, entityId },
       include: {
         workflow: {
-          select: {
-            id: true,
-            name: true,
-            version: true
-          }
+          select: { id: true, name: true, version: true }
         }
       },
       orderBy: { startedAt: 'desc' }
     })
 
-    res.json({ success: true, data: instances })
+    successResponse(res, instances)
   } catch (error) {
-    console.error('获取流程实例列表失败:', error)
-    res.status(500).json({ success: false, message: '获取流程实例列表失败' })
+    logger.error('获取流程实例列表失败', { error })
+    errorResponse(res, '获取流程实例列表失败')
   }
 }

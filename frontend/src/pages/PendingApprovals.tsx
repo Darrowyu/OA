@@ -84,7 +84,7 @@ const canApprove = (role: UserRole): boolean => {
   ].includes(role)
 }
 
-export const PendingApprovals: React.FC = () => {
+export function PendingApprovals() {
   // const navigate = useNavigate()
   const { user } = useAuth()
   const { getSignature } = useSignature()

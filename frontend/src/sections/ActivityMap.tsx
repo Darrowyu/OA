@@ -58,7 +58,7 @@ export function ActivityMap() {
       </div>
 
       {/* Timeline */}
-      <div className="relative">
+      <div className="relative overflow-x-auto">
         {/* Time slots header */}
         <div className="flex justify-between text-xs text-gray-400 mb-4 px-[80px]">
           {timeSlots.map((time) => <span key={time}>{time}</span>)}

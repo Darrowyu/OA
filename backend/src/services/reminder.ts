@@ -2,6 +2,7 @@ import { ApplicationStatus, Priority } from '@prisma/client';
 import { sendEmailNotification, generateEmailTemplate } from './email';
 import { config } from '../config';
 import { prisma } from '../lib/prisma';
+import * as logger from '../lib/logger';
 
 // 默认提醒设置
 export const defaultReminderSettings = {
@@ -79,7 +80,7 @@ export function saveReminderSettings(settings: ReminderSettings): boolean {
 
     return true;
   } catch (error) {
-    console.error('保存提醒设置失败:', error);
+    logger.error('保存提醒设置失败', { error });
     return false;
   }
 }
@@ -141,7 +142,7 @@ export async function checkAndSendReminders(): Promise<void> {
 
   // 检查是否在允许的时间段
   if (!isInAllowedTimeRange(settings)) {
-    console.log('当前不在允许发送提醒的时间段');
+    logger.info('当前不在允许发送提醒的时间段');
     return;
   }
 
@@ -284,9 +285,9 @@ export async function checkAndSendReminders(): Promise<void> {
       }
     }
 
-    console.log(`提醒检查完成，发送了 ${reminderCount} 封提醒邮件`);
+    logger.info(`提醒检查完成，发送了 ${reminderCount} 封提醒邮件`);
   } catch (error) {
-    console.error('提醒检查失败:', error);
+    logger.error('提醒检查失败', { error });
   }
 }
 
@@ -298,9 +299,9 @@ export function startReminderScheduler(): void {
   const CHECK_INTERVAL = 60 * 60 * 1000; // 1小时
 
   setInterval(() => {
-    console.log('执行定时提醒检查...');
+    logger.info('执行定时提醒检查...');
     checkAndSendReminders();
   }, CHECK_INTERVAL);
 
-  console.log('提醒定时任务已启动，每小时检查一次');
+  logger.info('提醒定时任务已启动，每小时检查一次');
 }

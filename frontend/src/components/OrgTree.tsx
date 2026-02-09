@@ -24,14 +24,14 @@ interface TreeNodeProps {
   onSelect?: (dept: DepartmentTreeNode) => void;
 }
 
-const TreeNode: React.FC<TreeNodeProps> = ({
+function TreeNode({
   node,
   level,
   selectedId,
   expandedIds,
   onToggle,
   onSelect,
-}) => {
+}: TreeNodeProps) {
   const isExpanded = expandedIds.has(node.id);
   const isSelected = selectedId === node.id;
   const hasChildren = node.children && node.children.length > 0;
@@ -124,12 +124,12 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   );
 };
 
-export const OrgTree: React.FC<OrgTreeProps> = ({
+export function OrgTree({
   departments,
   selectedId,
   onSelect,
   className,
-}) => {
+}: OrgTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const handleToggle = useCallback((id: string) => {

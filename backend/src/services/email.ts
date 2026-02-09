@@ -125,7 +125,7 @@ export async function sendEmailNotification(
   // 如果没有收件人，直接返回失败
   if (!recipients || (Array.isArray(recipients) && recipients.length === 0) || recipients === '') {
     const logPrefix = applicationCode ? `申请 ${applicationCode}: ` : '';
-    console.log(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败: 没有有效的收件人`);
+    logger.info(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败: 没有有效的收件人`);
     return false;
   }
 

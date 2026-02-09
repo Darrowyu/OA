@@ -10,7 +10,7 @@ export function ApplicationsLayout() {
   return (
     <div className="h-screen overflow-auto">
       <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)]">
+      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)]">
         <Outlet />
       </main>
     </div>

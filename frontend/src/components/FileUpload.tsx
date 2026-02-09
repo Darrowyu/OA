@@ -21,13 +21,13 @@ interface UploadingFile {
 }
 
 
-export const FileUpload: React.FC<FileUploadProps> = ({
+export function FileUpload({
   onUploadComplete,
   disabled = false,
   maxSize = 10,
   accept = ".pdf",
   validateFileName = true,
-}) => {
+}: FileUploadProps) {
   const [uploadingFiles, setUploadingFiles] = React.useState<UploadingFile[]>([])
   const [isDragging, setIsDragging] = React.useState(false)
   const [previewFile, setPreviewFile] = React.useState<{ url: string; name: string } | null>(null)

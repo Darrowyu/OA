@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma'
+import * as logger from '../lib/logger'
 
 export interface CreateShiftData {
   name: string
@@ -146,7 +147,7 @@ export class ScheduleService {
           })
           results.push(schedule)
         } catch (error) {
-          console.error(`Failed to create schedule for user ${userId} on ${date}:`, error)
+          logger.error('Failed to create schedule', { userId, date, error })
         }
       }
     }
@@ -329,7 +330,7 @@ export class ScheduleService {
         })
         results.push(newSchedule)
       } catch (error) {
-        console.error(`Failed to copy schedule:`, error)
+        logger.error('Failed to copy schedule', { error })
       }
     }
 

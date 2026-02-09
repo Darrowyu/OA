@@ -3,23 +3,49 @@ import { UserRole } from '@prisma/client';
 import { knowledgeService } from '../services/knowledgeService';
 import logger from '../lib/logger';
 
+// 统一响应辅助函数
+function successResponse<T>(res: Response, data: T, message?: string): void {
+  res.json({ success: true, data, message })
+}
+
+function errorResponse(res: Response, message: string, status = 500): void {
+  res.status(status).json({ success: false, error: message })
+}
+
+// 验证用户登录
+function requireAuth(req: Request, res: Response): NonNullable<typeof req.user> | null {
+  const user = req.user
+  if (!user) {
+    errorResponse(res, '未登录', 401)
+    return null
+  }
+  return user
+}
+
+// 解析分页参数
+function parsePagination(query: Record<string, unknown>): { page: number; limit: number } {
+  return {
+    page: parseInt(query.page as string, 10) || 1,
+    limit: parseInt(query.limit as string, 10) || 20,
+  }
+}
+
+// 获取错误信息
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '未知错误'
+}
+
 /**
  * 获取分类列表
  * GET /api/knowledge/categories
  */
 export async function getCategories(_req: Request, res: Response): Promise<void> {
   try {
-    const categories = await knowledgeService.getCategories();
-    res.json({
-      success: true,
-      data: categories,
-    });
+    const categories = await knowledgeService.getCategories()
+    successResponse(res, categories)
   } catch (error) {
-    logger.error('获取分类列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取分类列表失败',
-    });
+    logger.error('获取分类列表失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取分类列表失败')
   }
 }
 
@@ -29,27 +55,17 @@ export async function getCategories(_req: Request, res: Response): Promise<void>
  */
 export async function getCategoryById(req: Request, res: Response): Promise<void> {
   try {
-    const { id } = req.params;
-    const category = await knowledgeService.getCategoryById(id);
+    const category = await knowledgeService.getCategoryById(req.params.id)
 
     if (!category) {
-      res.status(404).json({
-        success: false,
-        error: '分类不存在',
-      });
-      return;
+      errorResponse(res, '分类不存在', 404)
+      return
     }
 
-    res.json({
-      success: true,
-      data: category,
-    });
+    successResponse(res, category)
   } catch (error) {
-    logger.error('获取分类详情失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取分类详情失败',
-    });
+    logger.error('获取分类详情失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取分类详情失败')
   }
 }
 
@@ -59,14 +75,11 @@ export async function getCategoryById(req: Request, res: Response): Promise<void
  */
 export async function createCategory(req: Request, res: Response): Promise<void> {
   try {
-    const { name, description, icon, sortOrder, parentId } = req.body;
+    const { name, description, icon, sortOrder, parentId } = req.body
 
     if (!name?.trim()) {
-      res.status(400).json({
-        success: false,
-        error: '分类名称不能为空',
-      });
-      return;
+      errorResponse(res, '分类名称不能为空', 400)
+      return
     }
 
     const category = await knowledgeService.createCategory({
@@ -75,19 +88,12 @@ export async function createCategory(req: Request, res: Response): Promise<void>
       icon,
       sortOrder,
       parentId,
-    });
+    })
 
-    res.status(201).json({
-      success: true,
-      data: category,
-      message: '分类创建成功',
-    });
+    successResponse(res, category, '分类创建成功')
   } catch (error) {
-    logger.error('创建分类失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '创建分类失败',
-    });
+    logger.error('创建分类失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '创建分类失败')
   }
 }
 
@@ -97,29 +103,16 @@ export async function createCategory(req: Request, res: Response): Promise<void>
  */
 export async function updateCategory(req: Request, res: Response): Promise<void> {
   try {
-    const { id } = req.params;
-    const { name, description, icon, sortOrder, parentId, isActive } = req.body;
+    const { name, description, icon, sortOrder, parentId, isActive } = req.body
 
-    const category = await knowledgeService.updateCategory(id, {
-      name,
-      description,
-      icon,
-      sortOrder,
-      parentId,
-      isActive,
-    });
+    const category = await knowledgeService.updateCategory(req.params.id, {
+      name, description, icon, sortOrder, parentId, isActive,
+    })
 
-    res.json({
-      success: true,
-      data: category,
-      message: '分类更新成功',
-    });
+    successResponse(res, category, '分类更新成功')
   } catch (error) {
-    logger.error('更新分类失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '更新分类失败',
-    });
+    logger.error('更新分类失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '更新分类失败')
   }
 }
 
@@ -129,19 +122,11 @@ export async function updateCategory(req: Request, res: Response): Promise<void>
  */
 export async function deleteCategory(req: Request, res: Response): Promise<void> {
   try {
-    const { id } = req.params;
-    await knowledgeService.deleteCategory(id);
-
-    res.json({
-      success: true,
-      message: '分类删除成功',
-    });
+    await knowledgeService.deleteCategory(req.params.id)
+    successResponse(res, null, '分类删除成功')
   } catch (error) {
-    logger.error('删除分类失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(400).json({
-      success: false,
-      error: error instanceof Error ? error.message : '删除分类失败',
-    });
+    logger.error('删除分类失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '删除分类失败', 400)
   }
 }
 
@@ -151,21 +136,14 @@ export async function deleteCategory(req: Request, res: Response): Promise<void>
  */
 export async function getArticles(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    const {
-      page = '1',
-      limit = '20',
-      categoryId,
-      tag,
-      search,
-      isPublished,
-      authorId,
-    } = req.query;
+    const user = req.user
+    const { categoryId, tag, search, isPublished, authorId } = req.query
+    const { page, limit } = parsePagination(req.query as Record<string, unknown>)
 
     const result = await knowledgeService.getArticles(
       {
-        page: parseInt(page as string, 10),
-        limit: parseInt(limit as string, 10),
+        page,
+        limit,
         categoryId: categoryId as string,
         tag: tag as string,
         search: search as string,
@@ -174,18 +152,12 @@ export async function getArticles(req: Request, res: Response): Promise<void> {
       },
       user?.id,
       user?.role === UserRole.ADMIN
-    );
+    )
 
-    res.json({
-      success: true,
-      data: result,
-    });
+    successResponse(res, result)
   } catch (error) {
-    logger.error('获取文章列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取文章列表失败',
-    });
+    logger.error('获取文章列表失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取文章列表失败')
   }
 }
 
@@ -195,19 +167,12 @@ export async function getArticles(req: Request, res: Response): Promise<void> {
  */
 export async function getHotArticles(req: Request, res: Response): Promise<void> {
   try {
-    const { limit = '5' } = req.query;
-    const articles = await knowledgeService.getHotArticles(parseInt(limit as string, 10));
-
-    res.json({
-      success: true,
-      data: articles,
-    });
+    const limit = parseInt(req.query.limit as string, 10) || 5
+    const articles = await knowledgeService.getHotArticles(limit)
+    successResponse(res, articles)
   } catch (error) {
-    logger.error('获取热门文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取热门文章失败',
-    });
+    logger.error('获取热门文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取热门文章失败')
   }
 }
 
@@ -217,19 +182,12 @@ export async function getHotArticles(req: Request, res: Response): Promise<void>
  */
 export async function getRecentArticles(req: Request, res: Response): Promise<void> {
   try {
-    const { limit = '5' } = req.query;
-    const articles = await knowledgeService.getRecentArticles(parseInt(limit as string, 10));
-
-    res.json({
-      success: true,
-      data: articles,
-    });
+    const limit = parseInt(req.query.limit as string, 10) || 5
+    const articles = await knowledgeService.getRecentArticles(limit)
+    successResponse(res, articles)
   } catch (error) {
-    logger.error('获取最近文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取最近文章失败',
-    });
+    logger.error('获取最近文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取最近文章失败')
   }
 }
 
@@ -239,29 +197,17 @@ export async function getRecentArticles(req: Request, res: Response): Promise<vo
  */
 export async function getArticleById(req: Request, res: Response): Promise<void> {
   try {
-    const { id } = req.params;
-    const user = req.user;
-
-    const article = await knowledgeService.getArticleById(id, user?.id, true);
+    const article = await knowledgeService.getArticleById(req.params.id, req.user?.id, true)
 
     if (!article) {
-      res.status(404).json({
-        success: false,
-        error: '文章不存在或无权访问',
-      });
-      return;
+      errorResponse(res, '文章不存在或无权访问', 404)
+      return
     }
 
-    res.json({
-      success: true,
-      data: article,
-    });
+    successResponse(res, article)
   } catch (error) {
-    logger.error('获取文章详情失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取文章详情失败',
-    });
+    logger.error('获取文章详情失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取文章详情失败')
   }
 }
 
@@ -271,39 +217,22 @@ export async function getArticleById(req: Request, res: Response): Promise<void>
  */
 export async function createArticle(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: '未登录',
-      });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { title, content, summary, categoryId, tags, attachments, isPublished } = req.body;
+    const { title, content, summary, categoryId, tags, attachments, isPublished } = req.body
 
     if (!title?.trim()) {
-      res.status(400).json({
-        success: false,
-        error: '文章标题不能为空',
-      });
-      return;
+      errorResponse(res, '文章标题不能为空', 400)
+      return
     }
-
     if (!content?.trim()) {
-      res.status(400).json({
-        success: false,
-        error: '文章内容不能为空',
-      });
-      return;
+      errorResponse(res, '文章内容不能为空', 400)
+      return
     }
-
     if (!categoryId) {
-      res.status(400).json({
-        success: false,
-        error: '请选择分类',
-      });
-      return;
+      errorResponse(res, '请选择分类', 400)
+      return
     }
 
     const article = await knowledgeService.createArticle(
@@ -317,19 +246,12 @@ export async function createArticle(req: Request, res: Response): Promise<void> 
         isPublished,
       },
       user.id
-    );
+    )
 
-    res.status(201).json({
-      success: true,
-      data: article,
-      message: '文章创建成功',
-    });
+    successResponse(res, article, '文章创建成功')
   } catch (error) {
-    logger.error('创建文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '创建文章失败',
-    });
+    logger.error('创建文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '创建文章失败')
   }
 }
 
@@ -339,44 +261,22 @@ export async function createArticle(req: Request, res: Response): Promise<void> 
  */
 export async function updateArticle(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: '未登录',
-      });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-    const { title, content, summary, categoryId, tags, attachments, isPublished } = req.body;
+    const { title, content, summary, categoryId, tags, attachments, isPublished } = req.body
 
     const article = await knowledgeService.updateArticle(
-      id,
-      {
-        title,
-        content,
-        summary,
-        categoryId,
-        tags,
-        attachments,
-        isPublished,
-      },
+      req.params.id,
+      { title, content, summary, categoryId, tags, attachments, isPublished },
       user.id,
       user.role === UserRole.ADMIN
-    );
+    )
 
-    res.json({
-      success: true,
-      data: article,
-      message: '文章更新成功',
-    });
+    successResponse(res, article, '文章更新成功')
   } catch (error) {
-    logger.error('更新文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(400).json({
-      success: false,
-      error: error instanceof Error ? error.message : '更新文章失败',
-    });
+    logger.error('更新文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '更新文章失败', 400)
   }
 }
 
@@ -386,28 +286,14 @@ export async function updateArticle(req: Request, res: Response): Promise<void> 
  */
 export async function deleteArticle(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: '未登录',
-      });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-    await knowledgeService.deleteArticle(id, user.id, user.role === UserRole.ADMIN);
-
-    res.json({
-      success: true,
-      message: '文章删除成功',
-    });
+    await knowledgeService.deleteArticle(req.params.id, user.id, user.role === UserRole.ADMIN)
+    successResponse(res, null, '文章删除成功')
   } catch (error) {
-    logger.error('删除文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(400).json({
-      success: false,
-      error: error instanceof Error ? error.message : '删除文章失败',
-    });
+    logger.error('删除文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '删除文章失败', 400)
   }
 }
 
@@ -417,44 +303,27 @@ export async function deleteArticle(req: Request, res: Response): Promise<void> 
  */
 export async function submitFeedback(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: '未登录',
-      });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-    const { isHelpful, comment } = req.body;
+    const { isHelpful, comment } = req.body
 
     if (isHelpful === undefined) {
-      res.status(400).json({
-        success: false,
-        error: '请提供反馈内容',
-      });
-      return;
+      errorResponse(res, '请提供反馈内容', 400)
+      return
     }
 
     const feedback = await knowledgeService.submitFeedback({
-      articleId: id,
+      articleId: req.params.id,
       userId: user.id,
       isHelpful,
       comment,
-    });
+    })
 
-    res.json({
-      success: true,
-      data: feedback,
-      message: '反馈提交成功',
-    });
+    successResponse(res, feedback, '反馈提交成功')
   } catch (error) {
-    logger.error('提交反馈失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '提交反馈失败',
-    });
+    logger.error('提交反馈失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '提交反馈失败')
   }
 }
 
@@ -464,31 +333,18 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
  */
 export async function searchArticles(req: Request, res: Response): Promise<void> {
   try {
-    const { q, limit = '20' } = req.query;
+    const { q, limit = '20' } = req.query
 
     if (!q || typeof q !== 'string') {
-      res.status(400).json({
-        success: false,
-        error: '请输入搜索关键词',
-      });
-      return;
+      errorResponse(res, '请输入搜索关键词', 400)
+      return
     }
 
-    const articles = await knowledgeService.searchArticles(
-      q,
-      parseInt(limit as string, 10)
-    );
-
-    res.json({
-      success: true,
-      data: articles,
-    });
+    const articles = await knowledgeService.searchArticles(q, parseInt(limit as string, 10))
+    successResponse(res, articles)
   } catch (error) {
-    logger.error('搜索文章失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '搜索文章失败',
-    });
+    logger.error('搜索文章失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '搜索文章失败')
   }
 }
 
@@ -498,17 +354,10 @@ export async function searchArticles(req: Request, res: Response): Promise<void>
  */
 export async function getAllTags(_req: Request, res: Response): Promise<void> {
   try {
-    const tags = await knowledgeService.getAllTags();
-
-    res.json({
-      success: true,
-      data: tags,
-    });
+    const tags = await knowledgeService.getAllTags()
+    successResponse(res, tags)
   } catch (error) {
-    logger.error('获取标签列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : '获取标签列表失败',
-    });
+    logger.error('获取标签列表失败', { error: getErrorMessage(error) })
+    errorResponse(res, getErrorMessage(error) || '获取标签列表失败')
   }
 }

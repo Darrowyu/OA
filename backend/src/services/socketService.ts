@@ -2,6 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { verifyAccessToken } from '../utils/jwt';
 import { NotificationType, Notification } from '@prisma/client';
+import * as logger from '../lib/logger';
 
 // Socket.io 服务器实例
 let io: SocketIOServer | null = null;
@@ -56,7 +57,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId as string;
 
-    console.log(`用户 ${userId} 已连接, socketId: ${socket.id}`);
+    logger.info(`用户 ${userId} 已连接`, { socketId: socket.id });
 
     // 将用户加入专属房间
     socket.join(`user:${userId}`);
@@ -74,7 +75,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
 
     // 处理断开连接
     socket.on('disconnect', (reason: string) => {
-      console.log(`用户 ${userId} 已断开连接, 原因: ${reason}`);
+      logger.info(`用户 ${userId} 已断开连接`, { reason });
 
       // 从在线列表中移除
       const sockets = onlineUsers.get(userId) || [];
@@ -92,7 +93,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
     });
   });
 
-  console.log('Socket.io 服务已初始化');
+  logger.info('Socket.io 服务已初始化');
   return io;
 }
 
@@ -153,10 +154,10 @@ export async function sendNotificationToUser(
     // 发送给该用户的所有连接
     ioInstance.to(room).emit('notification:new', clientNotification);
 
-    console.log(`通知已发送给用户 ${userId}: ${notification.title}`);
+    logger.info(`通知已发送给用户 ${userId}`, { title: notification.title });
     return true;
   } catch (error) {
-    console.error('发送通知失败:', error);
+    logger.error('发送通知失败', { error });
     return false;
   }
 }
@@ -194,10 +195,10 @@ export async function broadcastNotification(notification: Notification): Promise
     ioInstance.emit('notification:broadcast', clientNotification);
 
     const onlineCount = Array.from(onlineUsers.values()).flat().length;
-    console.log(`广播通知已发送给 ${onlineCount} 个连接`);
+    logger.info(`广播通知已发送`, { onlineCount });
     return onlineCount;
   } catch (error) {
-    console.error('广播通知失败:', error);
+    logger.error('广播通知失败', { error });
     return 0;
   }
 }
@@ -210,6 +211,6 @@ export async function updateUnreadCount(userId: string, count: number): Promise<
     const ioInstance = getIO();
     ioInstance.to(`user:${userId}`).emit('notification:unreadCount', { count });
   } catch (error) {
-    console.error('更新未读数量失败:', error);
+    logger.error('更新未读数量失败', { error });
   }
 }

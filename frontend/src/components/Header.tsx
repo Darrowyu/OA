@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Share2, MoreHorizontal, LayoutGrid, FileCheck, Settings, LogOut, User } from "lucide-react"
+import { Search, Share2, MoreHorizontal, LayoutGrid, FileCheck, Settings, LogOut, User, Menu } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/AuthContext"
 import { NotificationBell } from "@/components/NotificationBell"
 import { useNotifications } from "@/hooks/useNotifications"
+import { useSidebar } from "@/contexts/SidebarContext"
 
 const breadcrumbMap: Record<string, { name: string; icon: React.ElementType }> = {
   "/dashboard": { name: "工作台", icon: LayoutGrid },
@@ -28,6 +29,7 @@ export function Header() {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const { toggleSidebar } = useSidebar()
 
   // 使用通知 Hook
   const { unreadCount, wsStatus } = useNotifications()
@@ -67,15 +69,30 @@ export function Header() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, delay: 0.1 }}
-      className="sticky top-0 z-40 h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white/95 backdrop-blur-sm"
+      className="sticky top-0 z-40 h-16 flex items-center justify-between px-4 md:px-6 border-b border-gray-200 bg-white/95 backdrop-blur-sm"
     >
-      {/* Breadcrumb */}
-      <nav className="flex items-center text-sm ml-8">
-        <span className="text-gray-900 font-medium">{breadcrumb.name}</span>
-      </nav>
+      {/* Left: Mobile Menu Button + Breadcrumb */}
+      <div className="flex items-center gap-3">
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-9 w-9 -ml-2"
+          onClick={toggleSidebar}
+        >
+          <Menu className="h-5 w-5 text-gray-600" />
+        </Button>
 
-      {/* Search */}
-      <div className="flex-1 max-w-md mx-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center text-sm md:ml-8">
+          <span className="text-gray-900 font-medium text-sm md:text-base truncate max-w-[120px] md:max-w-none">
+            {breadcrumb.name}
+          </span>
+        </nav>
+      </div>
+
+      {/* Search - Hidden on mobile */}
+      <div className="hidden md:block flex-1 max-w-md mx-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -86,10 +103,10 @@ export function Header() {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-gray-500">3分钟前更新</span>
+      <div className="flex items-center gap-2 md:gap-3">
+        <span className="hidden lg:block text-xs text-gray-500">3分钟前更新</span>
 
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
+        <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 rounded-full hover:bg-gray-100">
           <Share2 className="h-4 w-4 text-gray-600" />
         </Button>
 

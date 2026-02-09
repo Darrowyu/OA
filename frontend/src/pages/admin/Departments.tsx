@@ -70,7 +70,7 @@ const initialFormData: DepartmentFormData = {
   isActive: true,
 };
 
-export const Departments: React.FC = () => {
+export function Departments() {
   // 状态
   const [departments, setDepartments] = useState<DepartmentTreeNode[]>([]);
   const [selectedDept, setSelectedDept] = useState<DepartmentTreeNode | null>(

@@ -49,7 +49,7 @@ interface CategoryStatProps {
   color: string
 }
 
-const CategoryStat: React.FC<CategoryStatProps> = ({ label, value, total, color }) => {
+function CategoryStat({ label, value, total, color }: CategoryStatProps) {
   const percentage = total > 0 ? Math.round((value / total) * 100) : 0
 
   return (
@@ -84,7 +84,7 @@ interface InlineStatCardProps {
   variant: "coral" | "blue" | "green" | "amber"
 }
 
-const InlineStatCard: React.FC<InlineStatCardProps> = ({ title, value, subtitle, icon, trend, variant }) => {
+function InlineStatCard({ title, value, subtitle, icon, trend, variant }: InlineStatCardProps) {
   const iconStyles = {
     coral: "bg-gray-900 text-white",
     blue: "bg-blue-500 text-white",
@@ -215,8 +215,8 @@ export function ApplicationList() {
         usersApi.getFactoryManagers(),
         usersApi.getManagers(),
       ])
-      setFactoryManagers((factoryResponse as any).data || [])
-      setManagers((managerResponse as any).data || [])
+      setFactoryManagers(factoryResponse.data || [])
+      setManagers(managerResponse.data || [])
     } catch (error) {
       console.error("获取审批人列表失败:", error)
     } finally {

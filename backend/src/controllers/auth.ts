@@ -5,6 +5,7 @@ import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { UserRole } from '@prisma/client';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
+import { config } from '../config';
 
 // 请求类型定义
 interface LoginRequest {
@@ -159,7 +160,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     }
 
     // 加密密码
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, config.bcrypt.saltRounds);
 
     // 创建用户
     const user = await prisma.user.create({

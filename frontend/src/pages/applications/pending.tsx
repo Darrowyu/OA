@@ -14,7 +14,7 @@ import { formatDate, formatAmount, cn } from "@/lib/utils"
 import { useSignature } from "@/hooks/useSignature"
 import { SignatureDialog } from "@/components/SignatureDialog"
 import { statusConfig, priorityConfig } from "@/config/status"
-import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle } from "lucide-react"
+import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle, User as UserIcon, Calendar as CalendarIcon, DollarSign } from "lucide-react"
 import { toast } from "sonner"
 
 const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
@@ -34,8 +34,86 @@ const canApprove = (role: UserRole): boolean => {
 }
 
 // 可以查看待审批页面的角色（包括管理员）
-const canViewPending = (role: UserRole): boolean => {
-  return [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO, UserRole.ADMIN].includes(role)
+const canViewPending = (role: UserRole): boolean =>
+  [UserRole.FACTORY_MANAGER, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.CEO, UserRole.ADMIN].includes(role)
+
+// 优先级Badge
+const PriorityBadge = ({ priority }: { priority: Priority }) => {
+  const config = priorityConfig[priority] || priorityConfig[Priority.NORMAL]
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
+      {priority === Priority.HIGH && <AlertCircle className="h-3 w-3" />}
+      {priority === Priority.URGENT && <AlertTriangle className="h-3 w-3" />}
+      {config.label}
+    </span>
+  )
+}
+
+// 状态Badge
+const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
+  const config = statusConfig[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-100" }
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
+      {config.label}
+    </span>
+  )
+}
+
+// 移动端卡片组件
+function MobileCard({ app, userCanApprove, processingId, onView, onApprove, onReject }: {
+  app: Application
+  userCanApprove: boolean
+  processingId: string | null
+  onView: (app: Application) => void
+  onApprove: (app: Application) => void
+  onReject: (app: Application) => void
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-xs text-gray-400 font-mono mb-1">{app.applicationNo}</p>
+          <h3 className="font-semibold text-gray-900 line-clamp-1">{app.title}</h3>
+        </div>
+        <StatusBadge status={app.status} />
+      </div>
+      <div className="space-y-2 text-sm mb-4">
+        <div className="flex items-center gap-2 text-gray-600">
+          <UserIcon className="h-4 w-4" />
+          <span>{app.submitterName}</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-600">
+          <CalendarIcon className="h-4 w-4" />
+          <span>{formatDate(app.submittedAt || app.createdAt)}</span>
+        </div>
+        {app.amount !== null && (
+          <div className="flex items-center gap-2 text-gray-600">
+            <DollarSign className="h-4 w-4" />
+            <span className="font-medium">{formatAmount(app.amount)}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400">优先级:</span>
+          <PriorityBadge priority={app.priority} />
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => onView(app)}>
+          <Eye className="h-4 w-4 mr-1" /> 查看
+        </Button>
+        {userCanApprove && (
+          <>
+            <Button size="sm" className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700" onClick={() => onApprove(app)} disabled={processingId === app.id}>
+              {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />} 通过
+            </Button>
+            <Button size="sm" variant="destructive" className="flex-1 rounded-xl" onClick={() => onReject(app)} disabled={processingId === app.id}>
+              <XCircle className="h-4 w-4 mr-1" /> 拒绝
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export function PendingList() {
@@ -79,9 +157,9 @@ export function PendingList() {
     }
   }, [user])
 
-  React.useEffect(() => { loadPendingApplications() }, [loadPendingApplications])
   React.useEffect(() => {
-    const interval = setInterval(() => { loadPendingApplications() }, 60000)
+    loadPendingApplications()
+    const interval = setInterval(loadPendingApplications, 60000)
     return () => clearInterval(interval)
   }, [loadPendingApplications])
 
@@ -116,16 +194,18 @@ export function PendingList() {
     setProcessingId(application.id)
     try {
       const data: ApprovalRequest = { action, comment: comment.trim() || undefined, skipManager, selectedManagerIds: selectedManagerIds.length > 0 ? selectedManagerIds : undefined }
-      let response
-      switch (user.role) {
-        case UserRole.FACTORY_MANAGER: response = await approvalsApi.factoryApprove(application.id, data); break
-        case UserRole.DIRECTOR: response = await approvalsApi.directorApprove(application.id, data); break
-        case UserRole.MANAGER: response = await approvalsApi.managerApprove(application.id, data); break
-        case UserRole.CEO: response = await approvalsApi.ceoApprove(application.id, data); break
-        default: throw new Error("无审批权限")
+      type ApprovalMethod = (applicationId: string, data: ApprovalRequest) => Promise<{ message?: string }>
+      const approvalApiMap: Partial<Record<UserRole, ApprovalMethod>> = {
+        [UserRole.FACTORY_MANAGER]: approvalsApi.factoryApprove,
+        [UserRole.DIRECTOR]: approvalsApi.directorApprove,
+        [UserRole.MANAGER]: approvalsApi.managerApprove,
+        [UserRole.CEO]: approvalsApi.ceoApprove,
       }
+      const apiMethod = approvalApiMap[user.role]
+      if (!apiMethod) throw new Error("无审批权限")
+      const response = await apiMethod.call(approvalsApi, application.id, data)
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
-      setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })
+      closeApprovalDialog()
       loadPendingApplications()
     } catch (error: any) {
       toast.error(error.response?.data?.error || "审批失败")
@@ -134,27 +214,16 @@ export function PendingList() {
     }
   }
 
-  const renderPriorityBadge = (priority: Priority) => {
-    const config = priorityConfig[priority] || priorityConfig[Priority.NORMAL]
-    const isHigh = priority === Priority.HIGH
-    const isUrgent = priority === Priority.URGENT
-    return (
-      <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
-        {isHigh && <AlertCircle className="h-3 w-3" />}
-        {isUrgent && <AlertTriangle className="h-3 w-3" />}
-        {config.label}
-      </span>
-    )
-  }
+  // 简化的回调函数
+  const handleView = (app: Application) => setDetailDialog({ open: true, application: app })
+  const handleApprove = (app: Application) => openApprovalDialog(app, "APPROVE")
+  const handleReject = (app: Application) => openApprovalDialog(app, "REJECT")
 
-  const renderStatusBadge = (status: ApplicationStatus) => {
-    const config = statusConfig[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-100", icon: null }
-    return (
-      <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium", config.bgColor, config.color)}>
-        {config.icon}{config.label}
-      </span>
-    )
-  }
+  // 辅助函数：关闭审批对话框
+  const closeApprovalDialog = (): void => setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })
+
+  // 辅助函数：更新审批对话框
+  const updateApprovalDialog = (updates: Partial<typeof approvalDialog>) => setApprovalDialog({ ...approvalDialog, ...updates })
 
   if (!user || !canViewPending(user.role)) {
     return (
@@ -197,69 +266,87 @@ export function PendingList() {
           <p className="text-gray-500">您当前没有需要审批的申请</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                <TableHead className="font-semibold">申请编号</TableHead>
-                <TableHead className="font-semibold">标题</TableHead>
-                <TableHead className="font-semibold">申请人</TableHead>
-                <TableHead className="font-semibold">金额</TableHead>
-                <TableHead className="font-semibold">优先级</TableHead>
-                <TableHead className="font-semibold">状态</TableHead>
-                <TableHead className="font-semibold">提交时间</TableHead>
-                <TableHead className="text-right font-semibold">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {applications.map((app) => (
-                <TableRow key={app.id} className="hover:bg-gray-50/50">
-                  <TableCell className="font-medium text-gray-900">{app.applicationNo}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{app.title}</TableCell>
-                  <TableCell>{app.submitterName}</TableCell>
-                  <TableCell className="font-medium">{formatAmount(app.amount)}</TableCell>
-                  <TableCell>{renderPriorityBadge(app.priority)}</TableCell>
-                  <TableCell>{renderStatusBadge(app.status)}</TableCell>
-                  <TableCell className="text-gray-500">{formatDate(app.submittedAt || app.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-lg hover:bg-gray-100"
-                        onClick={() => setDetailDialog({ open: true, application: app })}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {userCanApprove && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
-                            onClick={() => openApprovalDialog(app, "APPROVE")}
-                            disabled={processingId === app.id}
-                          >
-                            {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
-                            onClick={() => openApprovalDialog(app, "REJECT")}
-                            disabled={processingId === app.id}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+        <>
+          {/* 移动端卡片视图 */}
+          <div className="md:hidden">
+            {applications.map((app) => (
+              <MobileCard
+                key={app.id}
+                app={app}
+                userCanApprove={userCanApprove}
+                processingId={processingId}
+                onView={handleView}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
+            ))}
+          </div>
+
+          {/* PC端表格视图 */}
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                  <TableHead className="font-semibold">申请编号</TableHead>
+                  <TableHead className="font-semibold">标题</TableHead>
+                  <TableHead className="font-semibold">申请人</TableHead>
+                  <TableHead className="font-semibold">金额</TableHead>
+                  <TableHead className="font-semibold">优先级</TableHead>
+                  <TableHead className="font-semibold">状态</TableHead>
+                  <TableHead className="font-semibold">提交时间</TableHead>
+                  <TableHead className="text-right font-semibold">操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {applications.map((app) => (
+                  <TableRow key={app.id} className="hover:bg-gray-50/50">
+                    <TableCell className="font-medium text-gray-900">{app.applicationNo}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{app.title}</TableCell>
+                    <TableCell>{app.submitterName}</TableCell>
+                    <TableCell className="font-medium">{formatAmount(app.amount)}</TableCell>
+                    <TableCell><PriorityBadge priority={app.priority} /></TableCell>
+                    <TableCell><StatusBadge status={app.status} /></TableCell>
+                    <TableCell className="text-gray-500">{formatDate(app.submittedAt || app.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-lg hover:bg-gray-100"
+                          onClick={() => setDetailDialog({ open: true, application: app })}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {userCanApprove && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
+                              onClick={() => openApprovalDialog(app, "APPROVE")}
+                              disabled={processingId === app.id}
+                            >
+                              {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                              onClick={() => openApprovalDialog(app, "REJECT")}
+                              disabled={processingId === app.id}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       {/* 审批对话框 - 仅对可审批用户显示 */}
@@ -284,7 +371,7 @@ export function PendingList() {
                     <Checkbox
                       id="skipManager"
                       checked={approvalDialog.skipManager}
-                      onCheckedChange={(checked) => setApprovalDialog({ ...approvalDialog, skipManager: checked as boolean, selectedManagerIds: checked ? [] : approvalDialog.selectedManagerIds })}
+                      onCheckedChange={(checked) => updateApprovalDialog({ skipManager: checked as boolean, selectedManagerIds: checked ? [] : approvalDialog.selectedManagerIds })}
                     />
                     <Label htmlFor="skipManager" className="text-sm cursor-pointer">跳过经理审批，直接提交CEO</Label>
                   </div>
@@ -303,8 +390,10 @@ export function PendingList() {
                                 id={`manager-${manager.id}`}
                                 checked={approvalDialog.selectedManagerIds.includes(manager.id)}
                                 onCheckedChange={(checked) => {
-                                  if (checked) setApprovalDialog({ ...approvalDialog, selectedManagerIds: [...approvalDialog.selectedManagerIds, manager.id] })
-                                  else setApprovalDialog({ ...approvalDialog, selectedManagerIds: approvalDialog.selectedManagerIds.filter((id) => id !== manager.id) })
+                                  const newIds = checked
+                                    ? [...approvalDialog.selectedManagerIds, manager.id]
+                                    : approvalDialog.selectedManagerIds.filter((id) => id !== manager.id)
+                                  updateApprovalDialog({ selectedManagerIds: newIds })
                                 }}
                               />
                               <Label htmlFor={`manager-${manager.id}`} className="text-sm cursor-pointer">{manager.name} ({manager.department || '无部门'})</Label>
@@ -322,7 +411,7 @@ export function PendingList() {
                   id="comment"
                   placeholder={approvalDialog.action === "APPROVE" ? "请输入审批意见（可选）" : "请输入拒绝原因（必填）"}
                   value={approvalDialog.comment}
-                  onChange={(e) => setApprovalDialog({ ...approvalDialog, comment: e.target.value })}
+                  onChange={(e) => updateApprovalDialog({ comment: e.target.value })}
                   className="mt-1.5 rounded-xl"
                   rows={4}
                 />
@@ -332,7 +421,7 @@ export function PendingList() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })}
+              onClick={() => closeApprovalDialog()}
               className="rounded-xl"
             >
               取消
@@ -359,12 +448,19 @@ export function PendingList() {
             {detailDialog.application && (
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">申请编号</Label><p className="font-medium text-gray-900 mt-0.5">{detailDialog.application.applicationNo}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">状态</Label><div className="mt-1">{renderStatusBadge(detailDialog.application.status)}</div></div>
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">申请人</Label><p className="font-medium text-gray-900 mt-0.5">{detailDialog.application.submitterName}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">部门</Label><p className="font-medium text-gray-900 mt-0.5">{detailDialog.application.submitterDepartment}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">金额</Label><p className="font-medium text-gray-900 mt-0.5">{formatAmount(detailDialog.application.amount)}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-xl"><Label className="text-xs text-gray-500">优先级</Label><div className="mt-1">{renderPriorityBadge(detailDialog.application.priority)}</div></div>
+                  {[
+                    { label: "申请编号", value: detailDialog.application.applicationNo },
+                    { label: "状态", value: <StatusBadge status={detailDialog.application.status} /> },
+                    { label: "申请人", value: detailDialog.application.submitterName },
+                    { label: "部门", value: detailDialog.application.submitterDepartment },
+                    { label: "金额", value: formatAmount(detailDialog.application.amount) },
+                    { label: "优先级", value: <PriorityBadge priority={detailDialog.application.priority} /> },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="p-3 bg-gray-50 rounded-xl">
+                      <Label className="text-xs text-gray-500">{label}</Label>
+                      <div className="font-medium text-gray-900 mt-0.5">{value}</div>
+                    </div>
+                  ))}
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">标题</Label>

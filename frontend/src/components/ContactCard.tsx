@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { Mail, Phone, Briefcase, Building2 } from 'lucide-react';
 
@@ -18,12 +17,12 @@ export interface ContactCardProps {
   className?: string;
 }
 
-export const ContactCard: React.FC<ContactCardProps> = ({
+export function ContactCard({
   user,
   isSelected = false,
   onClick,
   className,
-}) => {
+}: ContactCardProps) {
   // 生成头像占位符
   const getAvatarPlaceholder = (name: string) => {
     return name.charAt(0).toUpperCase();

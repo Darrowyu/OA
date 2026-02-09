@@ -32,13 +32,13 @@ const currencyOptions = [
   { value: Currency.USD, label: "美元 (USD)" },
 ]
 
-export const ApplicationForm: React.FC<ApplicationFormProps> = ({
+export function ApplicationForm({
   factoryManagers,
   managers,
   onSubmit,
   onCancel,
   loading = false,
-}) => {
+}: ApplicationFormProps) {
   const [title, setTitle] = React.useState("")
   const [content, setContent] = React.useState("")
   const [amount, setAmount] = React.useState<string>("")

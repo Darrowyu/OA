@@ -50,13 +50,13 @@ interface EventFormProps {
   onDelete?: () => void;
 }
 
-const EventForm: React.FC<EventFormProps> = ({
+function EventForm({
   event,
   initialDate,
   onSubmit,
   onCancel,
   onDelete,
-}) => {
+}: EventFormProps) {
   const [title, setTitle] = useState(event?.title ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
   const [type, setType] = useState<CalendarEventType>(event?.type ?? CalendarEventType.MEETING);
@@ -281,19 +281,25 @@ const EventForm: React.FC<EventFormProps> = ({
 };
 
 // 日程统计卡片
-const StatCard: React.FC<{
+function StatCard({
+  title,
+  value,
+  color,
+}: {
   title: string;
   value: number;
   color: string;
-}> = ({ title, value, color }) => (
-  <div className="bg-white p-4 rounded-lg border">
-    <div className="text-sm text-gray-500">{title}</div>
-    <div className="text-2xl font-bold mt-1" style={{ color }}>{value}</div>
-  </div>
-);
+}) {
+  return (
+    <div className="bg-white p-4 rounded-lg border">
+      <div className="text-sm text-gray-500">{title}</div>
+      <div className="text-2xl font-bold mt-1" style={{ color }}>{value}</div>
+    </div>
+  );
+}
 
 // 主页面
-const SchedulePage: React.FC = () => {
+function SchedulePage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarViewType>('month');
@@ -417,14 +423,14 @@ const SchedulePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F3F4F6]">
       <Header />
-      <main className="p-6">
+      <main className="p-4 md:p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">日程管理</h1>
           <p className="text-gray-500 mt-1">管理您的个人和团队日程安排</p>
         </div>
 
         {/* 统计卡片 */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard title="总日程" value={stats.total} color="#374151" />
           <StatCard
             title="会议"

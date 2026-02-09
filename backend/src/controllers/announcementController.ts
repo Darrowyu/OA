@@ -12,44 +12,64 @@ import {
 } from '../services/announcementService';
 import logger from '../lib/logger';
 
+// 统一响应辅助函数
+function successResponse<T>(res: Response, data: T, message?: string): void {
+  res.json({ success: true, data, message })
+}
+
+function errorResponse(res: Response, message: string, status = 500): void {
+  res.status(status).json({ error: message })
+}
+
+// 验证用户登录
+function requireAuth(req: Request, res: Response): NonNullable<typeof req.user> | null {
+  const user = req.user
+  if (!user) {
+    errorResponse(res, '未登录', 401)
+    return null
+  }
+  return user
+}
+
+// 检查发布权限
+function canPublish(role: string): boolean {
+  return ['ADMIN', 'CEO', 'DIRECTOR', 'MANAGER'].includes(role)
+}
+
+// 解析分页参数
+function parsePagination(query: Record<string, unknown>): { page: number; pageSize: number } {
+  return {
+    page: parseInt(query.page as string, 10) || 1,
+    pageSize: parseInt(query.pageSize as string, 10) || 20,
+  }
+}
+
 /**
  * 获取公告列表
  * GET /api/announcements
  */
 export async function getAnnouncementsList(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const {
-      type,
-      isTop,
-      search,
-      page = '1',
-      pageSize = '20',
-      includeExpired,
-    } = req.query;
+    const { type, isTop, search, includeExpired } = req.query
+    const { page, pageSize } = parsePagination(req.query as Record<string, unknown>)
 
     const result = await getAnnouncements(user.id, {
-      page: parseInt(page as string, 10),
-      pageSize: parseInt(pageSize as string, 10),
+      page,
+      pageSize,
       ...(type && type !== 'all' && { type: type as AnnouncementType }),
       ...(isTop !== undefined && { isTop: isTop === 'true' }),
       ...(search && { search: search as string }),
       ...(includeExpired && { includeExpired: includeExpired === 'true' }),
       userDeptId: user.departmentId || undefined,
-    });
+    })
 
-    res.json({
-      success: true,
-      data: result,
-    });
+    successResponse(res, result)
   } catch (error) {
-    logger.error('获取公告列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取公告列表失败' });
+    logger.error('获取公告列表失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '获取公告列表失败')
   }
 }
 
@@ -59,28 +79,20 @@ export async function getAnnouncementsList(req: Request, res: Response): Promise
  */
 export async function getAnnouncementDetail(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-
-    const announcement = await getAnnouncementById(id, user.id);
+    const announcement = await getAnnouncementById(req.params.id, user.id)
 
     if (!announcement) {
-      res.status(404).json({ error: '公告不存在' });
-      return;
+      errorResponse(res, '公告不存在', 404)
+      return
     }
 
-    res.json({
-      success: true,
-      data: announcement,
-    });
+    successResponse(res, announcement)
   } catch (error) {
-    logger.error('获取公告详情失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取公告详情失败' });
+    logger.error('获取公告详情失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '获取公告详情失败')
   }
 }
 
@@ -90,45 +102,32 @@ export async function getAnnouncementDetail(req: Request, res: Response): Promis
  */
 export async function create(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
+    const user = requireAuth(req, res)
+    if (!user) return
+
+    if (!canPublish(user.role)) {
+      errorResponse(res, '无权发布公告', 403)
+      return
     }
 
-    // 检查权限：只有管理员、CEO、总监可以发布公告
-    if (!['ADMIN', 'CEO', 'DIRECTOR', 'MANAGER'].includes(user.role)) {
-      res.status(403).json({ error: '无权发布公告' });
-      return;
-    }
-
-    const {
-      title,
-      content,
-      type,
-      targetDepts,
-      isTop,
-      validFrom,
-      validUntil,
-      attachments,
-    } = req.body;
+    const { title, content, type, targetDepts, isTop, validFrom, validUntil, attachments } = req.body
 
     // 验证必填字段
     if (!title?.trim()) {
-      res.status(400).json({ error: '标题不能为空' });
-      return;
+      errorResponse(res, '标题不能为空', 400)
+      return
     }
     if (!content?.trim()) {
-      res.status(400).json({ error: '内容不能为空' });
-      return;
+      errorResponse(res, '内容不能为空', 400)
+      return
     }
     if (!type || !Object.values(AnnouncementType).includes(type)) {
-      res.status(400).json({ error: '请选择有效的公告类型' });
-      return;
+      errorResponse(res, '请选择有效的公告类型', 400)
+      return
     }
     if (!validFrom) {
-      res.status(400).json({ error: '请选择生效时间' });
-      return;
+      errorResponse(res, '请选择生效时间', 400)
+      return
     }
 
     const announcement = await createAnnouncement({
@@ -141,16 +140,12 @@ export async function create(req: Request, res: Response): Promise<void> {
       validUntil: validUntil ? new Date(validUntil) : undefined,
       attachments,
       authorId: user.id,
-    });
+    })
 
-    res.status(201).json({
-      success: true,
-      message: '公告发布成功',
-      data: announcement,
-    });
+    successResponse(res, announcement, '公告发布成功')
   } catch (error) {
-    logger.error('创建公告失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '创建公告失败' });
+    logger.error('创建公告失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '创建公告失败')
   }
 }
 
@@ -160,35 +155,21 @@ export async function create(req: Request, res: Response): Promise<void> {
  */
 export async function update(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-    const {
-      title,
-      content,
-      type,
-      targetDepts,
-      isTop,
-      validFrom,
-      validUntil,
-      attachments,
-    } = req.body;
+    const { id } = req.params
+    const { title, content, type, targetDepts, isTop, validFrom, validUntil, attachments } = req.body
 
-    // 检查公告是否存在
-    const existing = await getAnnouncementById(id);
+    const existing = await getAnnouncementById(id)
     if (!existing) {
-      res.status(404).json({ error: '公告不存在' });
-      return;
+      errorResponse(res, '公告不存在', 404)
+      return
     }
 
-    // 权限检查：只有发布者或管理员可以修改
     if (existing.authorId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权修改此公告' });
-      return;
+      errorResponse(res, '无权修改此公告', 403)
+      return
     }
 
     const updated = await updateAnnouncement(id, {
@@ -200,16 +181,12 @@ export async function update(req: Request, res: Response): Promise<void> {
       ...(validFrom !== undefined && { validFrom: new Date(validFrom) }),
       ...(validUntil !== undefined && { validUntil: validUntil ? new Date(validUntil) : null }),
       ...(attachments !== undefined && { attachments }),
-    });
+    })
 
-    res.json({
-      success: true,
-      message: '公告更新成功',
-      data: updated,
-    });
+    successResponse(res, updated, '公告更新成功')
   } catch (error) {
-    logger.error('更新公告失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '更新公告失败' });
+    logger.error('更新公告失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '更新公告失败')
   }
 }
 
@@ -219,36 +196,27 @@ export async function update(req: Request, res: Response): Promise<void> {
  */
 export async function remove(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
+    const { id } = req.params
 
-    // 检查公告是否存在
-    const existing = await getAnnouncementById(id);
+    const existing = await getAnnouncementById(id)
     if (!existing) {
-      res.status(404).json({ error: '公告不存在' });
-      return;
+      errorResponse(res, '公告不存在', 404)
+      return
     }
 
-    // 权限检查：只有发布者或管理员可以删除
     if (existing.authorId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权删除此公告' });
-      return;
+      errorResponse(res, '无权删除此公告', 403)
+      return
     }
 
-    await deleteAnnouncement(id);
-
-    res.json({
-      success: true,
-      message: '公告删除成功',
-    });
+    await deleteAnnouncement(id)
+    successResponse(res, null, '公告删除成功')
   } catch (error) {
-    logger.error('删除公告失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '删除公告失败' });
+    logger.error('删除公告失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '删除公告失败')
   }
 }
 
@@ -258,36 +226,27 @@ export async function remove(req: Request, res: Response): Promise<void> {
  */
 export async function getStats(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
+    const { id } = req.params
 
-    // 检查公告是否存在
-    const existing = await getAnnouncementById(id);
+    const existing = await getAnnouncementById(id)
     if (!existing) {
-      res.status(404).json({ error: '公告不存在' });
-      return;
+      errorResponse(res, '公告不存在', 404)
+      return
     }
 
-    // 权限检查：只有发布者或管理员可以查看统计
     if (existing.authorId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权查看统计信息' });
-      return;
+      errorResponse(res, '无权查看统计信息', 403)
+      return
     }
 
-    const stats = await getReadStats(id);
-
-    res.json({
-      success: true,
-      data: stats,
-    });
+    const stats = await getReadStats(id)
+    successResponse(res, stats)
   } catch (error) {
-    logger.error('获取阅读统计失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取阅读统计失败' });
+    logger.error('获取阅读统计失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '获取阅读统计失败')
   }
 }
 
@@ -297,38 +256,28 @@ export async function getStats(req: Request, res: Response): Promise<void> {
  */
 export async function toggleTopStatus(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const { id } = req.params;
-    const { isTop } = req.body;
+    const { id } = req.params
+    const { isTop } = req.body
 
-    // 检查公告是否存在
-    const existing = await getAnnouncementById(id);
+    const existing = await getAnnouncementById(id)
     if (!existing) {
-      res.status(404).json({ error: '公告不存在' });
-      return;
+      errorResponse(res, '公告不存在', 404)
+      return
     }
 
-    // 权限检查：只有发布者或管理员可以修改置顶
     if (existing.authorId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权修改此公告' });
-      return;
+      errorResponse(res, '无权修改此公告', 403)
+      return
     }
 
-    const updated = await toggleTop(id, isTop);
-
-    res.json({
-      success: true,
-      message: isTop ? '公告已置顶' : '公告已取消置顶',
-      data: updated,
-    });
+    const updated = await toggleTop(id, isTop)
+    successResponse(res, updated, isTop ? '公告已置顶' : '公告已取消置顶')
   } catch (error) {
-    logger.error('切换置顶状态失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '切换置顶状态失败' });
+    logger.error('切换置顶状态失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '切换置顶状态失败')
   }
 }
 
@@ -338,20 +287,13 @@ export async function toggleTopStatus(req: Request, res: Response): Promise<void
  */
 export async function getUnreadCountHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res)
+    if (!user) return
 
-    const count = await getUnreadCount(user.id, user.departmentId || undefined);
-
-    res.json({
-      success: true,
-      data: { count },
-    });
+    const count = await getUnreadCount(user.id, user.departmentId || undefined)
+    successResponse(res, { count })
   } catch (error) {
-    logger.error('获取未读数量失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取未读数量失败' });
+    logger.error('获取未读数量失败', { error: error instanceof Error ? error.message : '未知错误' })
+    errorResponse(res, '获取未读数量失败')
   }
 }

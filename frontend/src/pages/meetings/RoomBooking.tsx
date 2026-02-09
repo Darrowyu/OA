@@ -399,7 +399,7 @@ export function RoomBooking() {
                         </div>
 
                         {/* 时间段网格 */}
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {TIME_SLOTS.map((time) => {
                             const occupied = isTimeSlotOccupied(time);
                             const isSelected = time === startTime || time === endTime;

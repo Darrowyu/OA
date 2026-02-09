@@ -36,7 +36,7 @@ interface TreeNodeProps {
   readOnly?: boolean;
 }
 
-const TreeNode: React.FC<TreeNodeProps> = ({
+function TreeNode({
   node,
   level,
   selectedId,
@@ -47,7 +47,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onDelete,
   onAddChild,
   readOnly,
-}) => {
+}: TreeNodeProps) {
   const isExpanded = expandedIds.has(node.id);
   const isSelected = selectedId === node.id;
   const hasChildren = node.children && node.children.length > 0;
@@ -217,7 +217,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   );
 };
 
-export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
+export function DepartmentTree({
   departments,
   selectedId,
   onSelect,
@@ -226,7 +226,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   onAddChild,
   className,
   readOnly = false,
-}) => {
+}: DepartmentTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const handleToggle = useCallback((id: string) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -45,11 +45,11 @@ interface ContactDetailPanelProps {
   isMobile?: boolean;
 }
 
-const ContactDetailPanel: React.FC<ContactDetailPanelProps> = ({
+function ContactDetailPanel({
   contact,
   onClose,
   isMobile = false,
-}) => {
+}: ContactDetailPanelProps) {
   // 生成头像占位符
   const getAvatarPlaceholder = (name: string) => {
     return name.charAt(0).toUpperCase();
@@ -233,7 +233,7 @@ const ContactDetailPanel: React.FC<ContactDetailPanelProps> = ({
 };
 
 // 主页面组件
-const ContactsPage: React.FC = () => {
+function ContactsPage() {
   const isMobile = useIsMobile();
 
   // 状态

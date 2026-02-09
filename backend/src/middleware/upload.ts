@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { Request, Response, NextFunction } from 'express';
 import { validateFilename, validateFilenames, generateValidationErrorMessage } from '../utils/validation';
+import * as logger from '../lib/logger';
 
 // 上传配置常量
 export const UPLOAD_CONFIG = {
@@ -189,7 +190,7 @@ export function cleanupTempFiles(files: Express.Multer.File[]): void {
         fs.unlinkSync(file.path);
       }
     } catch (error) {
-      console.error(`清理临时文件失败: ${file.path}`, error);
+      logger.error(`清理临时文件失败: ${file.path}`, { error });
     }
   }
 }
@@ -213,7 +214,7 @@ export function deleteFile(filePath: string): boolean {
     }
     return false;
   } catch (error) {
-    console.error(`删除文件失败: ${filePath}`, error);
+    logger.error(`删除文件失败: ${filePath}`, { error });
     return false;
   }
 }
@@ -230,7 +231,7 @@ export function getFileInfo(filePath: string): { size: number; createdAt: Date }
     }
     return null;
   } catch (error) {
-    console.error(`获取文件信息失败: ${filePath}`, error);
+    logger.error(`获取文件信息失败: ${filePath}`, { error });
     return null;
   }
 }

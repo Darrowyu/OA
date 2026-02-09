@@ -1,4 +1,3 @@
-import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { Application, ApplicationStatus, Priority } from "@/types"
 import { formatDate } from "@/lib/utils"
@@ -88,7 +87,7 @@ const priorityConfig: Record<Priority, { label: string; color: string; bgColor: 
   },
 }
 
-export const ApplicationCard: React.FC<ApplicationCardProps> = ({ application }) => {
+export function ApplicationCard({ application }: ApplicationCardProps) {
   const navigate = useNavigate()
   const status = statusConfig[application.status]
   const priority = priorityConfig[application.priority]

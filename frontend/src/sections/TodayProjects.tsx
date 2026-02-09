@@ -41,7 +41,7 @@ export function TodayProjects({ onOpenTask }: TodayProjectsProps) {
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {todayProjects.map((project, index) => (
           <motion.div
             key={project.id}

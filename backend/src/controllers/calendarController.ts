@@ -4,34 +4,53 @@ import * as calendarService from '../services/calendarService';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 
+// 统一错误处理辅助函数
+function handleError(res: Response, message: string, error: unknown, statusCode = 500): void {
+  const errorMessage = error instanceof Error ? error.message : '未知错误';
+  logger.error(message, { error: errorMessage });
+  res.status(statusCode).json({ success: false, error: message });
+}
+
+// 验证用户登录
+function requireAuth(req: Request, res: Response): NonNullable<typeof req.user> | null {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ success: false, error: '未登录' });
+    return null;
+  }
+  return user;
+}
+
+// 验证日期范围
+function validateDateRange(startDate: unknown, endDate: unknown, res: Response): { start: Date; end: Date } | null {
+  if (!startDate || !endDate) {
+    res.status(400).json({ success: false, error: '缺少时间范围参数' });
+    return null;
+  }
+
+  const start = new Date(startDate as string);
+  const end = new Date(endDate as string);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ success: false, error: '无效的时间格式' });
+    return null;
+  }
+
+  return { start, end };
+}
+
 /**
  * 获取日程列表
  * GET /api/calendar/events
  */
 export async function getEvents(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { startDate, endDate, types, includePrivate } = req.query;
-
-    // 验证时间参数
-    if (!startDate || !endDate) {
-      res.status(400).json({ success: false, error: '缺少时间范围参数' });
-      return;
-    }
-
-    const start = new Date(startDate as string);
-    const end = new Date(endDate as string);
-
-    // 验证日期有效性
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      res.status(400).json({ success: false, error: '无效的时间格式' });
-      return;
-    }
+    const dates = validateDateRange(startDate, endDate, res);
+    if (!dates) return;
 
     // 解析类型过滤
     const typeFilter = types
@@ -40,18 +59,14 @@ export async function getEvents(req: Request, res: Response): Promise<void> {
         )
       : undefined;
 
-    const events = await calendarService.getEvents(user.id, start, end, {
+    const events = await calendarService.getEvents(user.id, dates.start, dates.end, {
       types: typeFilter,
       includePrivate: includePrivate === 'true',
     });
 
-    res.json({
-      success: true,
-      data: events,
-    });
+    res.json({ success: true, data: events });
   } catch (error) {
-    logger.error('获取日程列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '获取日程列表失败' });
+    handleError(res, '获取日程列表失败', error);
   }
 }
 
@@ -61,11 +76,8 @@ export async function getEvents(req: Request, res: Response): Promise<void> {
  */
 export async function getEvent(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { id } = req.params;
     const event = await calendarService.getEventById(id, user.id);
@@ -75,13 +87,9 @@ export async function getEvent(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    res.json({
-      success: true,
-      data: event,
-    });
+    res.json({ success: true, data: event });
   } catch (error) {
-    logger.error('获取日程详情失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '获取日程详情失败' });
+    handleError(res, '获取日程详情失败', error);
   }
 }
 
@@ -91,11 +99,8 @@ export async function getEvent(req: Request, res: Response): Promise<void> {
  */
 export async function createEvent(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { title, description, startTime, endTime, location, type, isAllDay, recurrence, attendees, isPrivate, color } = req.body;
 
@@ -136,8 +141,7 @@ export async function createEvent(req: Request, res: Response): Promise<void> {
       data: event,
     });
   } catch (error) {
-    logger.error('创建日程失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : '创建日程失败' });
+    handleError(res, '创建日程失败', error);
   }
 }
 
@@ -147,11 +151,8 @@ export async function createEvent(req: Request, res: Response): Promise<void> {
  */
 export async function updateEvent(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { id } = req.params;
     const { title, description, startTime, endTime, location, type, isAllDay, recurrence, attendees, isPrivate, color } = req.body;
@@ -176,19 +177,11 @@ export async function updateEvent(req: Request, res: Response): Promise<void> {
       color: color?.trim(),
     });
 
-    res.json({
-      success: true,
-      message: '日程更新成功',
-      data: event,
-    });
+    res.json({ success: true, message: '日程更新成功', data: event });
   } catch (error) {
-    logger.error('更新日程失败', { error: error instanceof Error ? error.message : '未知错误' });
-    const errorMessage = error instanceof Error ? error.message : '更新日程失败';
-    if (errorMessage.includes('不存在')) {
-      res.status(404).json({ success: false, error: errorMessage });
-    } else {
-      res.status(500).json({ success: false, error: errorMessage });
-    }
+    const errorMessage = error instanceof Error ? error.message : '';
+    const statusCode = errorMessage.includes('不存在') ? 404 : 500;
+    handleError(res, errorMessage || '更新日程失败', error, statusCode);
   }
 }
 
@@ -198,27 +191,17 @@ export async function updateEvent(req: Request, res: Response): Promise<void> {
  */
 export async function deleteEvent(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { id } = req.params;
     await calendarService.deleteEvent(id, user.id);
 
-    res.json({
-      success: true,
-      message: '日程删除成功',
-    });
+    res.json({ success: true, message: '日程删除成功' });
   } catch (error) {
-    logger.error('删除日程失败', { error: error instanceof Error ? error.message : '未知错误' });
-    const errorMessage = error instanceof Error ? error.message : '删除日程失败';
-    if (errorMessage.includes('不存在')) {
-      res.status(404).json({ success: false, error: errorMessage });
-    } else {
-      res.status(500).json({ success: false, error: errorMessage });
-    }
+    const errorMessage = error instanceof Error ? error.message : '';
+    const statusCode = errorMessage.includes('不存在') ? 404 : 500;
+    handleError(res, errorMessage || '删除日程失败', error, statusCode);
   }
 }
 
@@ -228,27 +211,20 @@ export async function deleteEvent(req: Request, res: Response): Promise<void> {
  */
 export async function getSharedEvents(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { userIds, startDate, endDate, types } = req.query;
 
-    if (!userIds || !startDate || !endDate) {
+    if (!userIds) {
       res.status(400).json({ success: false, error: '缺少必要参数' });
       return;
     }
 
-    const userIdList = (userIds as string).split(',');
-    const start = new Date(startDate as string);
-    const end = new Date(endDate as string);
+    const dates = validateDateRange(startDate, endDate, res);
+    if (!dates) return;
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      res.status(400).json({ success: false, error: '无效的时间格式' });
-      return;
-    }
+    const userIdList = (userIds as string).split(',');
 
     // 解析类型过滤
     const typeFilter = types
@@ -257,18 +233,14 @@ export async function getSharedEvents(req: Request, res: Response): Promise<void
         )
       : undefined;
 
-    const events = await calendarService.getSharedEvents(userIdList, start, end, {
+    const events = await calendarService.getSharedEvents(userIdList, dates.start, dates.end, {
       types: typeFilter,
       includePrivate: false, // 共享视图不包含私有事件
     });
 
-    res.json({
-      success: true,
-      data: events,
-    });
+    res.json({ success: true, data: events });
   } catch (error) {
-    logger.error('获取共享日程失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '获取共享日程失败' });
+    handleError(res, '获取共享日程失败', error);
   }
 }
 
@@ -278,26 +250,12 @@ export async function getSharedEvents(req: Request, res: Response): Promise<void
  */
 export async function getAttendingEvents(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { startDate, endDate } = req.query;
-
-    if (!startDate || !endDate) {
-      res.status(400).json({ success: false, error: '缺少时间范围参数' });
-      return;
-    }
-
-    const start = new Date(startDate as string);
-    const end = new Date(endDate as string);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      res.status(400).json({ success: false, error: '无效的时间格式' });
-      return;
-    }
+    const dates = validateDateRange(startDate, endDate, res);
+    if (!dates) return;
 
     // 获取用户邮箱
     const userRecord = await prisma.user.findUnique({
@@ -310,15 +268,11 @@ export async function getAttendingEvents(req: Request, res: Response): Promise<v
       return;
     }
 
-    const events = await calendarService.getAttendingEvents(user.id, userRecord.email, start, end);
+    const events = await calendarService.getAttendingEvents(user.id, userRecord.email, dates.start, dates.end);
 
-    res.json({
-      success: true,
-      data: events,
-    });
+    res.json({ success: true, data: events });
   } catch (error) {
-    logger.error('获取参与日程失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '获取参与日程失败' });
+    handleError(res, '获取参与日程失败', error);
   }
 }
 
@@ -328,11 +282,8 @@ export async function getAttendingEvents(req: Request, res: Response): Promise<v
  */
 export async function updateAttendeeStatus(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { id } = req.params;
     const { status } = req.body;
@@ -356,13 +307,9 @@ export async function updateAttendeeStatus(req: Request, res: Response): Promise
 
     await calendarService.updateAttendeeStatus(id, userRecord.email, status as calendarService.Attendee['status']);
 
-    res.json({
-      success: true,
-      message: '状态更新成功',
-    });
+    res.json({ success: true, message: '状态更新成功' });
   } catch (error) {
-    logger.error('更新参与者状态失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '更新参与者状态失败' });
+    handleError(res, '更新参与者状态失败', error);
   }
 }
 
@@ -372,35 +319,17 @@ export async function updateAttendeeStatus(req: Request, res: Response): Promise
  */
 export async function getStatistics(req: Request, res: Response): Promise<void> {
   try {
-    const user = req.user;
-    if (!user) {
-      res.status(401).json({ success: false, error: '未登录' });
-      return;
-    }
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     const { startDate, endDate } = req.query;
+    const dates = validateDateRange(startDate, endDate, res);
+    if (!dates) return;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ success: false, error: '缺少时间范围参数' });
-      return;
-    }
+    const stats = await calendarService.getEventStatistics(user.id, dates.start, dates.end);
 
-    const start = new Date(startDate as string);
-    const end = new Date(endDate as string);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      res.status(400).json({ success: false, error: '无效的时间格式' });
-      return;
-    }
-
-    const stats = await calendarService.getEventStatistics(user.id, start, end);
-
-    res.json({
-      success: true,
-      data: stats,
-    });
+    res.json({ success: true, data: stats });
   } catch (error) {
-    logger.error('获取日程统计失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ success: false, error: '获取日程统计失败' });
+    handleError(res, '获取日程统计失败', error);
   }
 }

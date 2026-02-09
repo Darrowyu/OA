@@ -5,6 +5,7 @@ import {
   checkAndSendReminders,
   ReminderSettings,
 } from '../services/reminder';
+import * as logger from '../lib/logger';
 
 /**
  * 获取提醒设置
@@ -24,7 +25,7 @@ export async function getSettings(req: Request, res: Response): Promise<void> {
     const settings = getReminderSettings();
     res.json({ success: true, data: settings });
   } catch (error) {
-    console.error('获取提醒设置失败:', error);
+    logger.error('获取提醒设置失败', { error });
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: '获取提醒设置失败' },
@@ -72,11 +73,11 @@ export async function saveSettings(req: Request, res: Response): Promise<void> {
     }
 
     if (saveReminderSettings(settings)) {
-      console.log(`管理员 ${user.username} 更新了提醒策略`);
+      logger.info(`管理员 ${user.username} 更新了提醒策略`);
 
       // 立即触发一次提醒检查
       setTimeout(() => {
-        console.log('立即应用新的提醒策略，触发提醒检查...');
+        logger.info('立即应用新的提醒策略，触发提醒检查...');
         checkAndSendReminders();
       }, 100);
 
@@ -91,7 +92,7 @@ export async function saveSettings(req: Request, res: Response): Promise<void> {
       });
     }
   } catch (error) {
-    console.error('保存提醒设置失败:', error);
+    logger.error('保存提醒设置失败', { error });
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: '保存提醒设置失败' },
@@ -114,7 +115,7 @@ export async function triggerCheck(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    console.log(`管理员 ${user.username} 手动触发提醒检查`);
+    logger.info(`管理员 ${user.username} 手动触发提醒检查`);
 
     // 异步执行提醒检查
     setTimeout(() => {
@@ -126,7 +127,7 @@ export async function triggerCheck(req: Request, res: Response): Promise<void> {
       message: '提醒检查已触发，请查看服务器日志了解详细信息',
     });
   } catch (error) {
-    console.error('触发提醒检查失败:', error);
+    logger.error('触发提醒检查失败', { error });
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: '触发提醒检查失败' },

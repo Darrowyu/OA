@@ -61,6 +61,10 @@ export const config = {
     level: process.env.LOG_LEVEL || 'info',
     dir: process.env.LOG_DIR || 'logs',
   },
+
+  bcrypt: {
+    saltRounds: int(process.env.BCRYPT_SALT_ROUNDS, '10'),
+  },
 } as const;
 
 export type Config = typeof config;

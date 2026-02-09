@@ -94,22 +94,24 @@ interface StatCardProps {
   color: string
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, amount, count, icon, color }) => (
-  <Card>
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold mt-1">{formatAmount(amount)}</p>
-          <p className="text-sm text-gray-400 mt-1">{count} 笔申请</p>
+function StatCard({ title, amount, count, icon, color }: StatCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">{title}</p>
+            <p className="text-2xl font-bold mt-1">{formatAmount(amount)}</p>
+            <p className="text-sm text-gray-400 mt-1">{count} 笔申请</p>
+          </div>
+          <div className={cn("p-3 rounded-full", color)}>{icon}</div>
         </div>
-        <div className={cn("p-3 rounded-full", color)}>{icon}</div>
-      </div>
-    </CardContent>
-  </Card>
-)
+      </CardContent>
+    </Card>
+  )
+}
 
-export const ApprovedApplications: React.FC = () => {
+export function ApprovedApplications() {
   // const navigate = useNavigate()
   const { user } = useAuth()
   const [applications, setApplications] = React.useState<Application[]>([])

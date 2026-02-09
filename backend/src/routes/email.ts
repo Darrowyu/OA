@@ -2,6 +2,7 @@ import { Router } from 'express';
 // 邮件服务相关函数通过动态导入使用
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
+import * as logger from '../lib/logger';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.post('/test', authMiddleware, requireRole(UserRole.ADMIN), async (req, re
       res.status(500).json({ success: false, message: '测试邮件发送失败' });
     }
   } catch (error) {
-    console.error('发送测试邮件失败:', error);
+    logger.error('发送测试邮件失败', { error });
     res.status(500).json({ success: false, message: '发送测试邮件失败' });
   }
 });

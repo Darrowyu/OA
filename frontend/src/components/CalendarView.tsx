@@ -45,7 +45,7 @@ const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
 // 小时标签
 const hours = Array.from({ length: 24 }, (_, i) => i);
 
-export const CalendarView: React.FC<CalendarViewProps> = ({
+export function CalendarView({
   events,
   view,
   currentDate,
@@ -54,7 +54,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onEventClick,
   onSlotClick,
   className,
-}) => {
+}: CalendarViewProps) {
   // 导航到上一个/下一个
   const navigatePrevious = useCallback(() => {
     if (view === 'month') {

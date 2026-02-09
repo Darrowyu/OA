@@ -33,6 +33,7 @@ import workflowRoutes from './routes/workflows';
 import reportRoutes from './routes/reports';
 import knowledgeRoutes from './routes/knowledge';
 import { createServer } from 'http';
+import * as logger from './lib/logger';
 
 // 创建Express应用
 const app = express();
@@ -112,15 +113,11 @@ initializeSocket(server);
 
 // 启动服务器
 server.listen(config.port, () => {
-  console.log(`
-========================================
-  OA系统后端服务已启动
-========================================
-  环境: ${config.nodeEnv}
-  端口: ${config.port}
-  时间: ${new Date().toLocaleString()}
-========================================
-  `);
+  logger.info('OA系统后端服务已启动', {
+    environment: config.nodeEnv,
+    port: config.port,
+    time: new Date().toLocaleString(),
+  });
 
   // 启动提醒定时任务
   startReminderScheduler();
@@ -128,16 +125,16 @@ server.listen(config.port, () => {
 
 // 优雅关闭处理
 const gracefulShutdown = (signal: string) => {
-  console.log(`\n${signal} 信号接收到，开始优雅关闭...`);
+  logger.info(`${signal} 信号接收到，开始优雅关闭...`);
 
   server.close(() => {
-    console.log('HTTP服务器已关闭');
+    logger.info('HTTP服务器已关闭');
     process.exit(0);
   });
 
   // 超时强制退出
   setTimeout(() => {
-    console.error('关闭超时，强制退出');
+    logger.error('关闭超时，强制退出');
     process.exit(1);
   }, 30000);
 };
