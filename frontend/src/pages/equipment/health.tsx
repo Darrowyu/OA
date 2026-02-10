@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -131,6 +131,22 @@ const statusMap: Record<string, { label: string; color: string; icon: React.Reac
 
 export function EquipmentHealth() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
+  const chartRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!chartRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setChartSize({ width, height })
+        }
+      }
+    })
+    resizeObserver.observe(chartRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
 
   const filteredData = healthData.filter(
     (item) =>
@@ -225,8 +241,9 @@ export function EquipmentHealth() {
             <CardTitle>设备健康度趋势</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div ref={chartRef} className="h-64 min-h-[256px]">
+              {chartSize.width > 0 && chartSize.height > 0 && (
+              <ResponsiveContainer width={chartSize.width} height={chartSize.height}>
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="colorEQ001" x1="0" y1="0" x2="0" y2="1">
@@ -249,6 +266,7 @@ export function EquipmentHealth() {
                   <Area type="monotone" dataKey="EQ003" name="激光切割机" stroke="#ef4444" fillOpacity={0.3} fill="#ef4444" />
                 </AreaChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>

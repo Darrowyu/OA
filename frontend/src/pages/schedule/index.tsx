@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { CalendarView } from '@/components/CalendarView';
 import { Button } from '@/components/ui/button';
@@ -530,4 +531,35 @@ function SchedulePage() {
   );
 };
 
-export default SchedulePage;
+// 团队日程子页面
+function TeamSchedulePage() {
+  return (
+    <div className="p-8 text-center">
+      <h2 className="text-xl font-semibold text-gray-900">团队日程</h2>
+      <p className="text-gray-500 mt-2">团队日程功能开发中...</p>
+    </div>
+  );
+}
+
+// 会议邀请子页面
+function InvitationsPage() {
+  return (
+    <div className="p-8 text-center">
+      <h2 className="text-xl font-semibold text-gray-900">会议邀请</h2>
+      <p className="text-gray-500 mt-2">会议邀请功能开发中...</p>
+    </div>
+  );
+}
+
+// 主页面（带子路由）
+function SchedulePageWithRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<SchedulePage />} />
+      <Route path="/team" element={<TeamSchedulePage />} />
+      <Route path="/invitations" element={<InvitationsPage />} />
+    </Routes>
+  );
+}
+
+export default SchedulePageWithRoutes;

@@ -189,7 +189,7 @@ function App() {
       />
 
       <Route
-        path="/schedule"
+        path="/schedule/*"
         element={
           <ProtectedRoute>
             <DashboardLayout>

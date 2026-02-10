@@ -143,15 +143,17 @@ export class PartLifecycleService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as PartLifecycleStatus,
         expectedEndDate: item.expectedEndDate ? new Date(item.expectedEndDate) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 

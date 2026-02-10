@@ -785,7 +785,8 @@ export async function getContacts(req: Request, res: Response): Promise<void> {
       departmentId: user.department?.id || '',
     }));
 
-    res.json(success(formattedUsers, {
+    res.json(success({
+      items: formattedUsers,
       pagination: {
         page: pageNum,
         pageSize: size,

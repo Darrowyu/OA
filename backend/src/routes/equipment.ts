@@ -19,27 +19,26 @@ router.use(authenticate)
 // 设备信息路由
 // ============================================
 
-// 设备CRUD
-router.post('/equipment', asyncHandler(equipmentController.create))
-router.get('/equipment', asyncHandler(equipmentController.findMany))
-router.get('/equipment/statistics', asyncHandler(equipmentController.getStatistics))
-router.get('/equipment/categories', asyncHandler(equipmentController.getCategories))
-router.get('/equipment/locations', asyncHandler(equipmentController.getLocations))
-router.get('/equipment/:id', asyncHandler(equipmentController.getById))
-router.put('/equipment/:id', asyncHandler(equipmentController.update))
-router.delete('/equipment/:id', requireMinRole('MANAGER' as const), asyncHandler(equipmentController.delete))
+// 设备CRUD - 根路径 /api/equipment
+// 注意：具体路由必须在 /:id 通配符路由之前定义
+router.post('/', asyncHandler(equipmentController.create))
+router.get('/', asyncHandler(equipmentController.findMany))
+router.get('/statistics', asyncHandler(equipmentController.getStatistics))
+router.get('/categories', asyncHandler(equipmentController.getCategories))
+router.get('/locations', asyncHandler(equipmentController.getLocations))
 
 // ============================================
-// 维修保养记录路由
+// 维修保养记录路由 - /api/equipment/maintenance
 // ============================================
+// 必须在 /:id 之前定义，否则会被当成设备ID
 
-router.post('/maintenance-records', asyncHandler(maintenanceRecordController.create))
-router.get('/maintenance-records', asyncHandler(maintenanceRecordController.findMany))
-router.get('/maintenance-records/statistics', asyncHandler(maintenanceRecordController.getStatistics))
-router.get('/maintenance-records/:id', asyncHandler(maintenanceRecordController.getById))
-router.put('/maintenance-records/:id', asyncHandler(maintenanceRecordController.update))
-router.put('/maintenance-records/:id/complete', asyncHandler(maintenanceRecordController.complete))
-router.delete('/maintenance-records/:id', requireMinRole('MANAGER' as const), asyncHandler(maintenanceRecordController.delete))
+router.post('/maintenance', asyncHandler(maintenanceRecordController.create))
+router.get('/maintenance', asyncHandler(maintenanceRecordController.findMany))
+router.get('/maintenance/statistics', asyncHandler(maintenanceRecordController.getStatistics))
+router.get('/maintenance/:id', asyncHandler(maintenanceRecordController.getById))
+router.put('/maintenance/:id', asyncHandler(maintenanceRecordController.update))
+router.put('/maintenance/:id/complete', asyncHandler(maintenanceRecordController.complete))
+router.delete('/maintenance/:id', requireMinRole('MANAGER' as const), asyncHandler(maintenanceRecordController.delete))
 
 // ============================================
 // 保养计划路由
@@ -109,5 +108,15 @@ router.get('/part-lifecycle/by-part/:partId', asyncHandler(partLifecycleControll
 router.put('/part-lifecycle/:id', asyncHandler(partLifecycleController.update))
 router.put('/part-lifecycle/part/:partId/usage', asyncHandler(partLifecycleController.updateUsage))
 router.delete('/part-lifecycle/:id', requireMinRole('MANAGER' as const), asyncHandler(partLifecycleController.delete))
+
+// ============================================
+// 设备通配符路由 - 必须放在最后
+// ============================================
+// 这些路由会匹配任何路径，所以必须放在所有具体路由之后
+// 否则 /maintenance、/parts 等会被当成设备ID
+
+router.get('/:id', asyncHandler(equipmentController.getById))
+router.put('/:id', asyncHandler(equipmentController.update))
+router.delete('/:id', requireMinRole('MANAGER' as const), asyncHandler(equipmentController.delete))
 
 export default router

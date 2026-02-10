@@ -57,6 +57,21 @@ router.post('/', requireRole(UserRole.ADMIN), createUser);
 router.post('/import', requireRole(UserRole.ADMIN), importUsers);
 
 /**
+ * @route   GET /api/users/contacts
+ * @desc    获取通讯录列表（支持分页、搜索、部门筛选）
+ * @access  Private
+ * @note    必须在 /:id 通配符路由之前定义
+ */
+router.get('/contacts', getContacts);
+
+/**
+ * @route   GET /api/users/export
+ * @desc    导出通讯录
+ * @access  Private
+ */
+router.get('/export', exportContacts);
+
+/**
  * @route   GET /api/users/:id
  * @desc    获取单个用户信息
  * @access  Private (Manager+ 或用户本人)
@@ -83,20 +98,6 @@ router.delete('/:id', requireRole(UserRole.ADMIN), deleteUser);
  * @access  Private (Admin only)
  */
 router.post('/:id/reset-password', requireRole(UserRole.ADMIN), resetPassword);
-
-/**
- * @route   GET /api/users/contacts
- * @desc    获取通讯录列表（支持分页、搜索、部门筛选）
- * @access  Private
- */
-router.get('/contacts', getContacts);
-
-/**
- * @route   GET /api/users/export
- * @desc    导出通讯录
- * @access  Private
- */
-router.get('/export', exportContacts);
 
 /**
  * @route   GET /api/users/:id/contact

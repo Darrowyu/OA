@@ -69,7 +69,8 @@ function getCalendarDays(date: Date): Date[] {
 }
 
 // 格式化日期
-function formatDateCN(date: Date): string {
+function formatDateCN(date: Date | null | undefined): string {
+  if (!date) return '';
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
@@ -489,7 +490,7 @@ export function RoomBooking() {
           <DialogHeader>
             <DialogTitle>确认预订</DialogTitle>
             <DialogDescription>
-              预订 {selectedRoom?.name} - {formatDateCN(selectedDate!)}
+              预订 {selectedRoom?.name} - {selectedDate ? formatDateCN(selectedDate) : ''}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">

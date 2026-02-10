@@ -32,7 +32,7 @@ function RoomsTab({
   setSearchQuery: (value: string) => void;
   onBook: (room: MeetingRoom) => void;
 }) {
-  const filteredRooms = rooms.filter(
+  const filteredRooms = (rooms || []).filter(
     (room) =>
       room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       room.location?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -105,7 +105,7 @@ function MeetingsTab({
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {meetings.map((meeting) => (
+            {(meetings || []).map((meeting) => (
               <MeetingItem
                 key={meeting.id}
                 meeting={meeting}
@@ -118,7 +118,7 @@ function MeetingsTab({
         </div>
       )}
 
-      {!isLoading && meetings.length === 0 && (
+      {!isLoading && (!meetings || meetings.length === 0) && (
         <div className="text-center py-12 text-gray-500">
           <EmptyIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p>{emptyText}</p>

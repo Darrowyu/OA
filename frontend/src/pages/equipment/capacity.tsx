@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -146,6 +146,38 @@ const statusMap: Record<string, { label: string; color: string }> = {
 
 export function EquipmentCapacity() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [trendChartSize, setTrendChartSize] = useState({ width: 0, height: 0 })
+  const [oeeChartSize, setOeeChartSize] = useState({ width: 0, height: 0 })
+  const trendChartRef = useRef<HTMLDivElement>(null)
+  const oeeChartRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!trendChartRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setTrendChartSize({ width, height })
+        }
+      }
+    })
+    resizeObserver.observe(trendChartRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!oeeChartRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setOeeChartSize({ width, height })
+        }
+      }
+    })
+    resizeObserver.observe(oeeChartRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
 
   const filteredData = capacityData.filter(
     (item) =>
@@ -244,8 +276,9 @@ export function EquipmentCapacity() {
             <CardTitle>产能趋势对比</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div ref={trendChartRef} className="h-64 min-h-[256px]">
+              {trendChartSize.width > 0 && trendChartSize.height > 0 && (
+              <ResponsiveContainer width={trendChartSize.width} height={trendChartSize.height}>
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="date" stroke="#6b7280" />
@@ -261,6 +294,7 @@ export function EquipmentCapacity() {
                   <Line type="monotone" dataKey="target" name="目标产能" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -271,8 +305,9 @@ export function EquipmentCapacity() {
             <CardTitle>OEE构成分析</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div ref={oeeChartRef} className="h-64 min-h-[256px]">
+              {oeeChartSize.width > 0 && oeeChartSize.height > 0 && (
+              <ResponsiveContainer width={oeeChartSize.width} height={oeeChartSize.height}>
                 <BarChart data={oeeData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
                   <XAxis type="number" domain={[0, 100]} stroke="#6b7280" />
@@ -291,6 +326,7 @@ export function EquipmentCapacity() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>

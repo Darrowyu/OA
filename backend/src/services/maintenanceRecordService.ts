@@ -170,7 +170,7 @@ export class MaintenanceRecordService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         type: item.type as MaintenanceType,
         status: item.status as MaintenanceRecordStatus,
@@ -178,10 +178,12 @@ export class MaintenanceRecordService {
         startTime: new Date(item.startTime),
         endTime: item.endTime ? new Date(item.endTime) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 

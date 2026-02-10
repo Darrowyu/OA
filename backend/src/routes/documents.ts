@@ -68,7 +68,7 @@ const upload = multer({
 router.use(authenticate)
 
 // ============================================
-// 文件夹路由
+// 文件夹路由 - 路径 /api/documents/folders
 // ============================================
 
 router.post('/folders', asyncHandler(folderController.create))
@@ -79,55 +79,55 @@ router.put('/folders/:id', asyncHandler(folderController.update))
 router.delete('/folders/:id', asyncHandler(folderController.delete))
 
 // ============================================
-// 文档路由
+// 文档路由 - 根路径 /api/documents
 // ============================================
 
 // 上传文档
 router.post(
-  '/documents',
+  '/',
   upload.single('file'),
   asyncHandler(documentController.upload)
 )
 
 // 更新文档（上传新版本）
 router.put(
-  '/documents/:id',
+  '/:id',
   upload.single('file'),
   asyncHandler(documentController.update)
 )
 
 // 获取文档列表
-router.get('/documents', asyncHandler(documentController.findMany))
+router.get('/', asyncHandler(documentController.findMany))
 
 // 获取文档统计
-router.get('/documents/statistics', asyncHandler(documentController.getStatistics))
+router.get('/statistics', asyncHandler(documentController.getStatistics))
 
 // 获取文档版本历史
-router.get('/documents/:id/versions', asyncHandler(documentController.getVersions))
+router.get('/:id/versions', asyncHandler(documentController.getVersions))
 
 // 下载文档
-router.get('/documents/:id/download', asyncHandler(documentController.download))
+router.get('/:id/download', asyncHandler(documentController.download))
 
 // 预览文档
-router.get('/documents/:id/preview', asyncHandler(documentController.preview))
+router.get('/:id/preview', asyncHandler(documentController.preview))
 
 // 重命名文档
-router.put('/documents/:id/rename', asyncHandler(documentController.rename))
+router.put('/:id/rename', asyncHandler(documentController.rename))
 
 // 移动文档
-router.put('/documents/:id/move', asyncHandler(documentController.move))
+router.put('/:id/move', asyncHandler(documentController.move))
 
 // 删除文档（软删除）
-router.delete('/documents/:id', asyncHandler(documentController.delete))
+router.delete('/:id', asyncHandler(documentController.delete))
 
 // 彻底删除文档（管理员）
 router.delete(
-  '/documents/:id/permanent',
+  '/:id/permanent',
   requireMinRole('MANAGER' as const),
   asyncHandler(documentController.permanentlyDelete)
 )
 
-// 获取文档详情
-router.get('/documents/:id', asyncHandler(documentController.getById))
+// 获取文档详情 - 必须放在通配符路由最后
+router.get('/:id', asyncHandler(documentController.getById))
 
 export default router

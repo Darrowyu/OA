@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,6 +75,39 @@ const topParts = [
 ]
 
 export function PartsStatistics() {
+  const [barChartSize, setBarChartSize] = useState({ width: 0, height: 0 })
+  const [pieChartSize, setPieChartSize] = useState({ width: 0, height: 0 })
+  const barChartRef = useRef<HTMLDivElement>(null)
+  const pieChartRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!barChartRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setBarChartSize({ width, height })
+        }
+      }
+    })
+    resizeObserver.observe(barChartRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!pieChartRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setPieChartSize({ width, height })
+        }
+      }
+    })
+    resizeObserver.observe(pieChartRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
+
   return (
     <motion.div
       variants={containerVariants}
@@ -167,8 +201,9 @@ export function PartsStatistics() {
             <CardTitle>月度出入库趋势</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+            <div ref={barChartRef} className="h-80 min-h-[320px]">
+              {barChartSize.width > 0 && barChartSize.height > 0 && (
+              <ResponsiveContainer width={barChartSize.width} height={barChartSize.height}>
                 <BarChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="month" stroke="#6b7280" />
@@ -184,6 +219,7 @@ export function PartsStatistics() {
                   <Bar dataKey="out" name="出库" fill="#f97316" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -194,8 +230,9 @@ export function PartsStatistics() {
             <CardTitle>配件分类占比</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+            <div ref={pieChartRef} className="h-80 min-h-[320px]">
+              {pieChartSize.width > 0 && pieChartSize.height > 0 && (
+              <ResponsiveContainer width={pieChartSize.width} height={pieChartSize.height}>
                 <PieChart>
                   <Pie
                     data={categoryData}
@@ -213,6 +250,7 @@ export function PartsStatistics() {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+              )}
               <div className="flex flex-wrap justify-center gap-4 mt-4">
                 {categoryData.map((item) => (
                   <div key={item.name} className="flex items-center gap-2">

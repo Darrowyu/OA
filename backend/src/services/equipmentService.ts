@@ -198,17 +198,19 @@ export class EquipmentService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as EquipmentStatus,
         lastMaintenanceAt: item.lastMaintenanceAt ? new Date(item.lastMaintenanceAt) : null,
         nextMaintenanceAt: item.nextMaintenanceAt ? new Date(item.nextMaintenanceAt) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    }
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+}
   }
 
   // 获取设备统计

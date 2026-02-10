@@ -53,11 +53,13 @@ export interface UpdateMeetingInput {
 
 // 分页响应类型
 export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+  items: T[]
+  pagination: {
+    total: number
+    page: number
+    pageSize: number
+    totalPages: number
+  }
 }
 
 // 会议室查询参数
@@ -243,17 +245,19 @@ export class MeetingService {
     ])
 
     return {
-      data: data.map(room => ({
+      items: data.map(room => ({
         ...room,
         facilities: room.facilities as string[] | null,
         location: room.location,
         image: room.image,
         description: room.description,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 
@@ -579,14 +583,7 @@ export class MeetingService {
       if (endDate) (where.AND as Record<string, unknown>[]).push({ startTime: { lte: endDate } })
     }
 
-    // 查询用户参与的会议（在attendees中）
-    if (userId) {
-      where.attendees = {
-        contains: userId,
-        mode: 'insensitive',
-      }
-    }
-
+    // 查询数据（注意：JSON字段attendees不能在where中过滤，需要在内存中过滤）
     const [total, data] = await Promise.all([
       prisma.meeting.count({ where }),
       prisma.meeting.findMany({
@@ -601,8 +598,17 @@ export class MeetingService {
       }),
     ])
 
+    // 在内存中过滤 attendees（如果是查询用户参与的会议）
+    let filteredData = data
+    if (userId) {
+      filteredData = data.filter(meeting => {
+        const attendees = meeting.attendees as unknown as Attendee[] | null
+        return attendees?.some(attendee => attendee.userId === userId)
+      })
+    }
+
     return {
-      data: data.map(meeting => ({
+      items: filteredData.map(meeting => ({
         ...meeting,
         description: meeting.description,
         roomId: meeting.roomId,
@@ -611,10 +617,12 @@ export class MeetingService {
         endTime: new Date(meeting.endTime),
         createdAt: new Date(meeting.createdAt),
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total: userId ? filteredData.length : total,
+        page,
+        pageSize,
+        totalPages: Math.ceil((userId ? filteredData.length : total) / pageSize),
+      },
     }
   }
 

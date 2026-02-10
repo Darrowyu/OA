@@ -144,15 +144,17 @@ export class PartService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as PartStatus,
         unitPrice: item.unitPrice ? Number(item.unitPrice) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 
@@ -260,16 +262,18 @@ export class PartService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         type: item.type as StockType,
         source: item.source as StockSource,
         date: new Date(item.date),
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 
@@ -393,16 +397,18 @@ export class PartService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as PartUsageStatus,
         applyDate: new Date(item.applyDate),
         approvedAt: item.approvedAt ? new Date(item.approvedAt) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 
@@ -518,7 +524,7 @@ export class PartService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as PartScrapStatus,
         originalValue: Number(item.originalValue),
@@ -526,10 +532,12 @@ export class PartService {
         applyDate: new Date(item.applyDate),
         approvedAt: item.approvedAt ? new Date(item.approvedAt) : null,
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 

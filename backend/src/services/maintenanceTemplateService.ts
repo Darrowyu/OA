@@ -97,16 +97,18 @@ export class MaintenanceTemplateService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         status: item.status as MaintenanceTemplateStatus,
         items: item.items,
         createdAt: new Date(item.createdAt),
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 

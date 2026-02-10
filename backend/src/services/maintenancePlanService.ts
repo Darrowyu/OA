@@ -107,16 +107,18 @@ export class MaintenancePlanService {
     ])
 
     return {
-      data: data.map(item => ({
+      items: data.map(item => ({
         ...item,
         frequency: item.frequency as MaintenancePlanFrequency,
         status: item.status as MaintenancePlanStatus,
         nextDate: new Date(item.nextDate),
       })),
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
     }
   }
 
