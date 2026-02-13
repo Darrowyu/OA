@@ -32,7 +32,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
 
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: (origin, callback) => {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // 无 origin（如移动端）或开发环境 localhost 自动通过
         if (!origin || (isDev && origin.startsWith('http://localhost:'))) {
           return callback(null, true);

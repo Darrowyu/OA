@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2,
@@ -119,7 +120,7 @@ export function Departments() {
         setUsers(response.data.items);
       }
     } catch (error) {
-      console.error('加载用户列表失败', error);
+      logger.error('加载用户列表失败', { error });
     }
   }, []);
 

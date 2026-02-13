@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/types';
+import { logger } from '@/lib/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -22,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error('解析用户信息失败:', error);
+        logger.error('解析用户信息失败', { error });
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');

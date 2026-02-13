@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { SignaturePad } from './SignaturePad';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface SignatureDialogProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export function SignatureDialog({
       }
     } catch (error) {
       // 如果没有签名，不显示错误
-      console.log('未找到现有签名');
+      logger.info('未找到现有签名');
     }
   };
 
@@ -62,7 +63,7 @@ export function SignatureDialog({
       toast.success('签名保存成功');
       onClose();
     } catch (error) {
-      console.error('保存签名失败:', error);
+      logger.error('保存签名失败', { error });
       toast.error('保存签名失败');
     } finally {
       setIsLoading(false);

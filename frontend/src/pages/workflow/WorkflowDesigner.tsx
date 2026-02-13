@@ -37,6 +37,7 @@ import { workflowApi, Workflow, FlowNode, FlowEdge, SimulationResult } from '@/s
 import { Node, Edge } from '@xyflow/react';
 import { FlowNodeData } from '@/components/FlowNode';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // 审批人类型选项
@@ -131,7 +132,7 @@ export default function WorkflowDesigner() {
         setEdges(flowEdges);
       }
     } catch (error) {
-      console.error('加载工作流失败:', error);
+      logger.error('加载工作流失败', { error });
       toast.error('加载工作流失败');
     } finally {
       setLoading(false);
@@ -240,7 +241,7 @@ export default function WorkflowDesigner() {
         }
       }
     } catch (error) {
-      console.error('保存失败:', error);
+      logger.error('保存工作流失败', { error });
       toast.error('保存失败');
     } finally {
       setSaving(false);
@@ -258,7 +259,7 @@ export default function WorkflowDesigner() {
         setWorkflow(response.data);
       }
     } catch (error) {
-      console.error('发布失败:', error);
+      logger.error('发布工作流失败', { error });
       toast.error('发布失败');
     }
   };
@@ -282,7 +283,7 @@ export default function WorkflowDesigner() {
         setSimulateResult(response.data);
       }
     } catch (error) {
-      console.error('模拟失败:', error);
+      logger.error('模拟工作流失败', { error });
       toast.error('模拟失败');
     } finally {
       setSimulateLoading(false);

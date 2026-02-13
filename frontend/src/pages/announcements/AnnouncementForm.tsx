@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Header } from '@/components/Header';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { AnnouncementType } from '@/types';
 import {
   announcementsApi,
@@ -168,7 +169,7 @@ export default function AnnouncementFormPage() {
           setDepartments(res.data);
         }
       } catch (error) {
-        console.error('加载部门列表失败', error);
+        logger.error('加载部门列表失败', { error });
       }
     };
 

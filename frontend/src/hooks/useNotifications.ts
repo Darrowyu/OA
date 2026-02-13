@@ -2,25 +2,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Notification, WebSocketStatus } from '@/types';
 import { notificationsApi } from '@/services/notifications';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
-// Socket事件回调类型
-type SocketEventCallback = (...args: unknown[]) => void;
-
-// Socket类型定义
-interface Socket {
-  connected: boolean;
-  disconnect(): void;
-  emit(event: string, ...args: unknown[]): void;
-  on(event: string, callback: SocketEventCallback): Socket;
-  join?(room: string): void;
-}
-
-// 动态导入 socket.io-client
-import { io as socketIo } from 'socket.io-client';
-const io: (url: string, opts?: Record<string, unknown>) => Socket = socketIo;
+// 导入 socket.io-client
+import io from 'socket.io-client';
 
 // Socket.io 服务器地址
 const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
+
+// 定义 Socket 类型
+type Socket = ReturnType<typeof io>;
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -76,7 +67,7 @@ export function useNotifications(): UseNotificationsReturn {
     });
 
     socket.on('connect_error', (error: unknown) => {
-      console.error('WebSocket 连接错误:', error);
+      logger.error('WebSocket 连接错误', { error });
       setWsStatus('error');
     });
 
@@ -156,7 +147,7 @@ export function useNotifications(): UseNotificationsReturn {
         setPage(pageNum);
       }
     } catch (error) {
-      console.error('获取通知列表失败:', error);
+      logger.error('获取通知列表失败', { error });
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +160,7 @@ export function useNotifications(): UseNotificationsReturn {
         setUnreadCount(response.data.count);
       }
     } catch (error) {
-      console.error('获取未读数量失败:', error);
+      logger.error('获取未读数量失败', { error });
     }
   }, []);
 
@@ -197,7 +188,7 @@ export function useNotifications(): UseNotificationsReturn {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error('标记已读失败:', error);
+      logger.error('标记已读失败', { error });
       toast.error('操作失败，请重试');
     }
   }, []);
@@ -217,7 +208,7 @@ export function useNotifications(): UseNotificationsReturn {
         toast.success(`已标记 ${response.data.count} 条通知为已读`);
       }
     } catch (error) {
-      console.error('标记全部已读失败:', error);
+      logger.error('标记全部已读失败', { error });
       toast.error('操作失败，请重试');
     }
   }, []);
@@ -234,7 +225,7 @@ export function useNotifications(): UseNotificationsReturn {
         toast.success('通知已删除');
       }
     } catch (error) {
-      console.error('删除通知失败:', error);
+      logger.error('删除通知失败', { error });
       toast.error('删除失败，请重试');
     }
   }, [notifications]);
@@ -247,7 +238,7 @@ export function useNotifications(): UseNotificationsReturn {
         toast.success(`已删除 ${response.data.count} 条已读通知`);
       }
     } catch (error) {
-      console.error('删除已读通知失败:', error);
+      logger.error('删除已读通知失败', { error });
       toast.error('删除失败，请重试');
     }
   }, []);

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { Header } from '@/components/Header';
 import { ReportType, ChartType, CustomReportConfig } from '@/types/reports';
 
@@ -203,7 +204,7 @@ export default function ReportBuilder() {
       pageSize: 50,
     };
 
-    console.log('生成报表配置:', finalConfig);
+    logger.info('生成报表配置', { config: finalConfig });
     toast.success('报表生成成功');
   };
 

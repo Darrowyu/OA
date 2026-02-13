@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { reportsApi } from '@/services/reports';
 import { DashboardSummary } from '@/types/reports';
 import {
@@ -40,7 +41,7 @@ export default function DashboardPage() {
         setLastUpdated(new Date());
       }
     } catch (error) {
-      console.error('获取仪表板数据失败:', error);
+      logger.error('获取仪表板数据失败', { error });
       toast.error('获取仪表板数据失败');
     } finally {
       setIsLoading(false);

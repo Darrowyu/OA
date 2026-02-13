@@ -11,6 +11,8 @@ import { applicationsApi } from "@/services/applications"
 import { approvalsApi, ApprovalRequest } from "@/services/approvals"
 import { usersApi } from "@/services/users"
 import { formatDate, formatAmount, cn } from "@/lib/utils"
+import { getErrorMessage } from "@/lib/error-handler"
+import { logger } from "@/lib/logger"
 import { useSignature } from "@/hooks/useSignature"
 import { SignatureDialog } from "@/components/SignatureDialog"
 import { statusConfig, priorityConfig } from "@/config/status"
@@ -137,7 +139,7 @@ export function PendingList() {
       const response = await usersApi.getManagers()
       setManagers(response.data || [])
     } catch (error) {
-      console.error("加载经理列表失败:", error)
+      logger.error("加载经理列表失败", { error })
     } finally {
       setLoadingManagers(false)
     }
@@ -207,8 +209,8 @@ export function PendingList() {
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
       closeApprovalDialog()
       loadPendingApplications()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "审批失败")
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "审批失败")
     } finally {
       setProcessingId(null)
     }

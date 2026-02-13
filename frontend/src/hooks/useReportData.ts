@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { reportsApi } from '@/services/reports';
+import { logger } from '@/lib/logger';
 import type {
   DateRangeFilter,
   ApprovalStats,
@@ -30,7 +31,7 @@ export function useApprovalStats(filters: DateRangeFilter): UseApprovalStatsRetu
         setStats(response.data);
       }
     } catch (error) {
-      console.error('获取审批统计失败:', error);
+      logger.error('获取审批统计失败', { error });
       toast.error('获取审批统计失败');
     } finally {
       setIsLoading(false);
@@ -65,7 +66,7 @@ export function useEquipmentStats(): UseEquipmentStatsReturn {
         setStats(response.data);
       }
     } catch (error) {
-      console.error('获取设备统计失败:', error);
+      logger.error('获取设备统计失败', { error });
       toast.error('获取设备统计失败');
     } finally {
       setIsLoading(false);
@@ -100,7 +101,7 @@ export function useAttendanceStats(filters: DateRangeFilter): UseAttendanceStats
         setStats(response.data);
       }
     } catch (error) {
-      console.error('获取考勤统计失败:', error);
+      logger.error('获取考勤统计失败', { error });
       toast.error('获取考勤统计失败');
     } finally {
       setIsLoading(false);
@@ -135,7 +136,7 @@ export function usePerformance(): UsePerformanceReturn {
         setPerformance(response.data);
       }
     } catch (error) {
-      console.error('获取绩效数据失败:', error);
+      logger.error('获取绩效数据失败', { error });
       toast.error('获取绩效数据失败');
     } finally {
       setIsLoading(false);

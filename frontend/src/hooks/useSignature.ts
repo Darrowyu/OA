@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 const SIGNATURE_CACHE_KEY = 'signature_cache';
 const SIGNATURE_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
@@ -32,7 +33,7 @@ export function useSignature() {
 
         setSignatures(validSignatures);
       } catch (e) {
-        console.error('解析签名缓存失败:', e);
+        logger.error('解析签名缓存失败', { error: e });
       }
     }
   }, []);
@@ -46,7 +47,7 @@ export function useSignature() {
       try {
         cache = JSON.parse(cached);
       } catch (e) {
-        console.error('解析签名缓存失败:', e);
+        logger.error('解析签名缓存失败', { error: e });
       }
     }
 
@@ -76,7 +77,7 @@ export function useSignature() {
           return item.data;
         }
       } catch (e) {
-        console.error('解析签名缓存失败:', e);
+        logger.error('解析签名缓存失败', { error: e });
       }
     }
 
@@ -92,7 +93,7 @@ export function useSignature() {
         return signatureData;
       }
     } catch (error) {
-      console.error('获取签名失败:', error);
+      logger.error('获取签名失败', { error });
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +135,7 @@ export function useSignature() {
         }
       });
     } catch (error) {
-      console.error('批量获取签名失败:', error);
+      logger.error('批量获取签名失败', { error });
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +155,7 @@ export function useSignature() {
 
       return true;
     } catch (error) {
-      console.error('保存签名失败:', error);
+      logger.error('保存签名失败', { error });
       return false;
     }
   }, [saveToCache]);

@@ -15,6 +15,7 @@ import {
 import { applicationsApi, GetApplicationsParams } from "@/services/applications"
 import { usersApi } from "@/services/users"
 import { getStatusLabel } from "@/config/status"
+import { logger } from "@/lib/logger"
 import {
   Plus,
   Search,
@@ -160,7 +161,7 @@ export function ApplicationList() {
       calculateStats(response.data.items)
       setLastUpdated(new Date())
     } catch (error) {
-      console.error("获取申请列表失败:", error)
+      logger.error("获取申请列表失败", { error })
     } finally {
       setLoading(false)
     }
@@ -218,7 +219,7 @@ export function ApplicationList() {
       setFactoryManagers(factoryResponse.data || [])
       setManagers(managerResponse.data || [])
     } catch (error) {
-      console.error("获取审批人列表失败:", error)
+      logger.error("获取审批人列表失败", { error })
     } finally {
       setLoadingUsers(false)
     }
@@ -234,7 +235,7 @@ export function ApplicationList() {
       setIsCreateDialogOpen(false)
       fetchApplications()
     } catch (error) {
-      console.error("创建申请失败:", error)
+      logger.error("创建申请失败", { error })
     } finally {
       setSubmitting(false)
     }

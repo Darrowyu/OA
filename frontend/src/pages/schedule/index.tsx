@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { CalendarView } from '@/components/CalendarView';
 import { Button } from '@/components/ui/button';

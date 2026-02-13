@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { attendanceApi, type AttendanceRecord } from '@/services/attendance'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 // 格式化时间
 function formatTime(dateString: string | null | undefined): string {
@@ -59,7 +60,7 @@ export function ClockIn() {
         setAttendance(response.data)
       }
     } catch (error) {
-      console.error('获取今日考勤失败:', error)
+      logger.error('获取今日考勤失败', { error })
     } finally {
       setFetching(false)
     }
@@ -95,7 +96,7 @@ export function ClockIn() {
           resolve(loc)
         },
         (error) => {
-          console.error('获取位置失败:', error)
+          logger.error('获取位置失败', { error })
           toast.error('获取位置失败，请允许位置权限')
           reject(error)
         },

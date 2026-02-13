@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { logger } from '@/lib/logger';
 
 // 设置PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -56,7 +57,7 @@ export function PdfPreview({ fileUrl, onClose }: PdfPreviewProps) {
       setCurrentPage(1);
       setIsLoading(false);
     } catch (err) {
-      console.error('PDF加载失败:', err);
+      logger.error('PDF加载失败', { error: err });
       setError('PDF加载失败，请检查文件是否有效');
       setIsLoading(false);
     }
@@ -105,7 +106,7 @@ export function PdfPreview({ fileUrl, onClose }: PdfPreviewProps) {
 
       await page.render(renderContext).promise;
     } catch (err) {
-      console.error('页面渲染失败:', err);
+      logger.error('页面渲染失败', { error: err });
       setError('页面渲染失败');
     } finally {
       setIsRendering(false);

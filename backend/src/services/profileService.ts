@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 import type {
   Theme,
   InterfaceDensity,
@@ -162,7 +163,7 @@ export async function getPreferences(userId: string) {
     return preference;
   } catch (error) {
     // 如果表不存在，返回默认设置
-    console.warn('UserPreference table not found, returning defaults');
+    logger.warn('UserPreference table not found, returning defaults');
     return {
       id: 'default',
       userId,
@@ -204,7 +205,7 @@ export async function updatePreferences(userId: string, data: UpdatePreferencesD
     return preference;
   } catch (error) {
     // 如果表不存在，返回模拟的更新结果
-    console.warn('UserPreference table not found, returning mock update result');
+    logger.warn('UserPreference table not found, returning mock update result');
     return {
       id: 'default',
       userId,

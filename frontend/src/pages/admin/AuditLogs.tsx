@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { auditApi, AuditLog, AuditStats } from '@/services/audit';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { logger } from '@/lib/logger';
 
 // 操作类型标签映射
 const actionLabelMap: Record<string, string> = {
@@ -164,7 +165,7 @@ export default function AuditLogs() {
         setStats(response.data);
       }
     } catch (err) {
-      console.error('获取统计数据失败:', err);
+      logger.error('获取统计数据失败', { error: err });
     }
   };
 
@@ -182,7 +183,7 @@ export default function AuditLogs() {
         setEntityTypes(entityTypesRes.data);
       }
     } catch (err) {
-      console.error('获取筛选选项失败:', err);
+      logger.error('获取筛选选项失败', { error: err });
     }
   };
 

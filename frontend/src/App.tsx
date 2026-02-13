@@ -1,36 +1,48 @@
+import { Suspense, lazy } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { PanelLeft, PanelRight } from "lucide-react"
+import { PanelLeft, PanelRight, Loader2 } from "lucide-react"
 import { Login } from "@/pages/Login"
 import Dashboard from "@/pages/dashboard"
-import { ApplicationsModule } from "@/pages/applications"
-import { EquipmentModule } from "@/pages/equipment"
-import { AttendanceModule } from "@/pages/attendance"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
-import Users from "@/pages/Users"
-import Settings from "@/pages/Settings"
-import Profile from "@/pages/Profile"
-import AuditLogs from "@/pages/admin/AuditLogs"
-import Departments from "@/pages/admin/Departments"
-import SchedulePage from "@/pages/schedule"
-import DocumentsPage from "@/pages/documents"
-import { MeetingsModule } from "@/pages/meetings"
-import ContactsPage from "@/pages/contacts"
-import AnnouncementsPage from "@/pages/announcements"
-import AnnouncementDetail from "@/pages/announcements/AnnouncementDetail"
-import AnnouncementForm from "@/pages/announcements/AnnouncementForm"
-import TasksPage from "@/pages/tasks"
-import WorkflowList from "@/pages/workflow/WorkflowList"
-import WorkflowDesigner from "@/pages/workflow/WorkflowDesigner"
-import ReportsCenter from "@/pages/reports"
-import ReportDashboard from "@/pages/reports/Dashboard"
-import ReportBuilder from "@/pages/reports/ReportBuilder"
-import KnowledgePage from "@/pages/knowledge"
-import ArticleView from "@/pages/knowledge/ArticleView"
-import ArticleEditor from "@/pages/knowledge/ArticleEditor"
-import SearchResults from "@/pages/knowledge/SearchResults"
+
+// 懒加载大型模块 - 代码分割优化
+const ApplicationsModule = lazy(() => import("@/pages/applications").then(m => ({ default: m.ApplicationsModule })))
+const EquipmentModule = lazy(() => import("@/pages/equipment").then(m => ({ default: m.EquipmentModule })))
+const AttendanceModule = lazy(() => import("@/pages/attendance").then(m => ({ default: m.AttendanceModule })))
+const MeetingsModule = lazy(() => import("@/pages/meetings").then(m => ({ default: m.MeetingsModule })))
+const Users = lazy(() => import("@/pages/Users").then(m => ({ default: m.default })))
+const Settings = lazy(() => import("@/pages/Settings").then(m => ({ default: m.default })))
+const Profile = lazy(() => import("@/pages/Profile").then(m => ({ default: m.default })))
+const AuditLogs = lazy(() => import("@/pages/admin/AuditLogs").then(m => ({ default: m.default })))
+const Departments = lazy(() => import("@/pages/admin/Departments").then(m => ({ default: m.default })))
+const SchedulePage = lazy(() => import("@/pages/schedule").then(m => ({ default: m.default })))
+const DocumentsPage = lazy(() => import("@/pages/documents").then(m => ({ default: m.default })))
+const ContactsPage = lazy(() => import("@/pages/contacts").then(m => ({ default: m.default })))
+const AnnouncementsPage = lazy(() => import("@/pages/announcements").then(m => ({ default: m.default })))
+const AnnouncementDetail = lazy(() => import("@/pages/announcements/AnnouncementDetail").then(m => ({ default: m.default })))
+const AnnouncementForm = lazy(() => import("@/pages/announcements/AnnouncementForm").then(m => ({ default: m.default })))
+const TasksPage = lazy(() => import("@/pages/tasks").then(m => ({ default: m.default })))
+const WorkflowList = lazy(() => import("@/pages/workflow/WorkflowList").then(m => ({ default: m.default })))
+const WorkflowDesigner = lazy(() => import("@/pages/workflow/WorkflowDesigner").then(m => ({ default: m.default })))
+const ReportsCenter = lazy(() => import("@/pages/reports").then(m => ({ default: m.default })))
+const ReportDashboard = lazy(() => import("@/pages/reports/Dashboard").then(m => ({ default: m.default })))
+const ReportBuilder = lazy(() => import("@/pages/reports/ReportBuilder").then(m => ({ default: m.default })))
+const KnowledgePage = lazy(() => import("@/pages/knowledge").then(m => ({ default: m.default })))
+const ArticleView = lazy(() => import("@/pages/knowledge/ArticleView").then(m => ({ default: m.default })))
+const ArticleEditor = lazy(() => import("@/pages/knowledge/ArticleEditor").then(m => ({ default: m.default })))
+const SearchResults = lazy(() => import("@/pages/knowledge/SearchResults").then(m => ({ default: m.default })))
+
+// 加载中组件
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    </div>
+  )
+}
 
 // 侧边栏切换按钮组件
 function SidebarToggle() {
@@ -147,7 +159,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ApplicationsModule />
+              <Suspense fallback={<PageLoading />}>
+                <ApplicationsModule />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -159,7 +173,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <EquipmentModule />
+              <Suspense fallback={<PageLoading />}>
+                <EquipmentModule />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -171,7 +187,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <AttendanceModule />
+              <Suspense fallback={<PageLoading />}>
+                <AttendanceModule />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -182,7 +200,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <MeetingsModule />
+              <Suspense fallback={<PageLoading />}>
+                <MeetingsModule />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -193,7 +213,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <SchedulePage />
+              <Suspense fallback={<PageLoading />}>
+                <SchedulePage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -203,7 +225,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <DocumentsPage />
+              <Suspense fallback={<PageLoading />}>
+                <DocumentsPage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -213,7 +237,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ContactsPage />
+              <Suspense fallback={<PageLoading />}>
+                <ContactsPage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -225,7 +251,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <TasksPage />
+              <Suspense fallback={<PageLoading />}>
+                <TasksPage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -237,7 +265,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <AnnouncementsPage />
+              <Suspense fallback={<PageLoading />}>
+                <AnnouncementsPage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -247,7 +277,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <AnnouncementForm />
+              <Suspense fallback={<PageLoading />}>
+                <AnnouncementForm />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -257,7 +289,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <AnnouncementDetail />
+              <Suspense fallback={<PageLoading />}>
+                <AnnouncementDetail />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -267,7 +301,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <AnnouncementForm />
+              <Suspense fallback={<PageLoading />}>
+                <AnnouncementForm />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -279,7 +315,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ReportsCenter />
+              <Suspense fallback={<PageLoading />}>
+                <ReportsCenter />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -289,7 +327,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ReportDashboard />
+              <Suspense fallback={<PageLoading />}>
+                <ReportDashboard />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -299,7 +339,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ReportBuilder />
+              <Suspense fallback={<PageLoading />}>
+                <ReportBuilder />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -311,7 +353,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <Users />
+              <Suspense fallback={<PageLoading />}>
+                <Users />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -323,7 +367,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <Settings />
+              <Suspense fallback={<PageLoading />}>
+                <Settings />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -335,7 +381,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <Profile />
+              <Suspense fallback={<PageLoading />}>
+                <Profile />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -347,7 +395,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <Departments />
+              <Suspense fallback={<PageLoading />}>
+                <Departments />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -359,7 +409,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <AuditLogs />
+              <Suspense fallback={<PageLoading />}>
+                <AuditLogs />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -371,7 +423,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <WorkflowList />
+              <Suspense fallback={<PageLoading />}>
+                <WorkflowList />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -381,7 +435,9 @@ function App() {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
-              <WorkflowDesigner />
+              <Suspense fallback={<PageLoading />}>
+                <WorkflowDesigner />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -393,7 +449,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <KnowledgePage />
+              <Suspense fallback={<PageLoading />}>
+                <KnowledgePage />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -403,7 +461,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <SearchResults />
+              <Suspense fallback={<PageLoading />}>
+                <SearchResults />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -413,7 +473,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ArticleEditor />
+              <Suspense fallback={<PageLoading />}>
+                <ArticleEditor />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -423,7 +485,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ArticleView />
+              <Suspense fallback={<PageLoading />}>
+                <ArticleView />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -433,7 +497,9 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <ArticleEditor />
+              <Suspense fallback={<PageLoading />}>
+                <ArticleEditor />
+              </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
         }

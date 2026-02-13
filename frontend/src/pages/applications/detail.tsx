@@ -16,6 +16,8 @@ import { approvalsApi } from "@/services/approvals"
 import { uploadsApi } from "@/services/uploads"
 import { useAuth } from "@/contexts/AuthContext"
 import { formatDate, formatFileSize } from "@/lib/utils"
+import { getErrorMessage } from "@/lib/error-handler"
+import { logger } from "@/lib/logger"
 import { statusConfig, priorityConfig } from "@/config/status"
 import {
   ArrowLeft,
@@ -70,7 +72,7 @@ export function ApplicationDetail() {
       const response = await approvalsApi.getApprovalHistory(id)
       setApprovalHistory(response.data)
     } catch (err) {
-      console.error("获取审批历史失败:", err)
+      logger.error("获取审批历史失败", { error: err })
     } finally {
       setLoadingHistory(false)
     }
@@ -147,8 +149,8 @@ export function ApplicationDetail() {
       setWithdrawDialogOpen(false)
       setWithdrawLevel(null)
       await Promise.all([fetchApplication(), fetchApprovalHistory()])
-    } catch (err: any) {
-      setError(err.response?.data?.error || "撤回操作失败，请重试")
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || "撤回操作失败，请重试")
     } finally {
       setActionLoading(false)
     }

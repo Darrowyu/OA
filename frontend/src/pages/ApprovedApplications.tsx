@@ -53,6 +53,7 @@ import {
   Filter,
 } from "lucide-react"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 // 状态筛选选项
 type StatusFilter = "all" | "approved" | "rejected"
@@ -208,7 +209,7 @@ export function ApprovedApplications() {
       calculateStats(items)
     } catch (error) {
       toast.error("加载审批记录失败")
-      console.error(error)
+      logger.error("操作失败", { error })
     } finally {
       setLoading(false)
     }

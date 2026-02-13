@@ -16,6 +16,7 @@ import {
 import { documentApi, type Document, type DocumentVersion } from '@/services/documents';
 import { formatFileSize } from '@/services/documents';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface DocumentViewerProps {
   document: Document | null;
@@ -73,7 +74,7 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
         setVersions(res.data);
       }
     } catch (error) {
-      console.error('加载版本历史失败', error);
+      logger.error('加载版本历史失败', { error });
     }
   };
 

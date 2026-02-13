@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/select';
 import { workflowApi, Workflow } from '@/services/workflows';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // 业务类型选项
@@ -87,7 +88,7 @@ export default function WorkflowList() {
         setWorkflows(response.data);
       }
     } catch (error) {
-      console.error('加载工作流失败:', error);
+      logger.error('加载工作流失败', { error });
       toast.error('加载工作流失败');
     } finally {
       setLoading(false);
@@ -102,7 +103,7 @@ export default function WorkflowList() {
       toast.success('删除成功');
       setWorkflows((prev) => prev.filter((w) => w.id !== workflowToDelete.id));
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除工作流失败', { error });
       toast.error('删除失败');
     } finally {
       setDeleteDialogOpen(false);
@@ -144,7 +145,7 @@ export default function WorkflowList() {
         navigate(`/workflow/designer/${response.data.id}`);
       }
     } catch (error) {
-      console.error('创建失败:', error);
+      logger.error('创建工作流失败', { error });
       toast.error('创建失败');
     }
   };
@@ -157,7 +158,7 @@ export default function WorkflowList() {
         loadWorkflows();
       }
     } catch (error) {
-      console.error('设置默认流程失败:', error);
+      logger.error('设置默认流程失败', { error });
       toast.error('设置默认流程失败');
     }
   };

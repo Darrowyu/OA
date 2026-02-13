@@ -41,6 +41,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 // 状态映射
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -128,7 +129,7 @@ export function PendingApprovals() {
       const response = await usersApi.getManagers()
       setManagers(response.data || [])
     } catch (error) {
-      console.error("加载经理列表失败:", error)
+      logger.error("加载经理列表失败", { error })
     } finally {
       setLoadingManagers(false)
     }
@@ -149,7 +150,7 @@ export function PendingApprovals() {
       setApplications(response.data.items || [])
     } catch (error) {
       toast.error("加载待审批列表失败")
-      console.error(error)
+      logger.error("操作失败", { error })
     } finally {
       setLoading(false)
     }
@@ -243,7 +244,7 @@ export function PendingApprovals() {
       loadPendingApplications()
     } catch (error: any) {
       toast.error(error.response?.data?.error || "审批失败")
-      console.error(error)
+      logger.error("操作失败", { error })
     } finally {
       setProcessingId(null)
     }

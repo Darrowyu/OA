@@ -7,6 +7,7 @@ import { applicationsApi } from "@/services/applications"
 import { usersApi } from "@/services/users"
 import { Loader2, ArrowLeft, FilePlus } from "lucide-react"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 export function ApplicationNew() {
   const navigate = useNavigate()
@@ -25,7 +26,7 @@ export function ApplicationNew() {
         setFactoryManagers(factoryRes.data || [])
         setManagers(managerRes.data || [])
       } catch (error) {
-        console.error("加载审批人失败:", error)
+        logger.error("加载审批人失败", { error })
         toast.error("加载审批人列表失败")
       } finally {
         setLoading(false)
@@ -41,7 +42,7 @@ export function ApplicationNew() {
       toast.success("申请创建成功")
       navigate("/approval")
     } catch (error) {
-      console.error("创建申请失败:", error)
+      logger.error("创建申请失败", { error })
       toast.error("创建申请失败")
     } finally {
       setSubmitting(false)

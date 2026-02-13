@@ -1,6 +1,7 @@
 // frontend/src/pages/tasks/index.tsx
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import type { DropResult } from '@hello-pangea/dnd'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -62,7 +63,7 @@ export function TasksPage() {
         setStats(response.data)
       }
     } catch (error) {
-      console.error('加载统计失败', error)
+      logger.error('加载统计失败', { error })
     }
   }, [])
 
