@@ -8,9 +8,18 @@
 - **前端**: React + TypeScript + Vite + Tailwind + shadcn/ui
 - **后端**: Node.js + Express + TypeScript + Prisma + PostgreSQL
 
-**关键账号**:
-- 管理员: `admin@example.com` / `admin123`
-- 普通用户: `user@example.com` / `user123`
+**关键账号** (执行 `npm run db:seed` 后生成):
+
+| 用户名 | 密码 | 角色 | 说明 |
+|--------|------|------|------|
+| `admin` | `admin123` | ADMIN | 系统管理员 |
+| `factory1` | `123456` | FACTORY_MANAGER | 厂长 |
+| `director1` | `123456` | DIRECTOR | 总监 |
+| `manager1` | `123456` | MANAGER | 经理 |
+| `ceo1` | `123456` | CEO | 总经理 |
+| `user1` | `123456` | USER | 普通用户 |
+
+**注意**: 登录时使用 `用户名` (如 admin)，不是邮箱。
 
 ---
 
