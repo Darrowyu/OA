@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext"
+import { NotFound } from "@/components/ui/not-found"
 
 // 懒加载大型模块 - 代码分割优化
 const ApplicationsModule = lazy(() => import("@/pages/applications").then(m => ({ default: m.ApplicationsModule })))
@@ -508,6 +509,9 @@ function App() {
       {/* 旧路由重定向 */}
       <Route path="/applications/*" element={<Navigate to="/approval" replace />} />
       <Route path="/help" element={<Navigate to="/knowledge" replace />} />
+
+      {/* 404 页面 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
