@@ -1,5 +1,6 @@
 import { WorkflowStatus, InstanceStatus, Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
+import logger from '../lib/logger'
 
 // 节点类型定义
 export type NodeType = 'start' | 'approval' | 'condition' | 'parallel' | 'end'
@@ -786,7 +787,7 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
   try {
     // 安全检查：限制条件表达式长度，防止DoS
     if (condition.length > 200) {
-      console.warn('条件表达式过长，拒绝执行:', condition.substring(0, 50) + '...')
+      logger.warn('条件表达式过长，拒绝执行', { condition: condition.substring(0, 50) + '...' })
       return false
     }
 
@@ -803,7 +804,7 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(condition)) {
-        console.warn('条件表达式包含危险模式，拒绝执行:', condition)
+        logger.warn('条件表达式包含危险模式，拒绝执行', { condition })
         return false
       }
     }
@@ -824,7 +825,7 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
 
     if (!operator || parts.length !== 2) {
       // 无法解析条件，默认不通过（安全优先）
-      console.warn('无法解析条件表达式:', condition)
+      logger.warn('无法解析条件表达式', { condition })
       return false
     }
 
@@ -832,13 +833,13 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
 
     // 安全检查：验证变量名合法性
     if (!isValidVariableName(left)) {
-      console.warn('条件表达式变量名非法:', left)
+      logger.warn('条件表达式变量名非法', { variable: left })
       return false
     }
 
     // 安全检查：白名单验证
     if (!ALLOWED_VARIABLES.includes(left)) {
-      console.warn('条件表达式变量不在白名单中:', left)
+      logger.warn('条件表达式变量不在白名单中', { variable: left })
       return false
     }
 
@@ -880,7 +881,7 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
     }
   } catch (error) {
     // 条件解析失败，记录日志并默认不通过（安全优先）
-    console.error('条件表达式执行失败:', condition, error)
+    logger.error('条件表达式执行失败', { condition, error })
     return false
   }
 }

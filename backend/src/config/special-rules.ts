@@ -87,6 +87,7 @@ export function clearSpecialManagerCache(): void {
 }
 
 import { prisma } from '../lib/prisma';
+import logger from '../lib/logger';
 
 /**
  * 检查指定员工ID是否为有效的特殊经理
@@ -111,7 +112,7 @@ export async function isSpecialManager(employeeId: string): Promise<boolean> {
 
     return user?.role === 'MANAGER' && user?.isActive === true;
   } catch (error) {
-    console.error('验证特殊经理失败:', error);
+    logger.error('验证特殊经理失败', { error });
     return false;
   }
 }
