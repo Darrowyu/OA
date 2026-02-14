@@ -131,7 +131,7 @@ async function processApproval(
       }
 
       const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-      const isSpecial = level === 'MANAGER' ? isSpecialManager(user.employeeId || '') : false;
+      const isSpecial = level === 'MANAGER' ? await isSpecialManager(user.employeeId || '') : false;
       const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
 
       // 更新或创建审批记录
@@ -211,7 +211,7 @@ async function processApproval(
       return { newStatus, isSpecial };
     });
 
-    const isSpecial = level === 'MANAGER' ? isSpecialManager(user.employeeId || '') : false;
+    const isSpecial = level === 'MANAGER' ? await isSpecialManager(user.employeeId || '') : false;
     const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
 
     res.json(ok({
@@ -471,11 +471,36 @@ export async function getApprovalHistory(req: Request, res: Response): Promise<v
 }
 
 // 撤回审批配置
-const approvalLevelConfig: Record<string, { role: UserRole; modelName: string; pendingStatus: ApplicationStatus }> = {
-  FACTORY: { role: 'FACTORY_MANAGER', modelName: 'factoryApproval', pendingStatus: ApplicationStatus.PENDING_FACTORY },
-  DIRECTOR: { role: 'DIRECTOR', modelName: 'directorApproval', pendingStatus: ApplicationStatus.PENDING_DIRECTOR },
-  MANAGER: { role: 'MANAGER', modelName: 'managerApproval', pendingStatus: ApplicationStatus.PENDING_MANAGER },
-  CEO: { role: 'CEO', modelName: 'ceoApproval', pendingStatus: ApplicationStatus.PENDING_CEO },
+const approvalLevelConfig: Record<string, {
+  role: UserRole;
+  modelName: string;
+  pendingStatus: ApplicationStatus;
+  // 定义后续需要清理的审批级别
+  subsequentLevels?: string[];
+}> = {
+  FACTORY: {
+    role: 'FACTORY_MANAGER',
+    modelName: 'factoryApproval',
+    pendingStatus: ApplicationStatus.PENDING_FACTORY,
+    subsequentLevels: ['directorApproval', 'managerApproval', 'ceoApproval'],
+  },
+  DIRECTOR: {
+    role: 'DIRECTOR',
+    modelName: 'directorApproval',
+    pendingStatus: ApplicationStatus.PENDING_DIRECTOR,
+    subsequentLevels: ['managerApproval', 'ceoApproval'],
+  },
+  MANAGER: {
+    role: 'MANAGER',
+    modelName: 'managerApproval',
+    pendingStatus: ApplicationStatus.PENDING_MANAGER,
+    subsequentLevels: ['ceoApproval'],
+  },
+  CEO: {
+    role: 'CEO',
+    modelName: 'ceoApproval',
+    pendingStatus: ApplicationStatus.PENDING_CEO,
+  },
 };
 
 // 允许撤回的状态
@@ -541,10 +566,19 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
 
     // 撤回审批
     await prisma.$transaction(async (tx) => {
-      // 删除审批记录
+      // 删除当前级别的审批记录
       await ((tx as unknown) as Record<string, { deleteMany: (args: unknown) => Promise<unknown> }>)[config.modelName].deleteMany({
         where: { applicationId, approverId: user.id },
       });
+
+      // 清理后续级别的所有审批记录，确保数据一致性
+      if (config.subsequentLevels && config.subsequentLevels.length > 0) {
+        for (const level of config.subsequentLevels) {
+          await ((tx as unknown) as Record<string, { deleteMany: (args: unknown) => Promise<unknown> }>)[level].deleteMany({
+            where: { applicationId },
+          });
+        }
+      }
 
       // 回退申请状态
       await tx.application.update({

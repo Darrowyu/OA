@@ -86,12 +86,42 @@ export function clearSpecialManagerCache(): void {
   configCache = null;
 }
 
+import { prisma } from '../lib/prisma';
+
 /**
- * 检查指定员工ID是否为特殊经理
+ * 检查指定员工ID是否为有效的特殊经理
+ * 验证用户是否存在、是否为活跃经理
  * @param employeeId 员工ID
- * @returns 是否为特殊经理
+ * @returns 是否为有效的特殊经理
  */
-export function isSpecialManager(employeeId: string): boolean {
+export async function isSpecialManager(employeeId: string): Promise<boolean> {
+  const config = getSpecialManagerConfig();
+
+  // 首先检查是否在特殊经理列表中
+  if (!config.specialManagerIds.includes(employeeId)) {
+    return false;
+  }
+
+  // 验证用户是否有效且是活跃经理
+  try {
+    const user = await prisma.user.findUnique({
+      where: { employeeId },
+      select: { role: true, isActive: true },
+    });
+
+    return user?.role === 'MANAGER' && user?.isActive === true;
+  } catch (error) {
+    console.error('验证特殊经理失败:', error);
+    return false;
+  }
+}
+
+/**
+ * 同步版本的isSpecialManager（用于向后兼容）
+ * 警告：此方法不进行数据库验证，仅检查配置列表
+ * @deprecated 请使用异步版本的 isSpecialManager
+ */
+export function isSpecialManagerSync(employeeId: string): boolean {
   const config = getSpecialManagerConfig();
   return config.specialManagerIds.includes(employeeId);
 }

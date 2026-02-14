@@ -756,11 +756,58 @@ function validateWorkflowDetailed(nodes: FlowNode[], edges: FlowEdge[]): string[
 }
 
 /**
+ * 允许的条件变量白名单
+ * 防止条件表达式注入攻击
+ */
+const ALLOWED_VARIABLES = [
+  'amount',      // 金额
+  'priority',    // 优先级
+  'status',      // 状态
+  'type',        // 类型
+  'days',        // 天数
+  'quantity',    // 数量
+]
+
+/**
+ * 验证变量名是否合法
+ * 只允许字母、数字、下划线，且不能包含危险字符
+ */
+function isValidVariableName(name: string): boolean {
+  // 只允许字母、数字、下划线
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)
+}
+
+/**
  * 评估条件表达式
  * 支持简单的条件语法：amount > 1000, status == 'approved', etc.
+ * 安全增强：白名单验证、变量名校验
  */
 function evaluateCondition(condition: string, variables: WorkflowVariables): boolean {
   try {
+    // 安全检查：限制条件表达式长度，防止DoS
+    if (condition.length > 200) {
+      console.warn('条件表达式过长，拒绝执行:', condition.substring(0, 50) + '...')
+      return false
+    }
+
+    // 安全检查：禁止危险字符和模式
+    const dangerousPatterns = [
+      /[;{}]/,           // 分号、花括号（代码注入）
+      /\bprocess\b/,     // process对象
+      /\brequire\b/,     // require函数
+      /\beval\b/,        // eval函数
+      /\bFunction\b/,    // Function构造器
+      /\bsetTimeout\b/,  // 定时器
+      /\bsetInterval\b/,
+    ]
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(condition)) {
+        console.warn('条件表达式包含危险模式，拒绝执行:', condition)
+        return false
+      }
+    }
+
     // 简单的条件表达式解析
     // 支持的运算符: >, <, >=, <=, ==, !=
     const operators = ['>=', '<=', '!=', '==', '>', '<']
@@ -776,11 +823,25 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
     }
 
     if (!operator || parts.length !== 2) {
-      // 无法解析条件，默认通过
-      return true
+      // 无法解析条件，默认不通过（安全优先）
+      console.warn('无法解析条件表达式:', condition)
+      return false
     }
 
     const [left, right] = parts
+
+    // 安全检查：验证变量名合法性
+    if (!isValidVariableName(left)) {
+      console.warn('条件表达式变量名非法:', left)
+      return false
+    }
+
+    // 安全检查：白名单验证
+    if (!ALLOWED_VARIABLES.includes(left)) {
+      console.warn('条件表达式变量不在白名单中:', left)
+      return false
+    }
+
     const leftValue = variables[left] ?? left
     let rightValue: unknown = right
 
@@ -815,11 +876,12 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
       case '!=':
         return leftValue != rightValue
       default:
-        return true
+        return false
     }
-  } catch {
-    // 条件解析失败，默认通过
-    return true
+  } catch (error) {
+    // 条件解析失败，记录日志并默认不通过（安全优先）
+    console.error('条件表达式执行失败:', condition, error)
+    return false
   }
 }
 
