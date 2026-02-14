@@ -168,6 +168,7 @@ model Application {
   @@index([submittedAt])
   @@index([applicantId])
   @@index([deletedAt])
+  @@index([status, applicantId, submittedAt])
 }
 
 model FactoryApproval {
@@ -281,6 +282,8 @@ model ReminderLog {
   reminderType  ReminderType
   reminderCount Int          @default(1)
   sentAt        DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   // 关联字段
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
@@ -298,6 +301,8 @@ model ArchiveRecord {
   archivedAt    DateTime @default(now())
   archivePath   String
   dataSnapshot  Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // 关联字段
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
@@ -612,6 +617,7 @@ model PartStock {
   remark      String? // 备注
   relatedId   String? // 关联记录ID
   createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // 关联字段
   part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
@@ -726,6 +732,7 @@ model UserDevice {
   lastActiveAt DateTime @default(now())
   isCurrent    Boolean  @default(false)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // 关联字段
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -766,6 +773,7 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@index([type])
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 
@@ -839,6 +847,7 @@ model CalendarEvent {
   @@index([startTime])
   @@index([endTime])
   @@index([type])
+  @@index([userId, startTime, endTime])
   @@map("calendar_events")
 }
 
@@ -975,6 +984,7 @@ model Schedule {
   shiftId   String
   isRestDay Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   shift Shift @relation(fields: [shiftId], references: [id])
@@ -1255,6 +1265,8 @@ model WorkflowInstance {
   contextData   Json?          // 上下文数据
   startedAt     DateTime       @default(now())
   completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   // 关联字段
   workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
