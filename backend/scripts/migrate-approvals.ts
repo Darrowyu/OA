@@ -17,16 +17,17 @@ type Metadata = {
 async function migrateApprovals(): Promise<void> {
   console.log('开始迁移审批数据...');
 
-  // 迁移 FactoryApproval (level=1)
-  console.log('迁移厂长审批数据...');
-  const factoryApprovals = await prisma.factoryApproval.findMany();
+  await prisma.$transaction(async (tx) => {
+    // 迁移 FactoryApproval (level=1)
+    console.log('迁移厂长审批数据...');
+    const factoryApprovals = await tx.factoryApproval.findMany();
   for (const approval of factoryApprovals) {
     const metadata: Metadata = {};
     if (approval.approvedAt) {
       metadata.approvedAt = approval.approvedAt.toISOString();
     }
 
-    await prisma.approval.create({
+    await tx.approval.create({
       data: {
         applicationId: approval.applicationId,
         approverId: approval.approverId,
@@ -56,7 +57,7 @@ async function migrateApprovals(): Promise<void> {
       metadata.skipManager = approval.skipManager;
     }
 
-    await prisma.approval.create({
+    await tx.approval.create({
       data: {
         applicationId: approval.applicationId,
         approverId: approval.approverId,
@@ -80,7 +81,7 @@ async function migrateApprovals(): Promise<void> {
       metadata.approvedAt = approval.approvedAt.toISOString();
     }
 
-    await prisma.approval.create({
+    await tx.approval.create({
       data: {
         applicationId: approval.applicationId,
         approverId: approval.approverId,
@@ -104,7 +105,7 @@ async function migrateApprovals(): Promise<void> {
       metadata.approvedAt = approval.approvedAt.toISOString();
     }
 
-    await prisma.approval.create({
+    await tx.approval.create({
       data: {
         applicationId: approval.applicationId,
         approverId: approval.approverId,
@@ -121,7 +122,12 @@ async function migrateApprovals(): Promise<void> {
 
   const total = factoryApprovals.length + directorApprovals.length +
                 managerApprovals.length + ceoApprovals.length;
-  console.log(`\n迁移完成！共迁移 ${total} 条审批记录`);
+    console.log(`  已迁移 ${ceoApprovals.length} 条CEO审批记录`);
+
+    const total = factoryApprovals.length + directorApprovals.length +
+                  managerApprovals.length + ceoApprovals.length;
+    console.log(`\n迁移完成！共迁移 ${total} 条审批记录`);
+  }, { maxWait: 5000, timeout: 30000 }); // 事务配置
 }
 
 async function verifyMigration(): Promise<void> {
