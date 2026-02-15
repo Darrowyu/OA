@@ -17,6 +17,39 @@ function getUserId(req: Request): string {
   return req.user?.id as string
 }
 
+// 获取当前用户角色
+function getUserRole(req: Request): string {
+  return req.user?.role as string
+}
+
+// 检查任务权限（创建者、执行者或管理员）
+async function checkTaskPermission(taskId: string, userId: string, userRole: string): Promise<boolean> {
+  // 管理员有全部权限
+  if (userRole === 'ADMIN') return true
+
+  const task = await taskService.getById(taskId)
+  if (!task) return false
+
+  // 创建者或执行者有权限
+  return task.creatorId === userId || task.assigneeId === userId
+}
+
+// 检查项目权限（负责人、成员或管理员）
+async function checkProjectPermission(projectId: string, userId: string, userRole: string): Promise<boolean> {
+  // 管理员有全部权限
+  if (userRole === 'ADMIN') return true
+
+  const project = await taskService.getProjectById(projectId)
+  if (!project) return false
+
+  // 负责人有权限
+  if (project.ownerId === userId) return true
+
+  // 成员有权限
+  const members = project.members as string[] | null
+  return members?.includes(userId) || false
+}
+
 export class TaskController {
   // 创建任务
   async create(req: Request, res: Response): Promise<void> {
@@ -67,6 +100,17 @@ export class TaskController {
   // 更新任务
   async update(req: Request, res: Response): Promise<void> {
     try {
+      // 权限检查
+      const hasPermission = await checkTaskPermission(
+        req.params.id,
+        getUserId(req),
+        getUserRole(req)
+      )
+      if (!hasPermission) {
+        errorResponse(res, '无权更新此任务', 403)
+        return
+      }
+
       const task = await taskService.update(req.params.id, req.body)
       successResponse(res, task)
     } catch (error) {
@@ -77,6 +121,17 @@ export class TaskController {
   // 更新任务状态（拖拽）
   async updateStatus(req: Request, res: Response): Promise<void> {
     try {
+      // 权限检查
+      const hasPermission = await checkTaskPermission(
+        req.params.id,
+        getUserId(req),
+        getUserRole(req)
+      )
+      if (!hasPermission) {
+        errorResponse(res, '无权更新此任务状态', 403)
+        return
+      }
+
       const { status, order } = req.body
       const task = await taskService.updateStatus(req.params.id, status as TaskStatus, order)
       successResponse(res, task)
@@ -98,6 +153,17 @@ export class TaskController {
   // 删除任务
   async delete(req: Request, res: Response): Promise<void> {
     try {
+      // 权限检查
+      const hasPermission = await checkTaskPermission(
+        req.params.id,
+        getUserId(req),
+        getUserRole(req)
+      )
+      if (!hasPermission) {
+        errorResponse(res, '无权删除此任务', 403)
+        return
+      }
+
       await taskService.delete(req.params.id)
       res.json({ success: true, message: '删除成功' })
     } catch (error) {
@@ -158,6 +224,17 @@ export class TaskController {
   // 更新项目
   async updateProject(req: Request, res: Response): Promise<void> {
     try {
+      // 权限检查
+      const hasPermission = await checkProjectPermission(
+        req.params.id,
+        getUserId(req),
+        getUserRole(req)
+      )
+      if (!hasPermission) {
+        errorResponse(res, '无权更新此项目', 403)
+        return
+      }
+
       const project = await taskService.updateProject(req.params.id, req.body)
       successResponse(res, project)
     } catch (error) {
@@ -168,6 +245,17 @@ export class TaskController {
   // 删除项目
   async deleteProject(req: Request, res: Response): Promise<void> {
     try {
+      // 权限检查
+      const hasPermission = await checkProjectPermission(
+        req.params.id,
+        getUserId(req),
+        getUserRole(req)
+      )
+      if (!hasPermission) {
+        errorResponse(res, '无权删除此项目', 403)
+        return
+      }
+
       await taskService.deleteProject(req.params.id)
       res.json({ success: true, message: '删除成功' })
     } catch (error) {

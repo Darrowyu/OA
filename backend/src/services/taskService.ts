@@ -398,10 +398,8 @@ export class TaskService {
 
   // 获取项目列表
   async getProjects(userId: string): Promise<TaskProjectWithOwner[]> {
+    // 先获取所有项目，内存中过滤成员（Prisma JSON不支持array_contains）
     const projects = await prisma.taskProject.findMany({
-      where: {
-        OR: [{ ownerId: userId }, { members: { array_contains: userId } }],
-      },
       orderBy: { createdAt: 'desc' },
       include: {
         owner: {
@@ -410,8 +408,15 @@ export class TaskService {
       },
     })
 
+    // 过滤：我是负责人 或 我是成员
+    const filteredProjects = projects.filter(project => {
+      if (project.ownerId === userId) return true
+      const members = project.members as string[] | null
+      return members?.includes(userId) || false
+    })
+
     return Promise.all(
-      projects.map(async project => {
+      filteredProjects.map(async project => {
         const taskCount = await prisma.task.count({
           where: { projectId: project.id },
         })
@@ -446,6 +451,28 @@ export class TaskService {
       ...project,
       members: (project.members as string[]) || [],
       taskCount,
+      createdAt: new Date(project.createdAt),
+      updatedAt: new Date(project.updatedAt),
+    }
+  }
+
+  // 获取项目详情
+  async getProjectById(id: string): Promise<(TaskProjectWithOwner & { members: string[] }) | null> {
+    const project = await prisma.taskProject.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+    })
+
+    if (!project) return null
+
+    return {
+      ...project,
+      members: (project.members as string[]) || [],
+      taskCount: await prisma.task.count({ where: { projectId: project.id } }),
       createdAt: new Date(project.createdAt),
       updatedAt: new Date(project.updatedAt),
     }
