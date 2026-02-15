@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
 import * as logger from '../lib/logger';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * @route   GET /api/signatures

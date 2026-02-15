@@ -99,7 +99,7 @@ router.put(
 // 获取文档列表
 router.get('/', asyncHandler(documentController.findMany))
 
-// 获取文档统计
+// 获取文档统计 - 必须在 /:id 之前定义
 router.get('/statistics', asyncHandler(documentController.getStatistics))
 
 // 获取文档版本历史

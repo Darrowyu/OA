@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import ExcelJS from 'exceljs';
 import * as logger from '../lib/logger';
-
-const prisma = new PrismaClient();
 
 // 状态映射
 const statusMap: Record<string, string> = {

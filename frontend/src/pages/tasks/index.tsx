@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Header } from '@/components/Header'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttChart } from '@/components/GanttChart'
-import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus } from '@/services/tasks'
+import { TaskListView } from './TaskListView'
+import { TaskCalendarView } from './TaskCalendarView'
+import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus, type Task } from '@/services/tasks'
 import { Plus, Layout, List, BarChart3, Calendar } from 'lucide-react'
 
 export function TasksPage() {
@@ -126,6 +128,12 @@ export function TasksPage() {
     toast.info(`打开任务: ${task.title}`)
   }, [])
 
+  // 点击列表/日历任务
+  const handleTaskClick = useCallback((task: Task) => {
+    // TODO: 打开任务详情侧边栏
+    toast.info(`打开任务: ${task.title}`)
+  }, [])
+
   // 添加任务
   const handleAddTask = (status: TaskStatus) => {
     // TODO: 打开新建任务对话框
@@ -211,9 +219,11 @@ export function TasksPage() {
           </TabsContent>
 
           <TabsContent value="list" className="mt-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-              列表视图开发中...
-            </div>
+            <TaskListView
+              onTaskClick={handleTaskClick}
+              onAddTask={() => handleAddTask(TaskStatus.TODO)}
+              refreshTrigger={isLoading ? 1 : 0}
+            />
           </TabsContent>
 
           <TabsContent value="gantt" className="mt-4">
@@ -225,9 +235,10 @@ export function TasksPage() {
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-              日历视图开发中...
-            </div>
+            <TaskCalendarView
+              onTaskClick={handleTaskClick}
+              refreshTrigger={isLoading ? 1 : 0}
+            />
           </TabsContent>
         </Tabs>
       </main>

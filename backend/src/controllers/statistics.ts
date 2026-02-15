@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ApplicationStatus } from '@prisma/client';
+import { ApplicationStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 import * as logger from '../lib/logger';
-
-const prisma = new PrismaClient();
 
 // 统一的错误响应辅助函数
 function errorResponse(res: Response, code: string, message: string, status = 500): void {
