@@ -12,6 +12,27 @@ interface TaskDetailModalProps {
   onClose: () => void
 }
 
+interface Attachment {
+  id: string
+  name: string
+  size: string
+  type?: string
+}
+
+interface CommentUser {
+  id: string
+  name: string
+  avatar?: string
+}
+
+interface Comment {
+  id: string
+  user: CommentUser
+  content: string
+  timestamp: string
+  attachments?: Attachment[]
+}
+
 const overlayVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -66,7 +87,7 @@ const parseMentions = (text: string) => {
 
 export function TaskDetailModal({ isOpen, onClose }: TaskDetailModalProps) {
   const [newComment, setNewComment] = useState("")
-  const [comments, setComments] = useState([
+  const [comments, setComments] = useState<Comment[]>([
     {
       id: "1",
       user: { id: "1", name: "赵小美", avatar: "" },
@@ -235,7 +256,7 @@ export function TaskDetailModal({ isOpen, onClose }: TaskDetailModalProps) {
                           <p className="text-sm text-gray-700 mb-2">{parseMentions(comment.content)}</p>
 
                           {/* Attachments */}
-                          {comment.attachments && comment.attachments.map((attachment: any) => (
+                          {comment.attachments && comment.attachments.map((attachment: Attachment) => (
                             <div
                               key={attachment.id}
                               className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg mb-2"

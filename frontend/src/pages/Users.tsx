@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { usersApi, CreateUserRequest, UpdateUserRequest } from '@/services/users';
 import { User, UserRole } from '@/types';
+import { getUserFriendlyMessage } from '@/lib/error-handler';
 
 const roleOptions = [
   { value: '', label: '全部角色' },
@@ -125,8 +126,8 @@ export default function Users() {
       setUsers(data.data || []);
       setTotal(data.meta?.pagination?.total || 0);
       setTotalPages(data.meta?.pagination?.totalPages || 0);
-    } catch (err: any) {
-      setError(err.error?.message || '加载用户列表失败');
+    } catch (err) {
+      setError(getUserFriendlyMessage(err) || '加载用户列表失败');
     } finally {
       setLoading(false);
     }
@@ -197,8 +198,8 @@ export default function Users() {
       setIsCreateDialogOpen(false);
       setFormData(initialFormData);
       loadUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.message || '创建用户失败');
+    } catch (err) {
+      setError(getUserFriendlyMessage(err) || '创建用户失败');
     } finally {
       setSubmitLoading(false);
     }
@@ -220,8 +221,8 @@ export default function Users() {
       setIsEditDialogOpen(false);
       setSelectedUser(null);
       loadUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.message || '更新用户失败');
+    } catch (err) {
+      setError(getUserFriendlyMessage(err) || '更新用户失败');
     } finally {
       setSubmitLoading(false);
     }
@@ -237,8 +238,8 @@ export default function Users() {
       setIsDeleteDialogOpen(false);
       setSelectedUser(null);
       loadUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.message || '删除用户失败');
+    } catch (err) {
+      setError(getUserFriendlyMessage(err) || '删除用户失败');
     } finally {
       setSubmitLoading(false);
     }

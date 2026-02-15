@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+import { getUserFriendlyMessage } from "@/lib/error-handler"
 
 // 状态映射
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -242,8 +243,8 @@ export function PendingApprovals() {
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
       setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })
       loadPendingApplications()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "审批失败")
+    } catch (error) {
+      toast.error(getUserFriendlyMessage(error) || "审批失败")
       logger.error("操作失败", { error })
     } finally {
       setProcessingId(null)

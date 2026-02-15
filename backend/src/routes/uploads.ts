@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { uploadSingle, handleUploadError, getFileUrl, UPLOAD_CONFIG } from '../middleware/upload';
 import prisma from '../lib/prisma';
+import { Prisma } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 import * as logger from '../lib/logger';
@@ -76,7 +77,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { applicationId } = req.query;
 
-    const where: any = {};
+    const where: Prisma.AttachmentWhereInput = {};
     if (applicationId) {
       where.applicationId = applicationId as string;
     }
