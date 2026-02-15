@@ -10,6 +10,7 @@ import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttChart } from '@/components/GanttChart'
 import { TaskListView } from './TaskListView'
 import { TaskCalendarView } from './TaskCalendarView'
+import { TaskDetailDialog } from './TaskDetailDialog'
 import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus, type Task } from '@/services/tasks'
 import { Plus, Layout, List, BarChart3, Calendar } from 'lucide-react'
 
@@ -26,6 +27,10 @@ export function TasksPage() {
     done: 0,
     overdue: 0,
   })
+
+  // 任务详情对话框状态
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   // 加载看板数据
   const loadKanbanData = useCallback(async () => {
@@ -116,23 +121,26 @@ export function TasksPage() {
     }
   }
 
+  // 打开任务详情
+  const openTaskDetail = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId)
+    setIsDetailOpen(true)
+  }, [])
+
   // 点击看板任务
   const handleKanbanTaskClick = useCallback((task: { id: string; title: string }) => {
-    // TODO: 打开任务详情侧边栏
-    toast.info(`打开任务: ${task.title}`)
-  }, [])
+    openTaskDetail(task.id)
+  }, [openTaskDetail])
 
   // 点击甘特图任务
   const handleGanttTaskClick = useCallback((task: GanttTask) => {
-    // TODO: 打开任务详情侧边栏
-    toast.info(`打开任务: ${task.title}`)
-  }, [])
+    openTaskDetail(task.id)
+  }, [openTaskDetail])
 
   // 点击列表/日历任务
   const handleTaskClick = useCallback((task: Task) => {
-    // TODO: 打开任务详情侧边栏
-    toast.info(`打开任务: ${task.title}`)
-  }, [])
+    openTaskDetail(task.id)
+  }, [openTaskDetail])
 
   // 添加任务
   const handleAddTask = (status: TaskStatus) => {
@@ -242,6 +250,18 @@ export function TasksPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* 任务详情对话框 */}
+      <TaskDetailDialog
+        taskId={selectedTaskId}
+        open={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onSuccess={() => {
+          loadKanbanData()
+          loadGanttData()
+          loadStats()
+        }}
+      />
     </div>
   )
 }

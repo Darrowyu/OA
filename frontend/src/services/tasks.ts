@@ -172,6 +172,50 @@ interface ProjectResponse {
   data: TaskProject
 }
 
+// 状态文本映射
+export function getStatusText(status: TaskStatus): string {
+  const statusMap: Record<TaskStatus, string> = {
+    [TaskStatus.TODO]: '待办',
+    [TaskStatus.IN_PROGRESS]: '进行中',
+    [TaskStatus.REVIEW]: '审核中',
+    [TaskStatus.DONE]: '已完成',
+  }
+  return statusMap[status] || status
+}
+
+// 状态颜色映射
+export function getStatusColor(status: TaskStatus): string {
+  const colorMap: Record<TaskStatus, string> = {
+    [TaskStatus.TODO]: 'bg-gray-100 text-gray-700',
+    [TaskStatus.IN_PROGRESS]: 'bg-blue-100 text-blue-700',
+    [TaskStatus.REVIEW]: 'bg-yellow-100 text-yellow-700',
+    [TaskStatus.DONE]: 'bg-green-100 text-green-700',
+  }
+  return colorMap[status] || 'bg-gray-100 text-gray-700'
+}
+
+// 优先级文本映射
+export function getPriorityText(priority: TaskPriority): string {
+  const priorityMap: Record<TaskPriority, string> = {
+    [TaskPriority.LOW]: '低',
+    [TaskPriority.MEDIUM]: '中',
+    [TaskPriority.HIGH]: '高',
+    [TaskPriority.URGENT]: '紧急',
+  }
+  return priorityMap[priority] || priority
+}
+
+// 优先级颜色映射
+export function getPriorityColor(priority: TaskPriority): string {
+  const colorMap: Record<TaskPriority, string> = {
+    [TaskPriority.LOW]: 'bg-gray-100 text-gray-700 border-gray-200',
+    [TaskPriority.MEDIUM]: 'bg-blue-100 text-blue-700 border-blue-200',
+    [TaskPriority.HIGH]: 'bg-orange-100 text-orange-700 border-orange-200',
+    [TaskPriority.URGENT]: 'bg-red-100 text-red-700 border-red-200',
+  }
+  return colorMap[priority] || 'bg-gray-100 text-gray-700'
+}
+
 export const tasksApi = {
   // 任务 CRUD
   getTasks: (params?: {
