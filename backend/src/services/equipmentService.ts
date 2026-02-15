@@ -154,19 +154,23 @@ export class EquipmentService {
       maintenanceRecords: number
     }
   }>> {
-    const { page = 1, pageSize = 10, status, category, location, keyword } = params
+    // 分页参数校验和限制
+    const page = Math.max(1, params.page || 1)
+    const pageSize = Math.min(100, Math.max(1, params.pageSize || 10)) // 最大100条
     const skip = (page - 1) * pageSize
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = {
+      deletedAt: null, // 软删除过滤
+    }
 
-    if (status) where.status = status
-    if (category) where.category = category
-    if (location) where.location = { contains: location }
-    if (keyword) {
+    if (params.status) where.status = params.status
+    if (params.category) where.category = params.category
+    if (params.location) where.location = { contains: params.location }
+    if (params.keyword) {
       where.OR = [
-        { name: { contains: keyword, mode: 'insensitive' } },
-        { code: { contains: keyword, mode: 'insensitive' } },
-        { model: { contains: keyword, mode: 'insensitive' } },
+        { name: { contains: params.keyword, mode: 'insensitive' } },
+        { code: { contains: params.keyword, mode: 'insensitive' } },
+        { model: { contains: params.keyword, mode: 'insensitive' } },
       ]
     }
 
@@ -213,8 +217,10 @@ export class EquipmentService {
 }
   }
 
-  // 获取设备统计
+  // 获取设备统计（排除已删除）
   async getStatistics(): Promise<EquipmentStatistics> {
+    const baseWhere = { deletedAt: null }
+
     const [
       total,
       running,
@@ -223,12 +229,12 @@ export class EquipmentService {
       maintenance,
       scrapped,
     ] = await Promise.all([
-      prisma.equipment.count(),
-      prisma.equipment.count({ where: { status: 'RUNNING' } }),
-      prisma.equipment.count({ where: { status: 'WARNING' } }),
-      prisma.equipment.count({ where: { status: 'STOPPED' } }),
-      prisma.equipment.count({ where: { status: 'MAINTENANCE' } }),
-      prisma.equipment.count({ where: { status: 'SCRAPPED' } }),
+      prisma.equipment.count({ where: baseWhere }),
+      prisma.equipment.count({ where: { ...baseWhere, status: 'RUNNING' } }),
+      prisma.equipment.count({ where: { ...baseWhere, status: 'WARNING' } }),
+      prisma.equipment.count({ where: { ...baseWhere, status: 'STOPPED' } }),
+      prisma.equipment.count({ where: { ...baseWhere, status: 'MAINTENANCE' } }),
+      prisma.equipment.count({ where: { ...baseWhere, status: 'SCRAPPED' } }),
     ])
 
     return {
@@ -241,33 +247,85 @@ export class EquipmentService {
     }
   }
 
-  // 获取所有分类
+  // 获取所有分类（排除已删除）
   async getCategories(): Promise<string[]> {
     const result = await prisma.equipment.groupBy({
       by: ['category'],
+      where: { deletedAt: null },
       orderBy: { category: 'asc' },
     })
     return result.map(item => item.category)
   }
 
-  // 获取所有位置
+  // 获取所有位置（排除已删除）
   async getLocations(): Promise<string[]> {
     const result = await prisma.equipment.groupBy({
       by: ['location'],
+      where: { deletedAt: null },
       orderBy: { location: 'asc' },
     })
     return result.map(item => item.location)
   }
 
-  // 更新设备健康度
-  async updateHealth(id: string, healthScore: number): Promise<void> {
-    let status: EquipmentStatus = 'RUNNING' as EquipmentStatus
-    if (healthScore < 30) status = 'STOPPED' as EquipmentStatus
-    else if (healthScore < 60) status = 'WARNING' as EquipmentStatus
+  // 更新设备健康度（支持多维指标）
+  async updateHealth(
+    id: string,
+    metrics: {
+      vibration?: number      // 振动指标 0-100
+      temperature?: number    // 温度指标 0-100
+      power?: number          // 功率指标 0-100
+      runtime?: number        // 运行时长指标 0-100
+      maintenance?: number    // 维护状况 0-100
+    }
+  ): Promise<void> {
+    // 权重配置
+    const weights = {
+      vibration: 0.25,   // 振动权重25%
+      temperature: 0.20, // 温度权重20%
+      power: 0.20,       // 功率权重20%
+      runtime: 0.15,     // 运行时长权重15%
+      maintenance: 0.20, // 维护状况权重20%
+    }
+
+    // 计算加权健康度
+    let healthScore = 100
+    let totalWeight = 0
+
+    for (const [key, value] of Object.entries(metrics)) {
+      if (value !== undefined) {
+        const weight = weights[key as keyof typeof weights]
+        healthScore -= (100 - value) * weight
+        totalWeight += weight
+      }
+    }
+
+    // 归一化（如果部分指标缺失）
+    if (totalWeight > 0 && totalWeight < 1) {
+      healthScore = 100 - (100 - healthScore) / totalWeight
+    }
+
+    // 确保在0-100范围内
+    healthScore = Math.max(0, Math.min(100, Math.round(healthScore)))
+
+    // 根据健康度确定状态
+    let status: EquipmentStatus
+    if (healthScore >= 80) {
+      status = 'RUNNING' as EquipmentStatus
+    } else if (healthScore >= 60) {
+      status = 'WARNING' as EquipmentStatus
+    } else if (healthScore >= 30) {
+      status = 'STOPPED' as EquipmentStatus
+    } else {
+      status = 'SCRAPPED' as EquipmentStatus
+    }
 
     await prisma.equipment.update({
       where: { id },
-      data: { healthScore, status },
+      data: {
+        healthScore,
+        status,
+        healthMetrics: metrics, // 存储详细指标
+      },
     })
   }
 

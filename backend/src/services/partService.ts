@@ -158,63 +158,106 @@ export class PartService {
     }
   }
 
-  async stockIn(data: PartStockCreateInput): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      const part = await tx.part.findUnique({
-        where: { id: data.partId },
-        select: { stock: true, minStock: true, maxStock: true },
-      })
+  async stockIn(data: PartStockCreateInput, userId: string): Promise<void> {
+    const maxRetries = 3
+    let retries = 0
 
-      if (!part) throw new Error('配件不存在')
+    while (retries < maxRetries) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // 使用SELECT FOR UPDATE获取行锁
+          const part = await tx.$queryRaw`
+            SELECT id, stock, minStock, maxStock, version
+            FROM "Part"
+            WHERE id = ${data.partId}
+            FOR UPDATE
+          ` as Array<{ id: string; stock: number; minStock: number; maxStock: number; version: number }>
 
-      const beforeStock = part.stock
-      const afterStock = beforeStock + data.quantity
+          if (!part || part.length === 0) throw new Error('配件不存在')
 
-      await tx.partStock.create({
-        data: {
-          ...data,
-          beforeStock,
-          afterStock,
-          date: data.date || new Date(),
-        },
-      })
+          const p = part[0]
+          const beforeStock = p.stock
+          const afterStock = beforeStock + data.quantity
 
-      const status = this.calculateStockStatus(afterStock, part.minStock, part.maxStock)
-      await tx.part.update({
-        where: { id: data.partId },
-        data: { stock: afterStock, status },
-      })
-    })
+          // 创建库存记录
+          await tx.partStock.create({
+            data: {
+              ...data,
+              beforeStock,
+              afterStock,
+              operator: userId,
+              date: data.date || new Date(),
+            },
+          })
+
+          // 更新配件库存和版本号（乐观锁）
+          const status = this.calculateStockStatus(afterStock, p.minStock, p.maxStock)
+          await tx.part.update({
+            where: { id: data.partId, version: p.version },
+            data: { stock: afterStock, status, version: { increment: 1 } },
+          })
+        }, { maxWait: 5000, timeout: 10000 })
+
+        return // 成功则退出重试循环
+      } catch (error) {
+        retries++
+        if (retries >= maxRetries) throw error
+        // 短暂延迟后重试
+        await new Promise(resolve => setTimeout(resolve, 100 * retries))
+      }
+    }
   }
 
-  async stockOut(data: PartStockCreateInput): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      const part = await tx.part.findUnique({
-        where: { id: data.partId },
-        select: { stock: true, minStock: true, maxStock: true },
-      })
+  async stockOut(data: PartStockCreateInput, userId: string): Promise<void> {
+    const maxRetries = 3
+    let retries = 0
 
-      if (!part) throw new Error('配件不存在')
-      if (part.stock < data.quantity) throw new Error('库存不足')
+    while (retries < maxRetries) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // 使用SELECT FOR UPDATE获取行锁
+          const part = await tx.$queryRaw`
+            SELECT id, stock, minStock, maxStock, version
+            FROM "Part"
+            WHERE id = ${data.partId}
+            FOR UPDATE
+          ` as Array<{ id: string; stock: number; minStock: number; maxStock: number; version: number }>
 
-      const beforeStock = part.stock
-      const afterStock = beforeStock - data.quantity
+          if (!part || part.length === 0) throw new Error('配件不存在')
 
-      await tx.partStock.create({
-        data: {
-          ...data,
-          beforeStock,
-          afterStock,
-          date: data.date || new Date(),
-        },
-      })
+          const p = part[0]
+          if (p.stock < data.quantity) throw new Error('库存不足')
 
-      const status = this.calculateStockStatus(afterStock, part.minStock, part.maxStock)
-      await tx.part.update({
-        where: { id: data.partId },
-        data: { stock: afterStock, status },
-      })
-    })
+          const beforeStock = p.stock
+          const afterStock = beforeStock - data.quantity
+
+          // 创建出库记录
+          await tx.partStock.create({
+            data: {
+              ...data,
+              beforeStock,
+              afterStock,
+              operator: userId,
+              date: data.date || new Date(),
+            },
+          })
+
+          // 更新配件库存和版本号（乐观锁）
+          const status = this.calculateStockStatus(afterStock, p.minStock, p.maxStock)
+          await tx.part.update({
+            where: { id: data.partId, version: p.version },
+            data: { stock: afterStock, status, version: { increment: 1 } },
+          })
+        }, { maxWait: 5000, timeout: 10000 })
+
+        return // 成功则退出重试循环
+      } catch (error) {
+        retries++
+        if (retries >= maxRetries) throw error
+        // 短暂延迟后重试
+        await new Promise(resolve => setTimeout(resolve, 100 * retries))
+      }
+    }
   }
 
   async findStockRecords(params: PartStockQueryParams): Promise<PaginatedResponse<{

@@ -445,6 +445,7 @@ model Equipment {
   location          String // 存放位置
   status            EquipmentStatus @default(RUNNING)
   healthScore       Int?            @db.SmallInt // 健康度 0-100（应用层验证范围）
+  healthMetrics     Json?           // 健康度详细指标 {vibration, temperature, power, runtime}
   purchaseDate      DateTime? // 购买日期
   warrantyDate      DateTime? // 保修到期日
   purchasePrice     Decimal?        @db.Decimal(15, 2) // 购买价格
@@ -468,6 +469,7 @@ model Equipment {
   @@index([category])
   @@index([location])
   @@index([deletedAt])
+  @@index([nextMaintenanceAt]) // 添加下次保养时间索引
 }
 
 // 维修/保养记录
@@ -528,6 +530,7 @@ model MaintenancePlan {
   @@index([equipmentId])
   @@index([status])
   @@index([nextDate])
+  @@index([status, nextDate]) // 即将到期计划查询优化
 }
 
 // 保养模板
@@ -568,6 +571,7 @@ model Part {
   status      PartStatus @default(NORMAL)
   unitPrice   Decimal?   @db.Decimal(15, 2) // 单价
   description String? // 备注
+  version     Int        @default(0) // 乐观锁版本号
   createdBy   String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -581,6 +585,7 @@ model Part {
   @@index([status])
   @@index([code])
   @@index([category])
+  @@index([status, stock]) // 库存预警查询优化
 }
 
 // 配件领用
@@ -661,6 +666,7 @@ model PartStock {
   @@index([type])
   @@index([date])
   @@index([source])
+  @@index([partId, date(sort: Desc)]) // 配件库存流水查询优化
 }
 
 // 配件生命周期
@@ -684,6 +690,7 @@ model PartLifecycle {
   @@index([partId])
   @@index([status])
   @@index([expectedEndDate])
+  @@index([status, expectedEndDate]) // 即将到期配件查询优化
 }
 
 // ============================================

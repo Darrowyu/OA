@@ -567,22 +567,24 @@ export const partController = {
 
   async stockIn(req: AuthRequest, res: Response): Promise<void> {
     const data = stockOperationSchema.parse(req.body)
+    const userId = req.user?.id || 'system'
     await partService.stockIn({
       ...data,
       type: 'IN' as StockType,
       source: data.source as StockSource,
-    })
+    }, userId)
 
     successResponse(res, null, '入库成功')
   },
 
   async stockOut(req: AuthRequest, res: Response): Promise<void> {
     const data = stockOperationSchema.parse(req.body)
+    const userId = req.user?.id || 'system'
     await partService.stockOut({
       ...data,
       type: 'OUT' as StockType,
       source: data.source as StockSource,
-    })
+    }, userId)
 
     successResponse(res, null, '出库成功')
   },
