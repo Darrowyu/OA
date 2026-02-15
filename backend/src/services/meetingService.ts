@@ -388,28 +388,52 @@ export class MeetingService {
       }
     }
 
-    const meeting = await prisma.meeting.create({
-      data: {
-        title: data.title,
-        description: data.description,
-        roomId: data.roomId,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        organizerId,
-        attendees: data.attendees as unknown as Prisma.InputJsonValue || undefined,
-        status: MeetingStatus.SCHEDULED,
-      },
-    })
+    // 使用事务确保并发安全
+    return await prisma.$transaction(async (tx) => {
+      // 如果有会议室，检查冲突（使用行锁防止并发）
+      if (data.roomId) {
+        const conflictingMeeting = await tx.meeting.findFirst({
+          where: {
+            roomId: data.roomId,
+            status: { not: MeetingStatus.CANCELLED },
+            AND: [
+              { startTime: { lt: data.endTime } },
+              { endTime: { gt: data.startTime } },
+            ],
+          },
+        })
 
-    return {
-      ...meeting,
-      description: meeting.description,
-      roomId: meeting.roomId,
-      attendees: meeting.attendees as unknown as Attendee[] | null,
-      startTime: new Date(meeting.startTime),
-      endTime: new Date(meeting.endTime),
-      createdAt: new Date(meeting.createdAt),
-    }
+        if (conflictingMeeting) {
+          throw new Error('该时间段会议室已被预订')
+        }
+      }
+
+      const meeting = await tx.meeting.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          roomId: data.roomId,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          organizerId,
+          attendees: data.attendees as unknown as Prisma.InputJsonValue || undefined,
+          status: MeetingStatus.SCHEDULED,
+        },
+      })
+
+      return {
+        ...meeting,
+        description: meeting.description,
+        roomId: meeting.roomId,
+        attendees: meeting.attendees as unknown as Attendee[] | null,
+        startTime: new Date(meeting.startTime),
+        endTime: new Date(meeting.endTime),
+        createdAt: new Date(meeting.createdAt),
+      }
+    }, {
+      // 串行化隔离级别确保并发安全
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    })
   }
 
   // 更新会议

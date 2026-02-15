@@ -119,6 +119,7 @@ model User {
   announcements      Announcement[]     @relation("UserAnnouncements") // 发布的公告
   announcementReads  AnnouncementRead[] // 已读公告记录
   meetings           Meeting[]          @relation("UserMeetings") // 组织的会议
+  meetingAttendees   MeetingAttendee[]  // 参与的会议
   assignedTasks      Task[]             @relation("AssignedTasks") // 被分配的任务
   createdTasks       Task[]             @relation("CreatedTasks") // 创建的任务
   ownedProjects      TaskProject[]      // 拥有的项目
@@ -1124,12 +1125,34 @@ model Meeting {
   // 关联字段
   room      MeetingRoom? @relation(fields: [roomId], references: [id])
   organizer User         @relation("UserMeetings", fields: [organizerId], references: [id])
+  attendeeRecords MeetingAttendee[] // 参会者关联记录
 
   @@index([roomId])
   @@index([startTime])
   @@index([organizerId])
   @@index([status])
+  @@index([roomId, startTime, endTime])
   @@map("meetings")
+}
+
+// 会议参会者关联表（替代JSON存储）
+model MeetingAttendee {
+  id        String         @id @default(cuid())
+  meetingId String
+  userId    String
+  status    AttendeeStatus @default(PENDING)
+  joinedAt  DateTime?      // 实际加入时间
+  leftAt    DateTime?      // 离开时间
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  meeting   Meeting        @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])  // 同一用户在同一会议只能有一条记录
+  @@index([userId])              // 查询"我的会议"
+  @@index([meetingId, status])   // 按状态筛选参会者
+  @@map("meeting_attendees")
 }
 
 // ============================================

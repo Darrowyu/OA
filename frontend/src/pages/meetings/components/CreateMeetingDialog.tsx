@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { meetingApi, type MeetingRoom } from '@/services/meetings';
+import { usersApi } from '@/services/users';
+import type { User } from '@/types';
 
 interface CreateMeetingDialogProps {
   open: boolean;
@@ -29,11 +32,15 @@ export function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }:
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedAttendees, setSelectedAttendees] = useState<User[]>([]);
+  const [userSearch, setUserSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadRooms();
+      loadUsers();
       // 设置默认时间为下一个整点
       const now = new Date();
       now.setMinutes(0, 0, 0);
@@ -51,6 +58,17 @@ export function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }:
     }
   }, [open, initialRoomId]);
 
+  const loadUsers = async () => {
+    try {
+      const res = await usersApi.getUsers({ pageSize: 100 });
+      if (res.success) {
+        setUsers(res.data.items);
+      }
+    } catch {
+      toast.error('加载用户列表失败');
+    }
+  };
+
   const loadRooms = async () => {
     try {
       const res = await meetingApi.getAllRooms();
@@ -61,6 +79,26 @@ export function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }:
       toast.error('加载会议室失败');
     }
   };
+
+  const toggleAttendee = (user: User) => {
+    setSelectedAttendees((prev) => {
+      const exists = prev.find((u) => u.id === user.id);
+      if (exists) {
+        return prev.filter((u) => u.id !== user.id);
+      }
+      return [...prev, user];
+    });
+  };
+
+  const removeAttendee = (userId: string) => {
+    setSelectedAttendees((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const filteredUsers = users.filter(
+    (u) =>
+      !selectedAttendees.find((sa) => sa.id === u.id) &&
+      (u.name.includes(userSearch) || u.email?.includes(userSearch))
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,13 +115,22 @@ export function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }:
         roomId: roomId || undefined,
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
+        attendees: selectedAttendees.map((u) => ({
+          userId: u.id,
+          name: u.name,
+          email: u.email || '',
+          status: 'PENDING' as const,
+        })),
       });
       toast.success('会议创建成功');
       onSuccess();
       onClose();
+      // 重置表单
       setTitle('');
       setDescription('');
       setRoomId('');
+      setSelectedAttendees([]);
+      setUserSearch('');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '创建会议失败');
     } finally {
@@ -147,6 +194,55 @@ export function CreateMeetingDialog({ open, onClose, onSuccess, initialRoomId }:
                 onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
+          </div>
+
+          {/* 参会人员选择 */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">参会人员</label>
+
+            {/* 已选择的参会者 */}
+            {selectedAttendees.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {selectedAttendees.map((user) => (
+                  <Badge key={user.id} variant="secondary" className="flex items-center gap-1">
+                    {user.name}
+                    <button
+                      type="button"
+                      onClick={() => removeAttendee(user.id)}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* 用户搜索和选择 */}
+            <Input
+              placeholder="搜索用户姓名或邮箱..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="mb-2"
+            />
+            {userSearch && filteredUsers.length > 0 && (
+              <div className="border rounded-md max-h-32 overflow-y-auto">
+                {filteredUsers.slice(0, 5).map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => toggleAttendee(user)}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                  >
+                    <span className="font-medium">{user.name}</span>
+                    <span className="text-gray-500 ml-2">{user.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {userSearch && filteredUsers.length === 0 && (
+              <p className="text-sm text-gray-500 px-3 py-2">未找到匹配的用户</p>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>

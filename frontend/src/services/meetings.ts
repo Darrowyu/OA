@@ -232,6 +232,16 @@ export function getAttendeeStatusText(status: Attendee['status']): string {
   return statusMap[status] || status;
 }
 
+// 获取参会状态颜色
+export function getAttendeeStatusColor(status: Attendee['status']): string {
+  const colorMap: Record<Attendee['status'], string> = {
+    PENDING: 'bg-yellow-100 text-yellow-800',
+    ACCEPTED: 'bg-green-100 text-green-800',
+    DECLINED: 'bg-red-100 text-red-800',
+  };
+  return colorMap[status] || 'bg-gray-100 text-gray-800';
+}
+
 // 格式化会议时间
 export function formatMeetingTime(startTime: string, endTime: string): string {
   const start = new Date(startTime);
