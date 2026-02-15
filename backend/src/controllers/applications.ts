@@ -9,6 +9,7 @@ import {
 } from '../utils/application';
 import { prisma as prismaInstance } from '../lib/prisma';
 import logger from '../lib/logger';
+import { createNotifications } from '../services/notificationService';
 
 // 用户类型定义
 interface RequestUser {
@@ -501,7 +502,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
     }
 
     // 创建厂长审批记录
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 更新申请状态
       await tx.application.update({
         where: { id },
@@ -522,7 +523,29 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
           action: 'PENDING',
         })),
       });
+
+      return { managers, application: existingApp };
     });
+
+    // P0修复: 集成通知到业务流程 - 通知厂长有新的审批待处理
+    try {
+      if (result?.managers && result.managers.length > 0) {
+        const notifications = result.managers.map(manager => ({
+          userId: manager.id,
+          type: 'APPROVAL' as const,
+          title: '新的审批待处理',
+          content: `申请 "${result.application.title}" 需要您审批`,
+          data: {
+            applicationId: id,
+            applicationNo: result.application.applicationNo,
+            action: 'submit',
+          },
+        }));
+        await createNotifications(notifications);
+      }
+    } catch (notifyError) {
+      logger.error('提交申请通知发送失败', { error: notifyError });
+    }
 
     res.json({ success: true, message: '申请提交成功' });
   } catch (error) {

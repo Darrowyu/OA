@@ -55,11 +55,12 @@ export const folderController = {
   },
 
   // 更新文件夹
-  async update(req: Request, res: Response): Promise<void> {
+  async update(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params
     const data = updateFolderSchema.parse(req.body)
+    const userId = req.user!.id
 
-    const folder = await documentService.updateFolder(id, data)
+    const folder = await documentService.updateFolder(id, data, userId)
 
     res.json({
       success: true,
@@ -69,9 +70,10 @@ export const folderController = {
   },
 
   // 删除文件夹
-  async delete(req: Request, res: Response): Promise<void> {
+  async delete(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params
-    await documentService.deleteFolder(id)
+    const userId = req.user!.id
+    await documentService.deleteFolder(id, userId)
 
     res.json({
       success: true,
@@ -217,9 +219,10 @@ export const documentController = {
   },
 
   // 彻底删除文档
-  async permanentlyDelete(req: Request, res: Response): Promise<void> {
+  async permanentlyDelete(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params
-    await documentService.permanentlyDeleteDocument(id)
+    const userId = req.user!.id
+    await documentService.permanentlyDeleteDocument(id, userId)
 
     res.json({
       success: true,

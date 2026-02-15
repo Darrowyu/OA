@@ -1,6 +1,7 @@
 // backend/src/controllers/taskController.ts
 import type { Request, Response } from 'express'
 import { taskService } from '../services/taskService'
+import { createNotification } from '../services/notificationService'
 import type { TaskStatus, TaskPriority } from '../types/task'
 
 // 统一响应辅助函数
@@ -55,6 +56,25 @@ export class TaskController {
   async create(req: Request, res: Response): Promise<void> {
     try {
       const task = await taskService.create(req.body, getUserId(req))
+
+      // P0修复: 集成通知到业务流程 - 通知任务执行者
+      if (task.assigneeId) {
+        try {
+          await createNotification({
+            userId: task.assigneeId,
+            type: 'TASK',
+            title: '新任务分配',
+            content: `您被分配了新任务: ${task.title}`,
+            data: {
+              taskId: task.id,
+              action: 'assigned',
+            },
+          })
+        } catch (notifyError) {
+          console.error('任务通知发送失败:', notifyError)
+        }
+      }
+
       successResponse(res, task, 201)
     } catch (error) {
       errorResponse(res, error instanceof Error ? error.message : '创建任务失败')

@@ -139,11 +139,19 @@ export async function exportReport(req: Request, res: Response): Promise<void> {
   try {
     const { type, filters, format } = req.body;
 
+    // P0修复: 强制添加导出限制，防止内存溢出
+    const exportFilters = {
+      ...filters,
+      // 导出时限制为最近一年数据
+      startDate: filters?.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+      endDate: filters?.endDate || new Date(),
+    };
+
     // 根据类型获取数据
     const dataFetchers: Record<string, () => Promise<unknown>> = {
-      approval: () => reportService.getApprovalStats(filters || {}),
-      equipment: () => reportService.getEquipmentStats(filters || {}),
-      attendance: () => reportService.getAttendanceStats(filters || {}),
+      approval: () => reportService.getApprovalStats(exportFilters),
+      equipment: () => reportService.getEquipmentStats(exportFilters),
+      attendance: () => reportService.getAttendanceStats(exportFilters),
     };
 
     const fetchData = dataFetchers[type];

@@ -41,6 +41,15 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
+// P0-004修复: 白名单文件扩展名
+const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar']
+
+// P0-004修复: 检查文件扩展名是否在白名单
+function isAllowedFileType(filename: string): boolean {
+  const ext = path.extname(filename).toLowerCase()
+  return ALLOWED_EXTENSIONS.includes(ext)
+}
+
 // 获取文件类型
 function getFileType(filename: string): DocumentType {
   const ext = path.extname(filename).toLowerCase()
@@ -61,6 +70,20 @@ function getFileType(filename: string): DocumentType {
     '.rar': 'RAR',
   }
   return typeMap[ext] || 'OTHER'
+}
+
+// P0-001修复: 验证文件路径，防止路径遍历攻击
+function sanitizeFilePath(filePath: string, baseDir: string): string {
+  // 解析为绝对路径
+  const resolvedPath = path.resolve(filePath)
+  const resolvedBaseDir = path.resolve(baseDir)
+
+  // 确保文件路径在基础目录内
+  if (!resolvedPath.startsWith(resolvedBaseDir)) {
+    throw new Error('无效的文件路径: 检测到路径遍历攻击')
+  }
+
+  return resolvedPath
 }
 
 export class DocumentService {
@@ -98,12 +121,26 @@ export class DocumentService {
   }
 
   // 更新文件夹
-  async updateFolder(id: string, data: FolderUpdateInput): Promise<{
+  async updateFolder(id: string, data: FolderUpdateInput, userId: string): Promise<{
     id: string
     name: string
     updatedAt: Date
   }> {
-    const folder = await prisma.documentFolder.update({
+    // P0-002修复: 验证文件夹所有权
+    const folder = await prisma.documentFolder.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    })
+
+    if (!folder) {
+      throw new Error('文件夹不存在')
+    }
+
+    if (folder.ownerId !== userId) {
+      throw new Error('无权操作: 只有文件夹所有者可以更新文件夹')
+    }
+
+    const updated = await prisma.documentFolder.update({
       where: { id },
       data: {
         name: data.name,
@@ -117,13 +154,27 @@ export class DocumentService {
     })
 
     return {
-      ...folder,
-      updatedAt: new Date(folder.updatedAt),
+      ...updated,
+      updatedAt: new Date(updated.updatedAt),
     }
   }
 
   // 删除文件夹
-  async deleteFolder(id: string): Promise<void> {
+  async deleteFolder(id: string, userId: string): Promise<void> {
+    // P0-002修复: 验证文件夹所有权
+    const folder = await prisma.documentFolder.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    })
+
+    if (!folder) {
+      throw new Error('文件夹不存在')
+    }
+
+    if (folder.ownerId !== userId) {
+      throw new Error('无权操作: 只有文件夹所有者可以删除文件夹')
+    }
+
     // 检查文件夹是否为空
     const documentCount = await prisma.document.count({
       where: { folderId: id, isActive: true },
@@ -247,6 +298,19 @@ export class DocumentService {
     ownerId: string
     createdAt: Date
   }> {
+    // P0-004修复: 验证文件类型白名单
+    if (!isAllowedFileType(file.originalname)) {
+      // 删除已上传的文件
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path)
+      }
+      throw new Error('不支持的文件类型')
+    }
+
+    // P0-001修复: 验证文件路径安全
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads'
+    sanitizeFilePath(file.path, uploadDir)
+
     const type = getFileType(file.originalname)
 
     const document = await prisma.document.create({
@@ -369,7 +433,7 @@ export class DocumentService {
   }
 
   // 彻底删除文档
-  async permanentlyDeleteDocument(id: string): Promise<void> {
+  async permanentlyDeleteDocument(id: string, userId: string): Promise<void> {
     const document = await prisma.document.findUnique({
       where: { id },
       include: { versions: true },
@@ -377,10 +441,23 @@ export class DocumentService {
 
     if (!document) return
 
+    // P0-003修复: 验证文档所有权
+    if (document.ownerId !== userId) {
+      throw new Error('无权操作: 只有文档所有者可以彻底删除文档')
+    }
+
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads'
+
     // 删除所有版本文件
     for (const version of document.versions) {
-      if (fs.existsSync(version.path)) {
-        fs.unlinkSync(version.path)
+      try {
+        // P0-001修复: 验证文件路径安全
+        const safePath = sanitizeFilePath(version.path, uploadDir)
+        if (fs.existsSync(safePath)) {
+          fs.unlinkSync(safePath)
+        }
+      } catch (error) {
+        console.error(`删除文件失败: ${version.path}`, error)
       }
     }
 
@@ -578,6 +655,15 @@ export class DocumentService {
     })
 
     if (!document) return null
+
+    // P0-001修复: 验证文件路径安全
+    try {
+      const uploadDir = process.env.UPLOAD_DIR || 'uploads'
+      sanitizeFilePath(document.path, uploadDir)
+    } catch (error) {
+      console.error('文件路径验证失败:', error)
+      return null
+    }
 
     return {
       path: document.path,

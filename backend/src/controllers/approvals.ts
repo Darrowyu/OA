@@ -9,6 +9,7 @@ import { archiveApplication } from '../services/archive';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
+import { sendApprovalNotification } from '../services/notificationService';
 
 // 审批级别配置
 type ApprovalLevel = 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
@@ -210,6 +211,20 @@ async function processApproval(
     });
 
     const newStatus = getNextStatus(application.status, action);
+
+    // P0修复: 集成通知到业务流程 - 通知申请人审批结果
+    try {
+      const actionType = action === 'APPROVE' ? 'approve' : 'reject' as const;
+      await sendApprovalNotification(
+        application.applicantId,
+        applicationId,
+        application.applicationNo,
+        application.title,
+        actionType
+      );
+    } catch (notifyError) {
+      logger.error('审批通知发送失败', { error: notifyError });
+    }
 
     res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
