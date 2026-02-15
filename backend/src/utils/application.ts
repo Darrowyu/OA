@@ -53,7 +53,6 @@ export function getNextStatus(
   action: 'APPROVE' | 'REJECT',
   options?: {
     skipManager?: boolean;
-    isSpecialManager?: boolean;
   }
 ): ApplicationStatus {
   if (action === 'REJECT') {
@@ -66,9 +65,7 @@ export function getNextStatus(
     [ApplicationStatus.PENDING_DIRECTOR]: options?.skipManager
       ? ApplicationStatus.PENDING_CEO
       : ApplicationStatus.PENDING_MANAGER,
-    [ApplicationStatus.PENDING_MANAGER]: options?.isSpecialManager
-      ? ApplicationStatus.APPROVED
-      : ApplicationStatus.PENDING_CEO,
+    [ApplicationStatus.PENDING_MANAGER]: ApplicationStatus.PENDING_CEO,
     [ApplicationStatus.PENDING_CEO]: ApplicationStatus.APPROVED,
     [ApplicationStatus.APPROVED]: ApplicationStatus.APPROVED,
     [ApplicationStatus.REJECTED]: ApplicationStatus.REJECTED,
@@ -87,7 +84,6 @@ export function needsCeoApproval(amount: number | null, skipManager: boolean): b
   return !skipManager;
 }
 
-export { isSpecialManager } from '../config/special-rules'; // 重新导出配置函数保持向后兼容
 
 /**
  * 获取状态显示文本

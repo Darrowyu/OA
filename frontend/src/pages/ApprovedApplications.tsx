@@ -663,10 +663,10 @@ export function ApprovedApplications() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-sm">
-                                    {record.approverName}
+                                    {record.approver?.name || '未知用户'}
                                   </span>
                                   <Badge variant="outline" className="text-xs">
-                                    {record.approverRole}
+                                    {record.approver?.role || ''}
                                   </Badge>
                                   <span className={cn("text-sm", actionConfig.color)}>
                                     {actionConfig.label}

@@ -3,8 +3,6 @@ import apiClient from '@/lib/api';
 export interface ApprovalRequest {
   action: 'APPROVE' | 'REJECT';
   comment?: string;
-  selectedManagerIds?: string[];
-  skipManager?: boolean;
 }
 
 import { ApprovalRecord } from '@/types';

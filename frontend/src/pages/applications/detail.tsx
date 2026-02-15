@@ -356,11 +356,11 @@ export function ApplicationDetail() {
                 </div>
               ) : (
                 approvalHistory.map((record) => {
-                  const levelMap: Record<string, 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO'> = {
-                    '厂长': 'FACTORY', '总监': 'DIRECTOR', '经理': 'MANAGER', 'CEO': 'CEO',
-                  }
-                  const level = levelMap[record.approverRole]
+                  const level = record.level
                   const showWithdraw = level && canWithdraw(level) && record.approverId === user?.id
+                  const roleNameMap: Record<string, string> = {
+                    'FACTORY': '厂长', 'DIRECTOR': '总监', 'MANAGER': '经理', 'CEO': 'CEO',
+                  }
 
                   return (
                     <div key={record.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors">
@@ -377,8 +377,8 @@ export function ApplicationDetail() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-900">
-                              {record.approverName}
-                              <span className="text-gray-500 font-normal ml-1">({record.approverRole})</span>
+                              {record.approver?.name || '未知用户'}
+                              <span className="text-gray-500 font-normal ml-1">({roleNameMap[level] || level})</span>
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">{formatDate(record.createdAt)}</p>
                           </div>

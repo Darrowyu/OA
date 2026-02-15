@@ -19,7 +19,7 @@ export function getApplicationStatusDesc(
     case ApplicationStatus.PENDING_DIRECTOR:
       // 检查是否经过了厂长审批
       const hasFactoryApproval = approvalHistory?.some(
-        (record) => record.approverRole === 'FACTORY_MANAGER' && record.action === 'APPROVE'
+        (record) => record.level === 'FACTORY' && record.action === 'APPROVE'
       );
       if (hasFactoryApproval) {
         return '厂长已审批通过，等待总监审批';
@@ -29,7 +29,7 @@ export function getApplicationStatusDesc(
     case ApplicationStatus.PENDING_MANAGER:
       // 检查审批历史
       const hasDirectorApproval = approvalHistory?.some(
-        (record) => record.approverRole === 'DIRECTOR' && record.action === 'APPROVE'
+        (record) => record.level === 'DIRECTOR' && record.action === 'APPROVE'
       );
       if (hasDirectorApproval) {
         return '总监已审批通过，等待经理审批';
@@ -39,7 +39,7 @@ export function getApplicationStatusDesc(
     case ApplicationStatus.PENDING_CEO:
       // 检查审批历史
       const hasManagerApproval = approvalHistory?.some(
-        (record) => record.approverRole === 'MANAGER' && record.action === 'APPROVE'
+        (record) => record.level === 'MANAGER' && record.action === 'APPROVE'
       );
       if (hasManagerApproval) {
         return '经理已审批通过，等待CEO审批';
@@ -53,7 +53,7 @@ export function getApplicationStatusDesc(
       // 查找拒绝的审批人
       const rejectRecord = approvalHistory?.find((record) => record.action === 'REJECT');
       if (rejectRecord) {
-        return `已被${rejectRecord.approverName}(${getRoleLabel(rejectRecord.approverRole)})拒绝`;
+        return `已被${rejectRecord.approver?.name || '未知用户'}(${getRoleLabel(rejectRecord.approver?.role || '')})拒绝`;
       }
       return '已拒绝';
 

@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -19,12 +18,10 @@ import {
   ApplicationStatus,
   UserRole,
   Priority,
-  User,
 } from "@/types"
 import { useAuth } from "@/contexts/AuthContext"
 import { applicationsApi } from "@/services/applications"
 import { approvalsApi, ApprovalRequest } from "@/services/approvals"
-import { usersApi } from "@/services/users"
 import { formatDate, formatAmount, cn } from "@/lib/utils"
 import { useSignature } from "@/hooks/useSignature"
 import { SignatureDialog } from "@/components/SignatureDialog"
@@ -94,8 +91,6 @@ export function PendingApprovals() {
   const [loading, setLoading] = React.useState(true)
   const [processingId, setProcessingId] = React.useState<string | null>(null)
   const [signatureDialogOpen, setSignatureDialogOpen] = React.useState(false)
-  const [managers, setManagers] = React.useState<User[]>([])
-  const [loadingManagers, setLoadingManagers] = React.useState(false)
 
   // 审批对话框状态
   const [approvalDialog, setApprovalDialog] = React.useState<{
@@ -103,15 +98,11 @@ export function PendingApprovals() {
     application: Application | null
     action: "APPROVE" | "REJECT" | null
     comment: string
-    skipManager: boolean
-    selectedManagerIds: string[]
   }>({
     open: false,
     application: null,
     action: null,
     comment: "",
-    skipManager: false,
-    selectedManagerIds: [],
   })
 
   // 查看详情对话框
@@ -122,19 +113,6 @@ export function PendingApprovals() {
     open: false,
     application: null,
   })
-
-  // 加载经理列表（用于总监审批时选择）
-  const loadManagers = React.useCallback(async () => {
-    setLoadingManagers(true)
-    try {
-      const response = await usersApi.getManagers()
-      setManagers(response.data || [])
-    } catch (error) {
-      logger.error("加载经理列表失败", { error })
-    } finally {
-      setLoadingManagers(false)
-    }
-  }, [])
 
   // 加载待审批列表
   const loadPendingApplications = React.useCallback(async () => {
@@ -175,24 +153,17 @@ export function PendingApprovals() {
     application: Application,
     action: "APPROVE" | "REJECT"
   ) => {
-    // 如果是总监审批且是通过操作，加载经理列表
-    if (user?.role === UserRole.DIRECTOR && action === "APPROVE") {
-      await loadManagers()
-    }
-
     setApprovalDialog({
       open: true,
       application,
       action,
       comment: "",
-      skipManager: false,
-      selectedManagerIds: [],
     })
   }
 
   // 提交审批
   const submitApproval = async () => {
-    const { application, action, comment, skipManager, selectedManagerIds } = approvalDialog
+    const { application, action, comment } = approvalDialog
     if (!application || !action || !user) return
 
     // 如果是拒绝操作，不需要签名
@@ -204,12 +175,6 @@ export function PendingApprovals() {
         setSignatureDialogOpen(true)
         return
       }
-
-      // 总监审批时，如果不跳过经理，必须选择至少一个经理
-      if (user.role === UserRole.DIRECTOR && !skipManager && selectedManagerIds.length === 0) {
-        toast.error("请选择至少一位经理进行审批")
-        return
-      }
     }
 
     setProcessingId(application.id)
@@ -217,8 +182,6 @@ export function PendingApprovals() {
       const data: ApprovalRequest = {
         action,
         comment: comment.trim() || undefined,
-        skipManager,
-        selectedManagerIds: selectedManagerIds.length > 0 ? selectedManagerIds : undefined,
       }
 
       // 根据角色调用不同的审批接口
@@ -241,7 +204,7 @@ export function PendingApprovals() {
       }
 
       toast.success(response.message || (action === "APPROVE" ? "审批通过" : "已拒绝"))
-      setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })
+      setApprovalDialog({ open: false, application: null, action: null, comment: "" })
       loadPendingApplications()
     } catch (error) {
       toast.error(getUserFriendlyMessage(error) || "审批失败")
@@ -479,77 +442,6 @@ export function PendingApprovals() {
                 </div>
               )}
 
-              {/* 总监审批时显示经理选择 */}
-              {user?.role === UserRole.DIRECTOR && approvalDialog.action === "APPROVE" && (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="skipManager"
-                      checked={approvalDialog.skipManager}
-                      onCheckedChange={(checked) =>
-                        setApprovalDialog({
-                          ...approvalDialog,
-                          skipManager: checked as boolean,
-                          selectedManagerIds: checked ? [] : approvalDialog.selectedManagerIds,
-                        })
-                      }
-                    />
-                    <Label htmlFor="skipManager" className="text-sm cursor-pointer">
-                      跳过经理审批，直接提交CEO
-                    </Label>
-                  </div>
-
-                  {/* 经理选择列表 */}
-                  {!approvalDialog.skipManager && (
-                    <div className="border rounded-md p-3 space-y-2">
-                      <Label className="text-sm font-medium">选择审批经理：</Label>
-                      {loadingManagers ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                          <span className="text-sm text-gray-500">加载经理列表...</span>
-                        </div>
-                      ) : managers.length === 0 ? (
-                        <p className="text-sm text-gray-500 py-2">暂无经理用户</p>
-                      ) : (
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {managers.map((manager) => (
-                            <div key={manager.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`manager-${manager.id}`}
-                                checked={approvalDialog.selectedManagerIds.includes(manager.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setApprovalDialog({
-                                      ...approvalDialog,
-                                      selectedManagerIds: [...approvalDialog.selectedManagerIds, manager.id],
-                                    })
-                                  } else {
-                                    setApprovalDialog({
-                                      ...approvalDialog,
-                                      selectedManagerIds: approvalDialog.selectedManagerIds.filter(
-                                        (id) => id !== manager.id
-                                      ),
-                                    })
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`manager-${manager.id}`} className="text-sm cursor-pointer">
-                                {manager.name} ({manager.department || '无部门'})
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {approvalDialog.selectedManagerIds.length > 0 && (
-                        <p className="text-xs text-gray-500">
-                          已选择 {approvalDialog.selectedManagerIds.length} 位经理
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div>
                 <Label htmlFor="comment">审批备注</Label>
                 <Textarea
@@ -566,7 +458,7 @@ export function PendingApprovals() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setApprovalDialog({ open: false, application: null, action: null, comment: "", skipManager: false, selectedManagerIds: [] })}
+              onClick={() => setApprovalDialog({ open: false, application: null, action: null, comment: "" })}
             >
               取消
             </Button>

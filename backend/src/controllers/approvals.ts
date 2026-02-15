@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { ApplicationStatus, ApprovalAction, UserRole, Prisma } from '@prisma/client';
 import {
   getNextStatus,
-  isSpecialManager,
   shouldNotifyReadonly,
   getStatusText,
 } from '../utils/application';
@@ -131,8 +130,7 @@ async function processApproval(
       }
 
       const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-      const isSpecial = level === 'MANAGER' ? await isSpecialManager(user.employeeId || '') : false;
-      const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
+      const newStatus = getNextStatus(application.status, action);
 
       // 更新或创建审批记录
       const existingApproval = await config.txModel.findFirst({
@@ -184,8 +182,8 @@ async function processApproval(
           data: updateData,
         });
 
-        // 非特殊经理审批通过后创建CEO审批记录
-        if (level === 'MANAGER' && !isSpecial) {
+        // 经理审批通过后创建CEO审批记录
+        if (level === 'MANAGER') {
           const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
           if (ceo) {
             await tx.ceoApproval.create({
@@ -199,7 +197,7 @@ async function processApproval(
         }
 
         // 最终审批通过后处理归档
-        if ((level === 'CEO' || (level === 'MANAGER' && isSpecial))) {
+        if (level === 'CEO') {
           await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
           const archiveResult = await archiveApplication(applicationId, tx);
           if (!archiveResult.success) {
@@ -208,17 +206,15 @@ async function processApproval(
         }
       }
 
-      return { newStatus, isSpecial };
+      return { newStatus };
     });
 
-    const isSpecial = level === 'MANAGER' ? await isSpecialManager(user.employeeId || '') : false;
-    const newStatus = getNextStatus(application.status, action, { isSpecialManager: isSpecial });
+    const newStatus = getNextStatus(application.status, action);
 
     res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
       status: newStatus,
       statusText: getStatusText(newStatus),
-      ...(level === 'MANAGER' && { isSpecialManager: isSpecial }),
     }));
   } catch (error) {
     const msg = error instanceof Error ? error.message : '审批失败';
@@ -349,7 +345,6 @@ export async function directorApprove(req: Request, res: Response): Promise<void
 /**
  * 经理审批
  * POST /api/approvals/manager/:applicationId
- * E10002特殊规则: 审批后直接通过，跳过CEO
  */
 export function managerApprove(req: Request, res: Response): Promise<void> {
   return processApproval('MANAGER', req, res);

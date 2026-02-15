@@ -57,11 +57,16 @@ export interface ApprovalRecord {
   id: string;
   applicationId: string;
   approverId: string;
-  approverName: string;
-  approverRole: string;
+  approver: {
+    id: string;
+    name: string;
+    employeeId: string;
+    role: UserRole;
+  };
   action: ApprovalAction;
   comment: string | null;
   createdAt: string;
+  level: 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
 }
 
 // 申请类型

@@ -96,10 +96,11 @@ model User {
 
   // 关联字段
   applications       Application[]
-  factoryApprovals   FactoryApproval[]
-  directorApprovals  DirectorApproval[]
-  managerApprovals   ManagerApproval[]
-  ceoApprovals       CeoApproval[]
+  approvals          Approval[]           // 新的统一审批表
+  factoryApprovals   FactoryApproval[]    // @deprecated 使用 approvals 替代
+  directorApprovals  DirectorApproval[]   // @deprecated 使用 approvals 替代
+  managerApprovals   ManagerApproval[]    // @deprecated 使用 approvals 替代
+  ceoApprovals       CeoApproval[]        // @deprecated 使用 approvals 替代
   attachments        Attachment[]
   reminderLogs       ReminderLog[]
   preference         UserPreference? // 用户偏好设置（一对一）
@@ -155,10 +156,11 @@ model Application {
 
   // 关联字段
   applicant         User               @relation(fields: [applicantId], references: [id])
-  factoryApprovals  FactoryApproval[]
-  directorApprovals DirectorApproval[]
-  managerApprovals  ManagerApproval[]
-  ceoApprovals      CeoApproval[]
+  approvals         Approval[]         // 新的统一审批表
+  factoryApprovals  FactoryApproval[]  // @deprecated 使用 approvals 替代
+  directorApprovals DirectorApproval[] // @deprecated 使用 approvals 替代
+  managerApprovals  ManagerApproval[]  // @deprecated 使用 approvals 替代
+  ceoApprovals      CeoApproval[]      // @deprecated 使用 approvals 替代
   attachments       Attachment[]
   reminderLogs      ReminderLog[]
   archiveRecord     ArchiveRecord?
@@ -171,6 +173,36 @@ model Application {
   @@index([status, applicantId, submittedAt])
 }
 
+// ============================================
+// 统一审批表 (新的设计)
+// ============================================
+model Approval {
+  id            String         @id @default(cuid())
+  applicationId String
+  approverId    String
+  level         Int            // 1=Factory, 2=Director, 3=Manager, 4=CEO
+  action        ApprovalAction @default(PENDING)
+  comment       String?
+  metadata      Json?          // 存储特殊字段如skipManager, selectedManagerIds
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // 关联字段
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver    User        @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId, level])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([level])
+  @@map("approvals")
+}
+
+// ============================================
+// 旧审批表 (已废弃，保留用于数据迁移)
+// ============================================
+
+// @deprecated 使用 Approval 模型替代 (level=1)
 model FactoryApproval {
   id            String         @id @default(cuid())
   applicationId String
@@ -191,6 +223,7 @@ model FactoryApproval {
   @@index([action])
 }
 
+// @deprecated 使用 Approval 模型替代 (level=2)
 model DirectorApproval {
   id                 String         @id @default(cuid())
   applicationId      String
@@ -213,6 +246,7 @@ model DirectorApproval {
   @@index([action])
 }
 
+// @deprecated 使用 Approval 模型替代 (level=3)
 model ManagerApproval {
   id            String         @id @default(cuid())
   applicationId String
@@ -233,6 +267,7 @@ model ManagerApproval {
   @@index([action])
 }
 
+// @deprecated 使用 Approval 模型替代 (level=4)
 model CeoApproval {
   id            String         @id @default(cuid())
   applicationId String
