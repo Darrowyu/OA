@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { UserRole, Prisma } from '@prisma/client';
 import logger from '../lib/logger';
 import { success, fail } from '../utils/response';
+import { config } from '../config';
 
 // 查询参数类型
 interface UserQueryParams {
@@ -106,18 +107,11 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
           id: true,
           username: true,
           name: true,
-          email: true,
           role: true,
-          departmentId: true,
-          employeeId: true,
           isActive: true,
-          createdAt: true,
-          updatedAt: true,
           department: {
             select: {
-              id: true,
               name: true,
-              code: true,
             }
           }
         },
@@ -176,6 +170,13 @@ export async function getUser(req: Request, res: Response): Promise<void> {
 
     if (!user) {
       res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
+      return;
+    }
+
+    // 权限检查：只有管理员或本人可以查看
+    const currentUser = (req as Request & { user: { id: string; role: string } }).user;
+    if (currentUser.role !== 'ADMIN' && currentUser.id !== id) {
+      res.status(403).json(fail('FORBIDDEN', '无权查看此用户信息'));
       return;
     }
 
@@ -254,7 +255,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     }
 
     // 加密密码
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, config.bcrypt.saltRounds);
 
     // 创建用户
     const user = await prisma.user.create({

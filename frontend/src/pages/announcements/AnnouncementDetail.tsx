@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import {
   ArrowLeft,
   Calendar,
@@ -235,7 +236,7 @@ export default function AnnouncementDetailPage() {
             <div className="p-6">
               <div
                 className="prose prose-slate max-w-none"
-                dangerouslySetInnerHTML={{ __html: announcement.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(announcement.content) }}
               />
             </div>
 

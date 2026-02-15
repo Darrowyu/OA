@@ -7,6 +7,7 @@ import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
 import { config } from '../config';
 
+import { auditLogin, auditLogout } from '../middleware/auditMiddleware';
 // 请求类型定义
 interface LoginRequest {
   username: string;
@@ -79,6 +80,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       where: { id: user.id },
       data: { updatedAt: new Date() },
     });
+    // 记录登录审计
+    await auditLogin(req, user.id, true, { username: user.username });
 
     res.json(ok({
       user: {
@@ -327,7 +330,7 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     }
 
     // 加密新密码
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
 
     // 更新密码
     await prisma.user.update({
@@ -345,8 +348,12 @@ export async function changePassword(req: Request, res: Response): Promise<void>
 /**
  * 用户登出
  */
-export async function logout(_req: Request, res: Response): Promise<void> {
+export async function logout(req: Request, res: Response): Promise<void> {
   // 由于使用JWT无状态认证，服务端无需特殊处理
   // 客户端需要删除本地存储的令牌
+  // 记录登出审计
+  if (req.user) {
+    await auditLogout(req, req.user.userId);
+  }
   res.json(ok({ message: '登出成功' }));
 }

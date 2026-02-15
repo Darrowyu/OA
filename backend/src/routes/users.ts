@@ -15,6 +15,7 @@ import {
 } from '../controllers/users';
 import { authMiddleware, requireRole, requireMinRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
+import { auditMiddleware } from '../middleware/auditMiddleware';
 
 const router = Router();
 
@@ -47,7 +48,11 @@ router.get('/', requireMinRole(UserRole.MANAGER), getUsers);
  * @desc    创建新用户
  * @access  Private (Admin only)
  */
-router.post('/', requireRole(UserRole.ADMIN), createUser);
+router.post('/', requireRole(UserRole.ADMIN), auditMiddleware({
+  action: 'CREATE_USER',
+  entityType: 'User',
+  captureNewValues: true
+}), createUser);
 
 /**
  * @route   POST /api/users/import
@@ -83,21 +88,36 @@ router.get('/:id', requireMinRole(UserRole.MANAGER), getUser);
  * @desc    更新用户信息
  * @access  Private (Admin only)
  */
-router.put('/:id', requireRole(UserRole.ADMIN), updateUser);
+router.put('/:id', requireRole(UserRole.ADMIN), auditMiddleware({
+  action: 'UPDATE_USER',
+  entityType: 'User',
+  entityIdExtractor: (req) => req.params.id,
+  captureOldValues: true,
+  captureNewValues: true
+}), updateUser);
 
 /**
  * @route   DELETE /api/users/:id
  * @desc    删除用户
  * @access  Private (Admin only)
  */
-router.delete('/:id', requireRole(UserRole.ADMIN), deleteUser);
+router.delete('/:id', requireRole(UserRole.ADMIN), auditMiddleware({
+  action: 'DELETE_USER',
+  entityType: 'User',
+  entityIdExtractor: (req) => req.params.id,
+  captureOldValues: true
+}), deleteUser);
 
 /**
  * @route   POST /api/users/:id/reset-password
  * @desc    重置用户密码
  * @access  Private (Admin only)
  */
-router.post('/:id/reset-password', requireRole(UserRole.ADMIN), resetPassword);
+router.post('/:id/reset-password', requireRole(UserRole.ADMIN), auditMiddleware({
+  action: 'RESET_PASSWORD',
+  entityType: 'User',
+  entityIdExtractor: (req) => req.params.id
+}), resetPassword);
 
 /**
  * @route   GET /api/users/:id/contact

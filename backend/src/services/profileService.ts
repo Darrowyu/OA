@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
+import { config } from '../config';
 import type {
   Theme,
   InterfaceDensity,
@@ -138,7 +139,7 @@ export async function updateAvatar(userId: string, avatarUrl: string) {
  * 修改密码
  */
 export async function changePassword(userId: string, newPassword: string) {
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  const hashedPassword = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
   await prisma.user.update({
     where: { id: userId },
     data: { password: hashedPassword },

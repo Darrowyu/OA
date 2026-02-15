@@ -46,7 +46,7 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
     (req as unknown as Record<string, unknown>).auditRequestId = requestId;
 
     // 捕获旧值（用于更新操作）
-    if (captureOldValues && req.method === 'PUT' || req.method === 'PATCH') {
+    if (captureOldValues && (req.method === 'PUT' || req.method === 'PATCH')) {
       // 这里可以根据entityType和entityId查询原始数据
       // 实际实现需要在业务逻辑中处理
     }

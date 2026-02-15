@@ -5,6 +5,7 @@ import fs from 'fs'
 import { folderController, documentController } from '../controllers/documentController'
 import { authenticate, requireMinRole } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
+import { auditMiddleware } from '../middleware/auditMiddleware'
 
 const router = Router()
 
@@ -71,12 +72,27 @@ router.use(authenticate)
 // 文件夹路由 - 路径 /api/documents/folders
 // ============================================
 
-router.post('/folders', asyncHandler(folderController.create))
+router.post('/folders', auditMiddleware({
+  action: 'CREATE_FOLDER',
+  entityType: 'Folder',
+  captureNewValues: true
+}), asyncHandler(folderController.create))
 router.get('/folders/tree', asyncHandler(folderController.getTree))
 router.get('/folders/:parentId/subfolders', asyncHandler(folderController.getSubFolders))
 router.get('/folders/:id', asyncHandler(folderController.getById))
-router.put('/folders/:id', asyncHandler(folderController.update))
-router.delete('/folders/:id', asyncHandler(folderController.delete))
+router.put('/folders/:id', auditMiddleware({
+  action: 'UPDATE_FOLDER',
+  entityType: 'Folder',
+  entityIdExtractor: (req) => req.params.id,
+  captureOldValues: true,
+  captureNewValues: true
+}), asyncHandler(folderController.update))
+router.delete('/folders/:id', auditMiddleware({
+  action: 'DELETE_FOLDER',
+  entityType: 'Folder',
+  entityIdExtractor: (req) => req.params.id,
+  captureOldValues: true
+}), asyncHandler(folderController.delete))
 
 // ============================================
 // 文档路由 - 根路径 /api/documents

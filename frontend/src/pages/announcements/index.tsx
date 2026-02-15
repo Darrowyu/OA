@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import {
   Bell,
   Plus,
@@ -123,7 +124,7 @@ function AnnouncementCard({
 
           <p
             className="text-sm text-gray-500 mt-2 line-clamp-2"
-            dangerouslySetInnerHTML={{ __html: announcement.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(announcement.content) }}
           />
 
           <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
