@@ -290,7 +290,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
 }
 
 /**
- * 修改密码
+ * 修改密码（需要登录）
  */
 export async function changePassword(req: Request, res: Response): Promise<void> {
   try {
@@ -341,6 +341,65 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     res.json(ok({ message: '密码修改成功' }));
   } catch (error) {
     logger.error('修改密码失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '修改密码时发生错误'));
+  }
+}
+
+// 公共修改密码请求类型
+interface PublicChangePasswordRequest {
+  username: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
+/**
+ * 公共修改密码（无需登录，用于登录页面）
+ */
+export async function publicChangePassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { username, currentPassword, newPassword } = req.body as PublicChangePasswordRequest;
+
+    if (!username || !currentPassword || !newPassword) {
+      res.status(400).json(fail('MISSING_FIELDS', '请提供用户名、原密码和新密码'));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json(fail('WEAK_PASSWORD', '新密码长度至少为6位'));
+      return;
+    }
+
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (!user) {
+      res.status(404).json(fail('USER_NOT_FOUND', '用户不存在'));
+      return;
+    }
+
+    // 验证原密码
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+      res.status(400).json(fail('INVALID_PASSWORD', '用户名或原密码不正确'));
+      return;
+    }
+
+    // 加密新密码
+    const hashedNewPassword = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
+
+    // 更新密码
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedNewPassword },
+    });
+
+    logger.info('用户通过公共接口修改密码成功', { username });
+    res.json(ok({ message: '密码修改成功' }));
+  } catch (error) {
+    logger.error('公共修改密码失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '修改密码时发生错误'));
   }
 }

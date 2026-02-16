@@ -30,6 +30,12 @@ interface ChangePasswordResponse {
   message?: string;
 }
 
+export interface ChangePasswordPublicRequest {
+  username: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
 export const authApi = {
   login: (data: LoginRequest): Promise<LoginResponse> =>
     apiClient.post<LoginResponse>('/auth/login', data),
@@ -39,4 +45,6 @@ export const authApi = {
     apiClient.get('/auth/me'),
   changePassword: (oldPassword: string, newPassword: string): Promise<ChangePasswordResponse> =>
     apiClient.post('/auth/change-password', { oldPassword, newPassword }),
+  changePasswordPublic: (data: ChangePasswordPublicRequest): Promise<ChangePasswordResponse> =>
+    apiClient.post('/auth/change-password-public', data),
 };

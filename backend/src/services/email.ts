@@ -150,15 +150,14 @@ export async function sendEmailNotification(
     } catch (error) {
       if (!hasLoggedFailure) {
         const logPrefix = applicationCode ? `申请 ${applicationCode}: ` : '';
-        logger.error(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败，开始重试中...`, { error: (error as Error).message });
+        logger.error(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}邮件发送失败，开始无限重试中...`, { error: (error as Error).message });
         hasLoggedFailure = true;
       }
 
       retryCount++;
-      // 检查是否超过最大重试次数
-      if (retryCount >= config.email.maxRetries) {
-        throw new Error('邮件发送失败，超过最大重试次数');
-      }
+      // 无限重试直到成功 - 符合业务要求
+      const logPrefix = applicationCode ? `申请 ${applicationCode}: ` : '';
+      logger.info(`【${new Date().toLocaleString('zh-CN')}】${logPrefix}第 ${retryCount} 次重试，${config.email.retryDelay}ms 后重试...`);
       await new Promise(resolve => setTimeout(resolve, config.email.retryDelay));
       return await sendMail();
     }

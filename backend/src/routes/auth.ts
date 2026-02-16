@@ -5,6 +5,7 @@ import {
   refreshToken,
   getCurrentUser,
   changePassword,
+  publicChangePassword,
   logout,
 } from '../controllers/auth';
 import { authMiddleware } from '../middleware/auth';
@@ -52,5 +53,12 @@ router.post('/change-password', authMiddleware, changePassword);
  * @access  Private
  */
 router.post('/logout', authMiddleware, logout);
+
+/**
+ * @route   POST /api/auth/change-password-public
+ * @desc    公共修改密码（无需登录）
+ * @access  Public
+ */
+router.post('/change-password-public', publicChangePassword);
 
 export default router;

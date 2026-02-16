@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { PanelLeft, PanelRight, Loader2 } from "lucide-react"
 import { Login } from "@/pages/Login"
+import { ChangePassword } from "@/pages/ChangePassword"
 import Dashboard from "@/pages/dashboard"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Sidebar } from "@/components/Sidebar"
@@ -140,6 +141,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* 工作台 - 新设计 Dashboard */}

@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Mail, Lock, LayoutDashboard, ArrowRight } from "lucide-react"
+import { Loader2, ArrowRight, AlertCircle } from "lucide-react"
 import { authApi } from "@/services/auth"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -27,115 +26,110 @@ export function Login() {
 
     try {
       const response = await authApi.login(formData)
-
-      if (!response.success) {
-        throw new Error("登录失败")
-      }
+      if (!response.success) throw new Error("登录失败")
 
       const { user, accessToken, refreshToken } = response.data
-
       localStorage.setItem("accessToken", accessToken)
       localStorage.setItem("refreshToken", refreshToken)
       localStorage.setItem("user", JSON.stringify(user))
-
       login(user, accessToken)
-
       navigate("/approval")
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : '登录失败';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : "登录失败")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo区域 */}
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-coral text-white shadow-xl shadow-coral/30 mb-4">
-            <LayoutDashboard className="h-8 w-8" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white mb-4">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">OA系统</h1>
-          <p className="text-sm text-gray-500 mt-1">办公自动化管理平台</p>
+          <h1 className="text-xl font-semibold text-slate-900">Makrite OA</h1>
+          <p className="text-sm text-slate-500 mt-1">办公自动化管理系统</p>
         </div>
 
         {/* 登录卡片 */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-8 border border-gray-100">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">欢迎回来</h2>
-            <p className="text-sm text-gray-500 mt-1">请登录您的账户</p>
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h2 className="text-base font-medium text-slate-900 mb-6">登录</h2>
 
           {error && (
-            <Alert variant="destructive" className="mb-6 rounded-xl bg-red-50 border-red-200 text-red-700">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-gray-700">用户名</Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="请输入用户名"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="pl-11 h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-coral focus:ring-coral/20 transition-all"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-sm text-slate-700">用户名</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="请输入用户名"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="h-10 rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                required
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">密码</Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="请输入密码"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-11 h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-coral focus:ring-coral/20 transition-all"
-                  required
-                />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm text-slate-700">密码</Label>
+                <button
+                  type="button"
+                  onClick={() => navigate("/change-password")}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  修改密码
+                </button>
               </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="请输入密码"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="h-10 rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                required
+              />
             </div>
 
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-coral hover:bg-coral-dark shadow-lg shadow-coral/30 text-base font-medium transition-all"
+              className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   登录中...
                 </>
               ) : (
                 <>
                   登录
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">
-              默认账号: <span className="font-mono text-gray-600">admin / admin123</span>
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-center text-xs text-slate-400">
+              默认账号: <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">admin / admin123</code>
             </p>
           </div>
         </div>
 
-        {/* 底部版权 */}
-        <p className="text-center text-xs text-gray-400 mt-8">
-          © 2024 OA系统. All rights reserved.
+        <p className="text-center text-xs text-slate-400 mt-6">
+          © 2024 Makrite OA System
         </p>
       </div>
     </div>
