@@ -5,9 +5,22 @@ import fs from 'fs'
 import { folderController, documentController } from '../controllers/documentController'
 import { authenticate, requireMinRole } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
-import { auditMiddleware } from '../middleware/auditMiddleware'
+import { auditMiddleware, manualAudit } from '../middleware/auditMiddleware'
+import logger from '../lib/logger'
+import { documentPermissionMiddleware } from '../middleware/documentPermission'
 
 const router = Router()
+
+/**
+ * 格式化文件大小
+ */
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 // 文档上传目录
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'documents')
@@ -98,18 +111,113 @@ router.delete('/folders/:id', auditMiddleware({
 // 文档路由 - 根路径 /api/documents
 // ============================================
 
-// 上传文档
+// 上传文档 - 带审计日志
 router.post(
   '/',
   upload.single('file'),
-  asyncHandler(documentController.upload)
+  asyncHandler(async (req, res) => {
+    const file = req.file
+    const userId = (req as unknown as { user: { id: string } }).user?.id
+
+    // 记录上传开始日志
+    logger.info('文件上传开始', {
+      userId,
+      originalName: file?.originalname,
+      mimeType: file?.mimetype,
+      size: file?.size,
+      folderId: req.body.folderId,
+    })
+
+    try {
+      // 执行实际的上传处理
+      await documentController.upload(req, res)
+
+      // 记录上传成功审计日志
+      if (file) {
+        await manualAudit(req, {
+          userId: userId || 'unknown',
+          action: 'DOCUMENT_UPLOAD',
+          entityType: 'Document',
+          description: `上传文件: ${file.originalname} (${formatFileSize(file.size)})`,
+          newValues: {
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            folderId: req.body.folderId,
+          },
+        })
+
+        // 记录安全日志
+        logger.info('文件上传成功', {
+          userId,
+          originalName: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+          // 预留病毒扫描接口
+          virusScanStatus: 'PENDING', // 待集成病毒扫描服务
+        })
+      }
+    } catch (error) {
+      // 记录上传失败日志
+      logger.error('文件上传失败', {
+        userId,
+        originalName: file?.originalname,
+        error: error instanceof Error ? error.message : '未知错误',
+      })
+      throw error
+    }
+  })
 )
 
-// 更新文档（上传新版本）
+// 更新文档（上传新版本）- 带审计日志
 router.put(
   '/:id',
   upload.single('file'),
-  asyncHandler(documentController.update)
+  asyncHandler(async (req, res) => {
+    const { id } = req.params
+    const file = req.file
+    const userId = (req as unknown as { user: { id: string } }).user?.id
+
+    logger.info('文档版本更新开始', {
+      userId,
+      documentId: id,
+      originalName: file?.originalname,
+      size: file?.size,
+    })
+
+    try {
+      await documentController.update(req, res)
+
+      if (file) {
+        await manualAudit(req, {
+          userId: userId || 'unknown',
+          action: 'DOCUMENT_UPDATE_VERSION',
+          entityType: 'Document',
+          entityId: id,
+          description: `更新文档版本: ${file.originalname}`,
+          newValues: {
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+          },
+        })
+
+        logger.info('文档版本更新成功', {
+          userId,
+          documentId: id,
+          originalName: file.originalname,
+          virusScanStatus: 'PENDING',
+        })
+      }
+    } catch (error) {
+      logger.error('文档版本更新失败', {
+        userId,
+        documentId: id,
+        error: error instanceof Error ? error.message : '未知错误',
+      })
+      throw error
+    }
+  })
 )
 
 // 获取文档列表
@@ -121,11 +229,19 @@ router.get('/statistics', asyncHandler(documentController.getStatistics))
 // 获取文档版本历史
 router.get('/:id/versions', asyncHandler(documentController.getVersions))
 
-// 下载文档
-router.get('/:id/download', asyncHandler(documentController.download))
+// 下载文档 - 需要文档访问权限
+router.get(
+  '/:id/download',
+  documentPermissionMiddleware('download'),
+  asyncHandler(documentController.download)
+)
 
-// 预览文档
-router.get('/:id/preview', asyncHandler(documentController.preview))
+// 预览文档 - 需要文档访问权限
+router.get(
+  '/:id/preview',
+  documentPermissionMiddleware('preview'),
+  asyncHandler(documentController.preview)
+)
 
 // 重命名文档
 router.put('/:id/rename', asyncHandler(documentController.rename))

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { NativeSelect as Select } from "@/components/ui/select"
 import { FileUpload } from "./FileUpload"
-import { CreateApplicationRequest, User, Priority, Currency } from "@/types"
+import { CreateApplicationRequest, User, Priority } from "@/types"
 import { UploadResponse } from "@/services/uploads"
 import { Upload } from "lucide-react"
 
@@ -26,11 +26,6 @@ const priorityOptions = [
   { value: Priority.URGENT, label: "紧急" },
 ]
 
-// 货币选项
-const currencyOptions = [
-  { value: Currency.CNY, label: "人民币 (CNY)" },
-  { value: Currency.USD, label: "美元 (USD)" },
-]
 
 export function ApplicationForm({
   factoryManagers,
@@ -42,7 +37,6 @@ export function ApplicationForm({
   const [title, setTitle] = React.useState("")
   const [content, setContent] = React.useState("")
   const [amount, setAmount] = React.useState<string>("")
-  const [currency, setCurrency] = React.useState<Currency>(Currency.CNY)
   const [priority, setPriority] = React.useState<Priority>(Priority.NORMAL)
   const [selectedFactoryManagers, setSelectedFactoryManagers] = React.useState<string[]>([])
   const [selectedManagers, setSelectedManagers] = React.useState<string[]>([])
@@ -99,7 +93,6 @@ export function ApplicationForm({
     // 如果有金额，添加到请求中
     if (amount && Number(amount) > 0) {
       data.amount = Number(amount)
-      data.currency = currency
     }
 
     onSubmit(data)
@@ -197,16 +190,6 @@ export function ApplicationForm({
             step="0.01"
           />
           {errors.amount && <p className="text-sm text-red-500 mt-1">{errors.amount}</p>}
-        </div>
-        <div>
-          <Label htmlFor="currency">货币类型</Label>
-          <Select
-            id="currency"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as Currency)}
-            disabled={loading || !amount}
-            options={currencyOptions}
-          />
         </div>
       </div>
 

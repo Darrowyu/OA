@@ -9,7 +9,6 @@ import {
   ApplicationStatus,
   UserRole,
   ApprovalRecord,
-  Currency,
 } from "@/types"
 import { applicationsApi } from "@/services/applications"
 import { approvalsApi } from "@/services/approvals"
@@ -302,7 +301,7 @@ export function ApplicationDetail() {
                   <p className="text-xs text-gray-500 mb-0.5">金额</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {application.amount
-                      ? `${application.currency === Currency.USD ? "$" : "¥"}${application.amount.toLocaleString()}`
+                      ? `¥${application.amount.toLocaleString()}`
                       : "-"}
                   </p>
                 </div>

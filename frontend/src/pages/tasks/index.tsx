@@ -11,6 +11,7 @@ import { GanttChart } from '@/components/GanttChart'
 import { TaskListView } from './TaskListView'
 import { TaskCalendarView } from './TaskCalendarView'
 import { TaskDetailDialog } from './TaskDetailDialog'
+import { TaskCreateDialog } from './TaskCreateDialog'
 import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus, type Task } from '@/services/tasks'
 import { Plus, Layout, List, BarChart3, Calendar } from 'lucide-react'
 
@@ -31,6 +32,10 @@ export function TasksPage() {
   // 任务详情对话框状态
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  // 新建任务对话框状态
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createDefaultStatus, setCreateDefaultStatus] = useState<TaskStatus>(TaskStatus.TODO)
 
   // 加载看板数据
   const loadKanbanData = useCallback(async () => {
@@ -144,8 +149,8 @@ export function TasksPage() {
 
   // 添加任务
   const handleAddTask = (status: TaskStatus) => {
-    // TODO: 打开新建任务对话框
-    toast.info(`在 ${status} 列添加任务`)
+    setCreateDefaultStatus(status)
+    setIsCreateOpen(true)
   }
 
   return (
@@ -261,6 +266,18 @@ export function TasksPage() {
           loadGanttData()
           loadStats()
         }}
+      />
+
+      {/* 新建任务对话框 */}
+      <TaskCreateDialog
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          loadKanbanData()
+          loadGanttData()
+          loadStats()
+        }}
+        defaultStatus={createDefaultStatus}
       />
     </div>
   )

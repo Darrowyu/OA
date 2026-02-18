@@ -10,7 +10,6 @@ import {
   ApplicationFilter,
   CreateApplicationRequest,
   User,
-  Currency,
 } from "@/types"
 import { applicationsApi, GetApplicationsParams } from "@/services/applications"
 import { usersApi } from "@/services/users"
@@ -138,12 +137,9 @@ export function ApplicationList() {
   const [managers, setManagers] = React.useState<User[]>([])
   const [loadingUsers, setLoadingUsers] = React.useState(false)
   const [stats, setStats] = React.useState({
-    totalRMB: 0,
-    totalUSD: 0,
-    pendingRMB: 0,
-    pendingUSD: 0,
-    approvedRMB: 0,
-    approvedUSD: 0,
+    totalAmount: 0,
+    pendingAmount: 0,
+    approvedAmount: 0,
     totalCount: 0,
     pendingCount: 0,
     approvedCount: 0,
@@ -168,41 +164,27 @@ export function ApplicationList() {
   }, [page, pageSize, filter.status, filter.keyword])
 
   const calculateStats = (items: Application[]) => {
-    let totalRMB = 0, totalUSD = 0, pendingRMB = 0, pendingUSD = 0, approvedRMB = 0, approvedUSD = 0
+    let totalAmount = 0, pendingAmount = 0, approvedAmount = 0
     let pendingCount = 0, approvedCount = 0
 
     items.forEach((app) => {
       if (app.amount && app.amount > 0) {
         const amount = app.amount
-        if (app.currency === Currency.USD) {
-          totalUSD += amount
-          if ([ApplicationStatus.PENDING_FACTORY, ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO].includes(app.status)) {
-            pendingUSD += amount
-            pendingCount++
-          } else if (app.status === ApplicationStatus.APPROVED) {
-            approvedUSD += amount
-            approvedCount++
-          }
-        } else {
-          totalRMB += amount
-          if ([ApplicationStatus.PENDING_FACTORY, ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO].includes(app.status)) {
-            pendingRMB += amount
-            pendingCount++
-          } else if (app.status === ApplicationStatus.APPROVED) {
-            approvedRMB += amount
-            approvedCount++
-          }
+        totalAmount += amount
+        if ([ApplicationStatus.PENDING_FACTORY, ApplicationStatus.PENDING_DIRECTOR, ApplicationStatus.PENDING_MANAGER, ApplicationStatus.PENDING_CEO].includes(app.status)) {
+          pendingAmount += amount
+          pendingCount++
+        } else if (app.status === ApplicationStatus.APPROVED) {
+          approvedAmount += amount
+          approvedCount++
         }
       }
     })
 
     setStats({
-      totalRMB,
-      totalUSD,
-      pendingRMB,
-      pendingUSD,
-      approvedRMB,
-      approvedUSD,
+      totalAmount,
+      pendingAmount,
+      approvedAmount,
       totalCount: items.length,
       pendingCount,
       approvedCount,
@@ -242,10 +224,10 @@ export function ApplicationList() {
   }
 
   const handleExportExcel = () => {
-    const headers = ["申请编号", "标题", "申请人", "部门", "金额", "货币", "优先级", "状态", "提交时间"]
+    const headers = ["申请编号", "标题", "申请人", "部门", "金额", "优先级", "状态", "提交时间"]
     const rows = applications.map((app) => [
       app.applicationNo, app.title, app.submitterName, app.submitterDepartment, app.amount || "",
-      app.currency === Currency.USD ? "USD" : "CNY", app.priority, getStatusLabel(app.status),
+      app.priority, getStatusLabel(app.status),
       app.submittedAt ? new Date(app.submittedAt).toLocaleString("zh-CN") : "",
     ])
     const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
@@ -308,7 +290,7 @@ export function ApplicationList() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <InlineStatCard
           title="总申请金额"
-          value={`¥${(stats.totalRMB + stats.totalUSD * 7).toLocaleString()}`}
+          value={`¥${stats.totalAmount.toLocaleString()}`}
           subtitle="人民币等值"
           icon={<DollarSign className="h-6 w-6" />}
           trend={{ value: 12.5, isPositive: true, label: "vs 上月" }}
@@ -325,7 +307,7 @@ export function ApplicationList() {
         <InlineStatCard
           title="待审核申请"
           value={stats.pendingCount}
-          subtitle={`¥${stats.pendingRMB.toLocaleString()}`}
+          subtitle={`¥${stats.pendingAmount.toLocaleString()}`}
           icon={<Clock className="h-6 w-6" />}
           trend={{ value: 5.2, isPositive: false, label: "vs 上周" }}
           variant="amber"
@@ -333,7 +315,7 @@ export function ApplicationList() {
         <InlineStatCard
           title="已通过申请"
           value={stats.approvedCount}
-          subtitle={`¥${stats.approvedRMB.toLocaleString()}`}
+          subtitle={`¥${stats.approvedAmount.toLocaleString()}`}
           icon={<CheckCircle className="h-6 w-6" />}
           trend={{ value: 18.7, isPositive: true, label: "vs 上月" }}
           variant="green"
@@ -442,7 +424,7 @@ export function ApplicationList() {
             </div>
             <div className="mb-4">
               <p className="text-2xl font-bold text-gray-900">
-                ¥{(stats.totalRMB + stats.totalUSD * 7).toLocaleString()}
+                ¥{stats.totalAmount.toLocaleString()}
               </p>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
@@ -456,20 +438,20 @@ export function ApplicationList() {
             <div className="space-y-1">
               <CategoryStat
                 label="已通过金额"
-                value={stats.approvedRMB}
-                total={stats.totalRMB || 1}
+                value={stats.approvedAmount}
+                total={stats.totalAmount || 1}
                 color="bg-emerald-500"
               />
               <CategoryStat
                 label="待审核金额"
-                value={stats.pendingRMB}
-                total={stats.totalRMB || 1}
+                value={stats.pendingAmount}
+                total={stats.totalAmount || 1}
                 color="bg-amber-500"
               />
               <CategoryStat
                 label="美元金额"
-                value={stats.totalUSD * 7}
-                total={(stats.totalRMB + stats.totalUSD * 7) || 1}
+                value={0}
+                total={stats.totalAmount || 1}
                 color="bg-blue-500"
               />
             </div>

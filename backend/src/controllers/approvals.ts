@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { ApplicationStatus, ApprovalAction, UserRole, Prisma } from '@prisma/client';
 import {
   getNextStatus,
@@ -10,6 +11,27 @@ import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
 import { sendApprovalNotification } from '../services/notificationService';
+import { escapeHtml } from '../utils/validation';
+
+// 审批验证 Schema
+const approvalActionSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT'], { message: '无效的审批操作' }),
+  comment: z.string().max(500, '评论最多500字符').optional().transform((val) => {
+    if (!val) return val;
+    // XSS 防护：转义 HTML 标签
+    return escapeHtml(val);
+  }),
+});
+
+const directorApprovalSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT'], { message: '无效的审批操作' }),
+  comment: z.string().max(500, '评论最多500字符').optional().transform((val) => {
+    if (!val) return val;
+    return escapeHtml(val);
+  }),
+  selectedManagerIds: z.array(z.string()).optional(),
+  skipManager: z.boolean().optional().default(false),
+});
 
 // 审批级别配置
 type ApprovalLevel = 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
@@ -86,12 +108,15 @@ async function processApproval(
     }
 
     const { applicationId } = req.params;
-    const { action, comment } = req.body;
 
-    if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json(fail('INVALID_ACTION', '无效的审批操作'));
+    // Zod 验证
+    const parseResult = approvalActionSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json(fail('VALIDATION_ERROR', parseResult.error.errors[0]?.message || '参数验证失败'));
       return;
     }
+
+    const { action, comment } = parseResult.data;
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
@@ -265,12 +290,15 @@ export async function directorApprove(req: Request, res: Response): Promise<void
     }
 
     const { applicationId } = req.params;
-    const { action, comment, selectedManagerIds, skipManager = false } = req.body;
 
-    if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-      res.status(400).json(fail('INVALID_ACTION', '无效的审批操作'));
+    // Zod 验证
+    const parseResult = directorApprovalSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json(fail('VALIDATION_ERROR', parseResult.error.errors[0]?.message || '参数验证失败'));
       return;
     }
+
+    const { action, comment, selectedManagerIds, skipManager } = parseResult.data;
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },

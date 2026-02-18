@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -62,6 +63,22 @@ app.use(express.json({ limit: '10mb' }));
 
 // 解析URL编码请求体
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate Limiting - API限流保护
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 100, // 每个IP 100请求
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '请求过于频繁，请稍后再试'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
 
 // 健康检查端点
 app.get('/health', (_req: Request, res: Response) => {

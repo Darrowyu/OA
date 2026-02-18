@@ -177,7 +177,7 @@ export class DocumentService {
 
     // 检查文件夹是否为空
     const documentCount = await prisma.document.count({
-      where: { folderId: id, isActive: true },
+      where: { folderId: id, deletedAt: null },
     })
 
     if (documentCount > 0) {
@@ -428,7 +428,7 @@ export class DocumentService {
   async deleteDocument(id: string): Promise<void> {
     await prisma.document.update({
       where: { id },
-      data: { isActive: false, updatedAt: new Date() },
+      data: { deletedAt: new Date(), updatedAt: new Date() },
     })
   }
 
@@ -481,7 +481,7 @@ export class DocumentService {
     version: number
     folderId: string
     ownerId: string
-    isActive: boolean
+    deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
     folder: {
@@ -544,7 +544,7 @@ export class DocumentService {
     const { page = 1, pageSize = 20, folderId, type, keyword } = params
     const skip = (page - 1) * pageSize
 
-    const where: Record<string, unknown> = { isActive: true }
+    const where: Record<string, unknown> = { deletedAt: null }
 
     if (folderId) where.folderId = folderId
     if (type) where.type = type
@@ -651,7 +651,7 @@ export class DocumentService {
     size: number
   } | null> {
     const document = await prisma.document.findUnique({
-      where: { id, isActive: true },
+      where: { id, deletedAt: null },
     })
 
     if (!document) return null
@@ -680,7 +680,7 @@ export class DocumentService {
     byType: Record<string, number>
   }> {
     const documents = await prisma.document.findMany({
-      where: { isActive: true },
+      where: { deletedAt: null },
       select: {
         type: true,
         size: true,

@@ -153,7 +153,7 @@ export class TaskService {
     ])
 
     return {
-      data: tasks.map(task => this.formatTask(task)),
+      items: tasks.map(task => this.formatTask(task)),
       total,
       page,
       pageSize,
@@ -398,37 +398,51 @@ export class TaskService {
 
   // 获取项目列表
   async getProjects(userId: string): Promise<TaskProjectWithOwner[]> {
-    // 先获取所有项目，内存中过滤成员（Prisma JSON不支持array_contains）
-    const projects = await prisma.taskProject.findMany({
+    // 先查询用户负责的项目
+    const ownedProjects = await prisma.taskProject.findMany({
+      where: { ownerId: userId },
       orderBy: { createdAt: 'desc' },
       include: {
         owner: {
           select: { id: true, name: true, avatar: true },
         },
+        _count: {
+          select: { tasks: true },
+        },
       },
     })
 
-    // 过滤：我是负责人 或 我是成员
-    const filteredProjects = projects.filter(project => {
-      if (project.ownerId === userId) return true
+    // 再查询所有项目（用于内存过滤成员）
+    // 注意：由于Prisma JSON字段不支持数组包含查询，需要内存过滤
+    const allProjects = await prisma.taskProject.findMany({
+      where: { ownerId: { not: userId } }, // 排除已查询的
+      orderBy: { createdAt: 'desc' },
+      include: {
+        owner: {
+          select: { id: true, name: true, avatar: true },
+        },
+        _count: {
+          select: { tasks: true },
+        },
+      },
+    })
+
+    // 过滤成员包含当前用户的项目
+    const memberProjects = allProjects.filter(project => {
       const members = project.members as string[] | null
       return members?.includes(userId) || false
     })
 
-    return Promise.all(
-      filteredProjects.map(async project => {
-        const taskCount = await prisma.task.count({
-          where: { projectId: project.id },
-        })
-        return {
-          ...project,
-          members: (project.members as string[]) || [],
-          taskCount,
-          createdAt: new Date(project.createdAt),
-          updatedAt: new Date(project.updatedAt),
-        }
-      })
-    )
+    // 合并结果
+    const allFilteredProjects = [...ownedProjects, ...memberProjects]
+
+    return allFilteredProjects.map(project => ({
+      ...project,
+      members: (project.members as string[]) || [],
+      taskCount: project._count.tasks,
+      createdAt: new Date(project.createdAt),
+      updatedAt: new Date(project.updatedAt),
+    }))
   }
 
   // 更新项目

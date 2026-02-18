@@ -53,7 +53,7 @@ export interface TaskQueryParams {
 }
 
 export interface PaginatedTasks<T> {
-  data: T[]
+  items: T[]
   total: number
   page: number
   pageSize: number

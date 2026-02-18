@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { ApplicationStatus, Priority, Prisma, UserRole } from '@prisma/client';
 import {
   generateApplicationNo,
@@ -10,6 +11,8 @@ import {
 import { prisma as prismaInstance } from '../lib/prisma';
 import logger from '../lib/logger';
 import { createNotifications } from '../services/notificationService';
+import { fail } from '../utils/response';
+import { parsePaginationParams } from '../utils/validation';
 
 // 用户类型定义
 interface RequestUser {
@@ -43,6 +46,33 @@ interface ApplicationWithRelations {
 
 const prisma = prismaInstance;
 
+// Zod 验证 Schema
+const createApplicationSchema = z.object({
+  title: z.string().min(1, '标题不能为空').max(200, '标题最多200字符'),
+  content: z.string().min(1, '内容不能为空').max(5000, '内容最多5000字符'),
+  amount: z.union([z.string(), z.number()]).optional().nullable(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).default('NORMAL'),
+  factoryManagerIds: z.array(z.string().min(1, '厂长ID不能为空')).min(1, '请选择至少一位厂长'),
+  attachmentIds: z.array(z.string()).optional(),
+});
+
+const updateApplicationSchema = z.object({
+  title: z.string().min(1, '标题不能为空').max(200, '标题最多200字符').optional(),
+  content: z.string().min(1, '内容不能为空').max(5000, '内容最多5000字符').optional(),
+  amount: z.union([z.string(), z.number()]).optional().nullable(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+  factoryManagerIds: z.array(z.string().min(1, '厂长ID不能为空')).optional(),
+  attachmentIds: z.array(z.string()).optional(),
+});
+
+const paginationQuerySchema = z.object({
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  keyword: z.string().max(100, '搜索关键词最多100字符').optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
+});
+
 /**
  * 获取申请列表（带权限过滤）
  * GET /api/applications
@@ -51,22 +81,18 @@ export async function getApplications(req: Request, res: Response): Promise<void
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
-    const {
-      status,
-      priority,
-      keyword,
-      page = '1',
-      limit = '20',
-      myApplications,
-    } = req.query;
+    const queryResult = paginationQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+      res.status(400).json(fail('INVALID_PARAMS', queryResult.error.errors[0]?.message || '参数验证失败'));
+      return;
+    }
 
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
-    const skip = (pageNum - 1) * limitNum;
+    const { status, priority, keyword } = queryResult.data;
+    const { page: pageNum, pageSize: limitNum, skip } = parsePaginationParams(queryResult.data.page, queryResult.data.limit);
 
     // 构建查询条件
     const where: Prisma.ApplicationWhereInput = {};
@@ -91,12 +117,12 @@ export async function getApplications(req: Request, res: Response): Promise<void
       ];
     }
 
-    // 权限过滤
-    if (myApplications === 'true' || user.role === 'USER') {
-      // 只看自己的申请
+    // 权限过滤 - 基于用户角色自动过滤
+    if (user.role === 'USER') {
+      // 普通用户只能看自己的申请
       where.applicantId = user.id;
-    } else if (!status || status === 'all') {
-      // 根据角色过滤可见申请（使用配置对象替代switch）
+    } else if (user.role !== 'ADMIN') {
+      // 非管理员角色根据角色权限过滤
       const roleFilters: Record<string, Prisma.ApplicationWhereInput> = {
         FACTORY_MANAGER: {
           OR: [
@@ -134,8 +160,8 @@ export async function getApplications(req: Request, res: Response): Promise<void
       if (roleFilters[user.role]) {
         Object.assign(where, roleFilters[user.role]);
       }
-      // ADMIN不需要额外过滤，可以看所有
     }
+    // ADMIN不需要额外过滤，可以看所有申请
 
     // 并行查询总数和数据
     const [total, applications] = await Promise.all([
@@ -190,7 +216,7 @@ export async function getApplications(req: Request, res: Response): Promise<void
     });
   } catch (error) {
     logger.error('获取申请列表失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取申请列表失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取申请列表失败'));
   }
 }
 
@@ -202,11 +228,15 @@ export async function getApplication(req: Request, res: Response): Promise<void>
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json(fail('INVALID_ID', '无效的申请ID'));
+      return;
+    }
 
     const application = await prisma.application.findUnique({
       where: { id },
@@ -245,14 +275,14 @@ export async function getApplication(req: Request, res: Response): Promise<void>
     });
 
     if (!application) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
     // 权限检查
     const canView = await checkViewPermission(user, application);
     if (!canView) {
-      res.status(403).json({ error: '无权查看此申请' });
+      res.status(403).json(fail('FORBIDDEN', '无权查看此申请'));
       return;
     }
 
@@ -266,7 +296,7 @@ export async function getApplication(req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     logger.error('获取申请详情失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '获取申请详情失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取申请详情失败'));
   }
 }
 
@@ -278,31 +308,24 @@ export async function createApplication(req: Request, res: Response): Promise<vo
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     // 检查用户是否有提交权限
     if (!['USER', 'DIRECTOR', 'ADMIN'].includes(user.role)) {
-      res.status(403).json({ error: '无权提交申请' });
+      res.status(403).json(fail('FORBIDDEN', '无权提交申请'));
       return;
     }
 
-    const { title, content, amount, priority = 'NORMAL', factoryManagerIds, attachmentIds } = req.body;
+    // Zod 验证
+    const parseResult = createApplicationSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json(fail('VALIDATION_ERROR', parseResult.error.errors[0]?.message || '参数验证失败'));
+      return;
+    }
 
-    // 验证必填字段
-    if (!title?.trim()) {
-      res.status(400).json({ error: '标题不能为空' });
-      return;
-    }
-    if (!content?.trim()) {
-      res.status(400).json({ error: '内容不能为空' });
-      return;
-    }
-    if (!factoryManagerIds || !Array.isArray(factoryManagerIds) || factoryManagerIds.length === 0) {
-      res.status(400).json({ error: '请选择厂长' });
-      return;
-    }
+    const { title, content, amount, priority, factoryManagerIds, attachmentIds } = parseResult.data;
 
     // 生成申请编号
     const existingNos = await prisma.application.findMany({ select: { applicationNo: true } });
@@ -347,7 +370,7 @@ export async function createApplication(req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('创建申请失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '创建申请失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '创建申请失败'));
   }
 }
 
@@ -359,27 +382,39 @@ export async function updateApplication(req: Request, res: Response): Promise<vo
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     const { id } = req.params;
-    const { title, content, amount, priority, factoryManagerIds, attachmentIds } = req.body;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json(fail('INVALID_ID', '无效的申请ID'));
+      return;
+    }
+
+    // Zod 验证
+    const parseResult = updateApplicationSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json(fail('VALIDATION_ERROR', parseResult.error.errors[0]?.message || '参数验证失败'));
+      return;
+    }
+
+    const { title, content, amount, priority, factoryManagerIds, attachmentIds } = parseResult.data;
 
     // 查找申请
     const existingApp = await prisma.application.findUnique({ where: { id } });
     if (!existingApp) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
     // 权限检查：只有申请人或管理员可以修改草稿
     if (existingApp.status !== ApplicationStatus.DRAFT) {
-      res.status(400).json({ error: '只能修改草稿状态的申请' });
+      res.status(400).json(fail('INVALID_STATUS', '只能修改草稿状态的申请'));
       return;
     }
     if (existingApp.applicantId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权修改此申请' });
+      res.status(403).json(fail('FORBIDDEN', '无权修改此申请'));
       return;
     }
 
@@ -423,7 +458,7 @@ export async function updateApplication(req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('更新申请失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '更新申请失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '更新申请失败'));
   }
 }
 
@@ -435,29 +470,33 @@ export async function deleteApplication(req: Request, res: Response): Promise<vo
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json(fail('INVALID_ID', '无效的申请ID'));
+      return;
+    }
 
     // 查找申请
     const existingApp = await prisma.application.findUnique({ where: { id } });
     if (!existingApp) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
     // 权限检查
     if (existingApp.applicantId !== user.id && user.role !== 'ADMIN') {
-      res.status(403).json({ error: '无权删除此申请' });
+      res.status(403).json(fail('FORBIDDEN', '无权删除此申请'));
       return;
     }
 
     // 只能删除草稿或被拒绝的申请
     const deletableStatuses: ApplicationStatus[] = [ApplicationStatus.DRAFT, ApplicationStatus.REJECTED];
     if (!deletableStatuses.includes(existingApp.status)) {
-      res.status(400).json({ error: '只能删除草稿或已拒绝的申请' });
+      res.status(400).json(fail('INVALID_STATUS', '只能删除草稿或已拒绝的申请'));
       return;
     }
 
@@ -467,7 +506,7 @@ export async function deleteApplication(req: Request, res: Response): Promise<vo
     res.json({ success: true, message: '申请删除成功' });
   } catch (error) {
     logger.error('删除申请失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '删除申请失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '删除申请失败'));
   }
 }
 
@@ -479,25 +518,29 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
   try {
     const user = req.user;
     if (!user) {
-      res.status(401).json({ error: '未登录' });
+      res.status(401).json(fail('UNAUTHORIZED', '未登录'));
       return;
     }
 
     const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json(fail('INVALID_ID', '无效的申请ID'));
+      return;
+    }
 
     const existingApp = await prisma.application.findUnique({ where: { id } });
     if (!existingApp) {
-      res.status(404).json({ error: '申请不存在' });
+      res.status(404).json(fail('NOT_FOUND', '申请不存在'));
       return;
     }
 
     if (existingApp.applicantId !== user.id) {
-      res.status(403).json({ error: '无权提交此申请' });
+      res.status(403).json(fail('FORBIDDEN', '无权提交此申请'));
       return;
     }
 
     if (existingApp.status !== ApplicationStatus.DRAFT) {
-      res.status(400).json({ error: '只能提交草稿状态的申请' });
+      res.status(400).json(fail('INVALID_STATUS', '只能提交草稿状态的申请'));
       return;
     }
 
@@ -550,7 +593,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
     res.json({ success: true, message: '申请提交成功' });
   } catch (error) {
     logger.error('提交申请失败', { error: error instanceof Error ? error.message : '未知错误' });
-    res.status(500).json({ error: '提交申请失败' });
+    res.status(500).json(fail('INTERNAL_ERROR', '提交申请失败'));
   }
 }
 

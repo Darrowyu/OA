@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createAuditLog, CreateAuditLogData } from '../services/auditService';
+import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 
 /**
@@ -33,6 +34,242 @@ function getRequestId(req: Request): string {
 }
 
 /**
+ * 根据entityType和entityId查询原始数据
+ * 支持常见实体类型的旧值捕获
+ */
+async function fetchOldValues(
+  entityType: string,
+  entityId: string | undefined
+): Promise<Record<string, unknown> | undefined> {
+  if (!entityId) return undefined;
+
+  try {
+    let oldData: unknown = null;
+
+    switch (entityType) {
+      case 'User':
+        oldData = await prisma.user.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            role: true,
+            departmentId: true,
+            employeeId: true,
+            isActive: true,
+            phone: true,
+            position: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Department':
+        oldData = await prisma.department.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            parentId: true,
+            level: true,
+            managerId: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Application':
+        oldData = await prisma.application.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            applicationNo: true,
+            title: true,
+            content: true,
+            amount: true,
+            priority: true,
+            status: true,
+            applicantId: true,
+            rejectedBy: true,
+            rejectReason: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Equipment':
+        oldData = await prisma.equipment.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            model: true,
+            category: true,
+            location: true,
+            status: true,
+            healthScore: true,
+            purchaseDate: true,
+            warrantyDate: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Folder':
+      case 'DocumentFolder':
+        oldData = await prisma.documentFolder.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            name: true,
+            parentId: true,
+            ownerId: true,
+            permissions: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Document':
+        oldData = await prisma.document.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            folderId: true,
+            name: true,
+            type: true,
+            size: true,
+            version: true,
+            ownerId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Task':
+        oldData = await prisma.task.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            status: true,
+            priority: true,
+            assigneeId: true,
+            creatorId: true,
+            projectId: true,
+            startDate: true,
+            dueDate: true,
+            completedAt: true,
+            tags: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Meeting':
+        oldData = await prisma.meeting.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            roomId: true,
+            startTime: true,
+            endTime: true,
+            organizerId: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Announcement':
+        oldData = await prisma.announcement.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            type: true,
+            isTop: true,
+            validFrom: true,
+            validUntil: true,
+            authorId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'KnowledgeArticle':
+        oldData = await prisma.knowledgeArticle.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            summary: true,
+            categoryId: true,
+            tags: true,
+            isPublished: true,
+            authorId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      case 'Workflow':
+        oldData = await prisma.workflow.findUnique({
+          where: { id: entityId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            entityType: true,
+            version: true,
+            status: true,
+            isDefault: true,
+            createdBy: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        break;
+
+      default:
+        // 未知实体类型，返回undefined
+        logger.debug(`审计: 未知的实体类型 ${entityType}，无法捕获旧值`);
+        return undefined;
+    }
+
+    return oldData ? (oldData as Record<string, unknown>) : undefined;
+  } catch (error) {
+    logger.error('审计: 获取旧值失败', {
+      error: error instanceof Error ? error.message : '未知错误',
+      entityType,
+      entityId,
+    });
+    return undefined;
+  }
+}
+
+/**
  * 审计中间件 - 自动记录操作日志
  * 使用示例:
  * router.post('/users', auditMiddleware({ action: 'CREATE_USER', entityType: 'User' }), createUser);
@@ -46,9 +283,10 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
     (req as unknown as Record<string, unknown>).auditRequestId = requestId;
 
     // 捕获旧值（用于更新操作）
+    let oldValues: Record<string, unknown> | undefined;
     if (captureOldValues && (req.method === 'PUT' || req.method === 'PATCH')) {
-      // 这里可以根据entityType和entityId查询原始数据
-      // 实际实现需要在业务逻辑中处理
+      const entityId = entityIdExtractor ? entityIdExtractor(req) : req.params.id;
+      oldValues = await fetchOldValues(entityType, entityId);
     }
 
     // 监听响应完成
@@ -71,7 +309,7 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
         const entityId = entityIdExtractor ? entityIdExtractor(req) : undefined;
         const description = descriptionExtractor ? descriptionExtractor(req, res) : undefined;
 
-        let oldValues: Record<string, unknown> | undefined;
+        let finalOldValues = oldValues;
         let newValues: Record<string, unknown> | undefined;
 
         // 尝试解析响应体获取新值
@@ -98,7 +336,7 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
           action,
           entityType,
           entityId,
-          oldValues,
+          oldValues: finalOldValues,
           newValues,
           ipAddress: getClientIp(req),
           userAgent: req.headers['user-agent'],

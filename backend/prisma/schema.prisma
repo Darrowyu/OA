@@ -131,6 +131,7 @@ model User {
   @@index([role])
   @@index([isActive])
   @@index([deletedAt])
+  @@index([email, isActive])  // 按邮箱和活跃状态查询优化
 }
 
 model Application {
@@ -172,6 +173,7 @@ model Application {
   @@index([applicantId])
   @@index([deletedAt])
   @@index([status, applicantId, submittedAt])
+  @@index([status, priority])  // 按状态和优先级查询优化
 }
 
 // ============================================
@@ -919,17 +921,17 @@ model DocumentFolder {
 }
 
 model Document {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   folderId  String // 所属文件夹ID
   name      String // 文档名称
   type      String // 文件类型：PDF, DOC, XLS, etc.
   size      Int // 文件大小（字节）
   path      String // 存储路径
-  version   Int      @default(1) // 当前版本号
+  version   Int       @default(1) // 当前版本号
   ownerId   String // 上传者ID
-  isActive  Boolean  @default(true) // 是否有效（软删除）
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // 软删除字段（统一使用deletedAt）
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // 关联字段
   folder   DocumentFolder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
@@ -939,7 +941,7 @@ model Document {
   @@index([folderId])
   @@index([ownerId])
   @@index([type])
-  @@index([isActive])
+  @@index([deletedAt])      // 软删除查询优化
   @@map("documents")
 }
 
@@ -1119,6 +1121,7 @@ model Meeting {
   status      MeetingStatus @default(SCHEDULED)
   minutes     String?       // 会议纪要
   attachments Json?         // 附件列表 [{ name, url, size }]
+  deletedAt   DateTime?     // 软删除字段
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -1132,6 +1135,7 @@ model Meeting {
   @@index([organizerId])
   @@index([status])
   @@index([roomId, startTime, endTime])
+  @@index([deletedAt])      // 软删除查询优化
   @@map("meetings")
 }
 
@@ -1152,6 +1156,7 @@ model MeetingAttendee {
   @@unique([meetingId, userId])  // 同一用户在同一会议只能有一条记录
   @@index([userId])              // 查询"我的会议"
   @@index([meetingId, status])   // 按状态筛选参会者
+  @@index([userId, status])      // 查询"我的会议"按状态筛选
   @@map("meeting_attendees")
 }
 
@@ -1177,6 +1182,7 @@ model Announcement {
   attachments Json?              // 附件 [{ name, url, size }]
   viewCount   Int                @default(0) // 浏览次数
   authorId    String             // 发布人ID
+  deletedAt   DateTime?          // 软删除字段
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -1188,6 +1194,7 @@ model Announcement {
   @@index([isTop])
   @@index([validFrom])
   @@index([authorId])
+  @@index([deletedAt])      // 软删除查询优化
   @@map("announcements")
 }
 
@@ -1240,13 +1247,14 @@ model Task {
   tags        Json?        // ["前端", "紧急"]
   parentId    String?      // 子任务支持
   order       Int          @default(0) // 看板排序
+  deletedAt   DateTime?    // 软删除字段
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   // 关联字段
   assignee User?        @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
   creator  User         @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: Cascade)
-  parent   Task?        @relation("SubTasks", fields: [parentId], references: [id])
+  parent   Task?        @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
   subTasks Task[]       @relation("SubTasks")
   project  TaskProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
@@ -1260,12 +1268,13 @@ model Task {
   @@index([status, dueDate])                        // 看板按截止日期排序
   @@index([assigneeId, status, dueDate])            // 我的待办按截止日期排序
   @@index([creatorId, createdAt(sort: Desc)])       // 我创建的任务（最近优先）
+  @@index([deletedAt])                              // 软删除查询优化
   @@map("tasks")
 }
 
 model TaskProject {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @unique  // 项目名称唯一
   description String?
   color       String?
   ownerId     String

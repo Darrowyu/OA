@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/api';
 
 // 归档统计接口
 interface ArchiveStats {
@@ -118,10 +119,33 @@ export default function Settings() {
   const [newSkipDate, setNewSkipDate] = useState('');
   const [skipDateRangeStart, setSkipDateRangeStart] = useState('');
   const [skipDateRangeEnd, setSkipDateRangeEnd] = useState('');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [isLoadingEmailSettings, setIsLoadingEmailSettings] = useState(false);
 
   // 全局状态
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // 加载邮件提醒设置
+  const loadEmailSettings = async () => {
+    setIsLoadingEmailSettings(true);
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: EmailSettings;
+        error?: { code: string; message: string };
+      }>('/settings/reminders');
+      if (response.success) {
+        setEmailSettings(response.data);
+      } else {
+        setError(response.error?.message || '加载邮件设置失败');
+      }
+    } catch (err) {
+      setError('加载邮件设置失败');
+    } finally {
+      setIsLoadingEmailSettings(false);
+    }
+  };
 
   // 权限检查
   useEffect(() => {
@@ -134,17 +158,16 @@ export default function Settings() {
   const loadArchiveStats = async () => {
     setArchiveLoading(true);
     try {
-      // TODO: 替换为实际API调用
-      // const response = await fetch('/api/settings/archive-stats');
-      // const data = await response.json();
-      // 模拟数据
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setArchiveStats({
-        activeCount: 156,
-        archivedCount: 423,
-        dbSize: '256.5 MB',
-        archivableCount: 45,
-      });
+      const response = await apiClient.get<{
+        success: boolean;
+        data: ArchiveStats;
+        error?: { code: string; message: string };
+      }>('/admin/archive-stats');
+      if (response.success) {
+        setArchiveStats(response.data);
+      } else {
+        setError(response.error?.message || '加载归档统计失败');
+      }
     } catch (err) {
       setError('加载归档统计失败');
     } finally {
@@ -154,37 +177,22 @@ export default function Settings() {
 
   // 加载归档文件列表
   const loadArchiveFiles = async () => {
+    setArchiveLoading(true);
     try {
-      // TODO: 替换为实际API调用
-      // const response = await fetch('/api/settings/archive-files');
-      // const data = await response.json();
-      // 模拟数据
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      setArchiveFiles([
-        {
-          id: '1',
-          filename: 'archive_2024_01_15.json',
-          createdAt: '2024-01-15 10:30:00',
-          size: '12.5 MB',
-          recordCount: 89,
-        },
-        {
-          id: '2',
-          filename: 'archive_2024_02_20.json',
-          createdAt: '2024-02-20 14:15:00',
-          size: '8.3 MB',
-          recordCount: 56,
-        },
-        {
-          id: '3',
-          filename: 'archive_2024_03_10.json',
-          createdAt: '2024-03-10 09:45:00',
-          size: '15.7 MB',
-          recordCount: 112,
-        },
-      ]);
+      const response = await apiClient.get<{
+        success: boolean;
+        data: ArchiveFile[];
+        error?: { code: string; message: string };
+      }>('/admin/archive-files');
+      if (response.success) {
+        setArchiveFiles(response.data);
+      } else {
+        setError(response.error?.message || '加载归档文件列表失败');
+      }
     } catch (err) {
       setError('加载归档文件列表失败');
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -195,11 +203,17 @@ export default function Settings() {
     }
     setArchiveLoading(true);
     try {
-      // TODO: 替换为实际API调用
-      // await fetch('/api/settings/archive', { method: 'POST' });
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSuccess('归档执行成功');
-      loadArchiveStats();
+      const response = await apiClient.post<{
+        success: boolean;
+        data?: { archivedCount: number };
+        error?: { code: string; message: string };
+      }>('/admin/archive');
+      if (response.success) {
+        setSuccess(`归档执行成功，共归档 ${response.data?.archivedCount || 0} 条记录`);
+        loadArchiveStats();
+      } else {
+        setError(response.error?.message || '归档执行失败');
+      }
     } catch (err) {
       setError('归档执行失败');
     } finally {
@@ -271,17 +285,21 @@ export default function Settings() {
 
   // 保存邮件设置
   const saveEmailSettings = async () => {
+    setIsSavingEmail(true);
     try {
-      // TODO: 替换为实际API调用
-      // await fetch('/api/settings/email', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(emailSettings),
-      // });
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setSuccess('邮件设置保存成功');
+      const response = await apiClient.post<{
+        success: boolean;
+        error?: { code: string; message: string };
+      }>('/settings/reminders', emailSettings);
+      if (response.success) {
+        setSuccess('邮件设置保存成功');
+      } else {
+        setError(response.error?.message || '保存邮件设置失败');
+      }
     } catch (err) {
       setError('保存邮件设置失败');
+    } finally {
+      setIsSavingEmail(false);
     }
   };
 
@@ -312,6 +330,7 @@ export default function Settings() {
   useEffect(() => {
     if (isAdmin) {
       loadArchiveStats();
+      loadEmailSettings();
     }
   }, [isAdmin]);
 
@@ -811,8 +830,8 @@ export default function Settings() {
             </div>
 
             {/* 保存按钮 */}
-            <Button onClick={saveEmailSettings} className="w-full">
-              保存邮件设置
+            <Button onClick={saveEmailSettings} disabled={isSavingEmail || isLoadingEmailSettings} className="w-full">
+              {isSavingEmail ? '保存中...' : '保存邮件设置'}
             </Button>
           </CardContent>
         </Card>

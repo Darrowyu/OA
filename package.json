@@ -41,6 +41,7 @@
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@xyflow/react": "^12.10.0",
-    "dagre": "^0.8.5"
+    "dagre": "^0.8.5",
+    "express-rate-limit": "^8.2.1"
   }
 }

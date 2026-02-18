@@ -165,9 +165,24 @@ export function generateValidationErrorHtml(results: FilenameValidationResult[])
 }
 
 /**
- * HTML转义
+ * 解析分页参数
+ * 统一处理分页参数，限制最大值防止滥用
  */
-function escapeHtml(text: string): string {
-  const div = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-  return text.replace(/[&<>"']/g, m => div[m as keyof typeof div]);
+export function parsePaginationParams(
+  page?: string | number,
+  pageSize?: string | number
+): { page: number; pageSize: number; skip: number } {
+  const pageNum = Math.max(1, typeof page === 'string' ? parseInt(page, 10) || 1 : page || 1);
+  const limitNum = Math.min(100, Math.max(1, typeof pageSize === 'string' ? parseInt(pageSize, 10) || 10 : pageSize || 10));
+  return { page: pageNum, pageSize: limitNum, skip: (pageNum - 1) * limitNum };
+}
+
+/**
+ * HTML转义 - XSS防护
+ * @param text 需要转义的文本
+ * @returns 转义后的文本
+ */
+export function escapeHtml(text: string): string {
+  const div: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => div[m] || m);
 }

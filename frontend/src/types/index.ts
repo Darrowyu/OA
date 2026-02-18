@@ -36,7 +36,7 @@ export enum UserRole {
 }
 
 // 审批动作类型
-export type ApprovalAction = 'APPROVE' | 'REJECT';
+export type ApprovalAction = 'APPROVE' | 'REJECT' | 'PENDING';
 
 // 用户类型
 export interface User {
@@ -76,7 +76,6 @@ export interface Application {
   title: string;
   content: string;
   amount: number | null;
-  currency: Currency;
   priority: Priority;
   status: ApplicationStatus;
   submitterId: string;
@@ -110,7 +109,6 @@ export interface CreateApplicationRequest {
   title: string;
   content: string;
   amount?: number;
-  currency?: Currency;
   priority: Priority;
   factoryManagerIds: string[];
   managerIds: string[];
