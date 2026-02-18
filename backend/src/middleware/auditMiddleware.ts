@@ -293,12 +293,20 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
     const originalEnd = res.end.bind(res);
     let responseBody = '';
 
-    // 重写res.end以捕获响应内容
-    res.end = function(chunk: unknown, encoding?: unknown): Response {
+    // 重写res.end以捕获响应内容 - 处理多种调用签名
+    res.end = function(
+      chunk?: unknown,
+      encoding?: BufferEncoding | (() => void),
+      callback?: () => void
+    ): Response {
       if (chunk) {
         responseBody = chunk.toString();
       }
-      return originalEnd(chunk, encoding as BufferEncoding);
+      // 处理不同参数组合：res.end(), res.end(chunk), res.end(chunk, encoding), res.end(chunk, encoding, callback)
+      if (typeof encoding === 'function') {
+        return originalEnd(chunk, undefined as unknown as BufferEncoding, encoding);
+      }
+      return originalEnd(chunk, encoding as BufferEncoding, callback);
     };
 
     res.on('finish', async () => {

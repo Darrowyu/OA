@@ -248,7 +248,9 @@ async function processApproval(
         actionType
       );
     } catch (notifyError) {
-      logger.error('审批通知发送失败', { error: notifyError });
+      logger.error('审批通知发送失败', {
+        error: notifyError instanceof Error ? notifyError.message : String(notifyError),
+      });
     }
 
     res.json(ok({

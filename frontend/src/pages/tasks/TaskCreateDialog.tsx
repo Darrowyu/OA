@@ -55,8 +55,8 @@ export function TaskCreateDialog({ open, onClose, onSuccess, defaultStatus = Tas
       if (res.success) {
         setUsers(res.data.items)
       }
-    } catch {
-      // 静默失败
+    } catch (error) {
+      console.error('加载用户列表失败:', error);
     }
   }
 

@@ -2,13 +2,12 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { ApplicationStatus, Priority, Prisma, UserRole } from '@prisma/client';
 import {
-  generateApplicationNo,
   parseAmount,
   getStatusText,
   getPriorityText,
   isApplicationFinal,
 } from '../utils/application';
-import { prisma as prismaInstance } from '../lib/prisma';
+import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { createNotifications } from '../services/notificationService';
 import { fail } from '../utils/response';
@@ -43,8 +42,6 @@ interface ApplicationWithRelations {
   managerApprovals: ApprovalRecord[];
   ceoApprovals: ApprovalRecord[];
 }
-
-const prisma = prismaInstance;
 
 // Zod 验证 Schema
 const createApplicationSchema = z.object({
@@ -327,9 +324,25 @@ export async function createApplication(req: Request, res: Response): Promise<vo
 
     const { title, content, amount, priority, factoryManagerIds, attachmentIds } = parseResult.data;
 
-    // 生成申请编号
-    const existingNos = await prisma.application.findMany({ select: { applicationNo: true } });
-    const applicationNo = generateApplicationNo(existingNos.map(n => n.applicationNo));
+    // 生成申请编号 - 只查询当天最新编号，避免全表扫描
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `APP-${dateStr}-`;
+
+    const latestApp = await prisma.application.findFirst({
+      where: { applicationNo: { startsWith: prefix } },
+      orderBy: { applicationNo: 'desc' },
+      select: { applicationNo: true },
+    });
+
+    let nextNum = 1;
+    if (latestApp?.applicationNo) {
+      const match = latestApp.applicationNo.match(/-(\d{4})$/);
+      if (match) {
+        nextNum = parseInt(match[1], 10) + 1;
+      }
+    }
+    const applicationNo = `${prefix}${String(nextNum).padStart(4, '0')}`;
 
     // 解析金额
     const parsedAmount = parseAmount(amount);

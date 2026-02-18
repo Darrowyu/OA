@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/Header';
 import { useDepartments } from './hooks/useDepartments';
 import { DepartmentDetail } from './components/DepartmentDetail';
+import { DepartmentTree } from './components/DepartmentTree';
 import { departmentApi, type CreateDepartmentRequest } from '@/services/department';
 import {
   Dialog,
@@ -68,7 +69,7 @@ export default function Departments() {
 
   const [searchQuery, setSearchQuery] = useState('');
   // 过滤后的部门列表（搜索用）
-  void useFilteredDepartments(departments, searchQuery);
+  const filteredDepartments = useFilteredDepartments(departments, searchQuery);
 
   // 对话框状态
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -245,10 +246,11 @@ export default function Departments() {
               </div>
             </CardHeader>
             <CardContent className="p-4">
-              {/* 这里需要使用 DepartmentTree 组件 */}
-              <div className="min-h-[400px] text-gray-500 text-center py-20">
-                部门树组件加载中...
-              </div>
+              <DepartmentTree
+                nodes={filteredDepartments}
+                selectedId={selectedDept?.id}
+                onSelect={setSelectedDept}
+              />
             </CardContent>
           </Card>
 

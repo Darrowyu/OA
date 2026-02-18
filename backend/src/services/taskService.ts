@@ -396,50 +396,50 @@ export class TaskService {
     }
   }
 
-  // 获取项目列表
+  // 获取项目列表 - 使用单次查询优化性能
   async getProjects(userId: string): Promise<TaskProjectWithOwner[]> {
-    // 先查询用户负责的项目
-    const ownedProjects = await prisma.taskProject.findMany({
-      where: { ownerId: userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        owner: {
-          select: { id: true, name: true, avatar: true },
-        },
-        _count: {
-          select: { tasks: true },
-        },
+    // 使用原始查询一次性获取用户有权限的项目（owner或member）
+    const projects = await prisma.$queryRaw<Array<{
+      id: string
+      name: string
+      description: string | null
+      color: string
+      ownerId: string
+      members: string | null
+      createdAt: Date
+      updatedAt: Date
+      owner_id: string
+      owner_name: string
+      owner_avatar: string | null
+      task_count: bigint
+    }>>`
+      SELECT
+        p.id, p.name, p.description, p.color, p.owner_id as "ownerId",
+        p.members, p.created_at as "createdAt", p.updated_at as "updatedAt",
+        u.id as "owner_id", u.name as "owner_name", u.avatar as "owner_avatar",
+        COUNT(t.id) as "task_count"
+      FROM task_projects p
+      JOIN users u ON p.owner_id = u.id
+      LEFT JOIN tasks t ON t.project_id = p.id
+      WHERE p.owner_id = ${userId}
+         OR (p.members::text LIKE ${`%"${userId}"%`})
+      GROUP BY p.id, u.id
+      ORDER BY p.created_at DESC
+    `
+
+    return projects.map(project => ({
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      color: project.color,
+      ownerId: project.ownerId,
+      owner: {
+        id: project.owner_id,
+        name: project.owner_name,
+        avatar: project.owner_avatar,
       },
-    })
-
-    // 再查询所有项目（用于内存过滤成员）
-    // 注意：由于Prisma JSON字段不支持数组包含查询，需要内存过滤
-    const allProjects = await prisma.taskProject.findMany({
-      where: { ownerId: { not: userId } }, // 排除已查询的
-      orderBy: { createdAt: 'desc' },
-      include: {
-        owner: {
-          select: { id: true, name: true, avatar: true },
-        },
-        _count: {
-          select: { tasks: true },
-        },
-      },
-    })
-
-    // 过滤成员包含当前用户的项目
-    const memberProjects = allProjects.filter(project => {
-      const members = project.members as string[] | null
-      return members?.includes(userId) || false
-    })
-
-    // 合并结果
-    const allFilteredProjects = [...ownedProjects, ...memberProjects]
-
-    return allFilteredProjects.map(project => ({
-      ...project,
-      members: (project.members as string[]) || [],
-      taskCount: project._count.tasks,
+      members: project.members ? (JSON.parse(project.members) as string[]) : [],
+      taskCount: Number(project.task_count),
       createdAt: new Date(project.createdAt),
       updatedAt: new Date(project.updatedAt),
     }))
