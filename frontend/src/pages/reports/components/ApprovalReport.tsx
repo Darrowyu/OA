@@ -29,15 +29,15 @@ export function ApprovalReport() {
   const bottleneckColumns = [
     { key: 'stage', title: '审批阶段' },
     { key: 'pendingCount', title: '待处理数' },
-    { key: 'rejectionRate', title: '驳回率', render: (value: number) => `${value}%` },
-    { key: 'avgWaitTime', title: '平均等待(小时)', render: (value: number) => `${value}h` },
+    { key: 'rejectionRate', title: '驳回率', render: (value: unknown) => `${value}%` },
+    { key: 'avgWaitTime', title: '平均等待(小时)', render: (value: unknown) => `${value}h` },
   ];
 
   const approverColumns = [
     { key: 'approverName', title: '审批人' },
     { key: 'department', title: '部门' },
     { key: 'totalApprovals', title: '审批次数' },
-    { key: 'avgResponseTime', title: '平均响应(小时)', render: (value: number) => `${value}h` },
+    { key: 'avgResponseTime', title: '平均响应(小时)', render: (value: unknown) => `${value}h` },
   ];
 
   return (

@@ -53,7 +53,7 @@ export const config = {
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || true,
+    origin: process.env.CORS_ORIGIN?.split(',') || (process.env.NODE_ENV === 'production' ? false : ['http://localhost:5173', 'http://localhost:3000']),
     credentials: true,
   },
 

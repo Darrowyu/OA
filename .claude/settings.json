@@ -4,6 +4,7 @@
     "defaultMode": "acceptEdits"
   },
   "env": {
-    "MAX_THINKING_TOKENS": "8000"
+    "MAX_THINKING_TOKENS": "8000",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "true"
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -120,6 +120,9 @@ export default function AnnouncementFormPage() {
   const [targetDepts, setTargetDepts] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
+  // 使用 ref 替代 getElementById
+  const editorRef = useRef<HTMLDivElement>(null);
+
   // 加载编辑数据
   useEffect(() => {
     if (!id) {
@@ -176,21 +179,19 @@ export default function AnnouncementFormPage() {
     loadDepartments();
   }, []);
 
-  // 富文本命令
+  // 富文本命令 - 使用 ref 替代 getElementById
   const handleEditorCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     // 更新内容
-    const editor = document.getElementById('content-editor');
-    if (editor) {
-      setContent(editor.innerHTML);
+    if (editorRef.current) {
+      setContent(editorRef.current.innerHTML);
     }
   };
 
   // 处理内容变化
   const handleContentChange = () => {
-    const editor = document.getElementById('content-editor');
-    if (editor) {
-      setContent(editor.innerHTML);
+    if (editorRef.current) {
+      setContent(editorRef.current.innerHTML);
     }
   };
 
@@ -430,6 +431,7 @@ export default function AnnouncementFormPage() {
                     <EditorToolbar onCommand={handleEditorCommand} />
                     <div
                       id="content-editor"
+                      ref={editorRef}
                       contentEditable
                       className="p-4 min-h-[200px] outline-none"
                       dangerouslySetInnerHTML={{ __html: content }}

@@ -80,6 +80,24 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// 严格限流 - 用于认证端点
+const authLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5分钟
+  max: 5, // 每个IP 5次
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '登录尝试次数过多，请5分钟后再试'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // 成功请求不计入限制
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 // 健康检查端点
 app.get('/health', (_req: Request, res: Response) => {
   res.json({

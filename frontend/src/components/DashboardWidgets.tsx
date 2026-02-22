@@ -427,14 +427,12 @@ export function AreaChartWidget({ data, xKey, yKey, title, color = '#3b82f6', is
 interface DataTableColumn {
   key: string;
   title: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  render?: (value: any, record: Record<string, unknown>) => React.ReactNode;
+  render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode;
 }
 
 interface DataTableProps {
   columns: DataTableColumn[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
   title?: string;
   isLoading?: boolean;
   pagination?: {
@@ -480,7 +478,7 @@ export function DataTableWidget({ columns, data, title, isLoading, pagination }:
             </thead>
             <tbody>
               {data.map((row, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={row.id as string || `row-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                   {columns.map((col) => (
                     <td key={col.key} className="py-3 px-4 text-sm text-gray-700">
                       {col.render ? col.render(row[col.key], row) : String(row[col.key] || '-')}

@@ -36,7 +36,7 @@ export function EquipmentReport() {
     { key: 'equipmentName', title: '设备名称' },
     { key: 'maintenanceCount', title: '保养次数' },
     { key: 'repairCount', title: '维修次数' },
-    { key: 'totalCost', title: '总费用', render: (value: number) => `¥${Number(value).toLocaleString()}` },
+    { key: 'totalCost', title: '总费用', render: (value: unknown) => `¥${Number(value).toLocaleString()}` },
   ];
 
   return (

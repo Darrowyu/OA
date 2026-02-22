@@ -21,7 +21,7 @@ export function AttendanceReport() {
   const departmentColumns = [
     { key: 'departmentName', title: '部门' },
     { key: 'userCount', title: '人数' },
-    { key: 'attendanceRate', title: '出勤率', render: (value: number) => `${value}%` },
+    { key: 'attendanceRate', title: '出勤率', render: (value: unknown) => `${value}%` },
     { key: 'lateCount', title: '迟到次数' },
     { key: 'absentCount', title: '缺勤次数' },
   ];
@@ -33,10 +33,11 @@ export function AttendanceReport() {
     {
       key: 'type',
       title: '类型',
-      render: (value: string) => {
+      render: (value: unknown) => {
+        const type = value as string;
         return (
-          <Badge variant="secondary" className={value === 'LATE' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-600'}>
-            {value === 'LATE' ? '迟到' : value === 'EARLY_LEAVE' ? '早退' : '缺勤'}
+          <Badge variant="secondary" className={type === 'LATE' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-600'}>
+            {type === 'LATE' ? '迟到' : type === 'EARLY_LEAVE' ? '早退' : '缺勤'}
           </Badge>
         );
       },

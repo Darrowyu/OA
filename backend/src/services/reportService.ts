@@ -1058,17 +1058,26 @@ export class ReportService {
     const totalProcessed = factoryCount + directorCount + managerCount + ceoCount;
 
     // 会议统计
-    const meetingWhere: Record<string, unknown> = {
-      attendees: { contains: userId },
-    };
+    const meetingTimeWhere: Record<string, unknown> = {};
     if (startDate && endDate) {
-      meetingWhere.startTime = { gte: startDate, lte: endDate };
+      meetingTimeWhere.startTime = { gte: startDate, lte: endDate };
     }
 
-    const [organizedMeetings, attendedMeetings] = await Promise.all([
-      prisma.meeting.count({ where: { organizerId: userId, ...meetingWhere } }),
-      prisma.meeting.count({ where: meetingWhere }),
+    // 查询所有相关会议，在内存中过滤参与者（JSON字段不能用contains查询）
+    const [organizedMeetings, allMeetings] = await Promise.all([
+      prisma.meeting.count({ where: { organizerId: userId, ...meetingTimeWhere } }),
+      prisma.meeting.findMany({
+        where: meetingTimeWhere,
+        select: { organizerId: true, attendees: true },
+      }),
     ]);
+
+    // 在内存中过滤参与者
+    const attendedMeetings = allMeetings.filter((m) =>
+      m.attendees &&
+      Array.isArray(m.attendees) &&
+      m.attendees.some((a) => a && typeof a === 'object' && 'userId' in a && (a as { userId: string }).userId === userId)
+    ).length;
 
     // 申请统计
     const applicationWhere: Record<string, unknown> = { applicantId: userId };

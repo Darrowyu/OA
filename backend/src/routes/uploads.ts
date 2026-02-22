@@ -200,6 +200,15 @@ router.get('/:id/download', authenticate, async (req: Request, res: Response) =>
       return;
     }
 
+    // 验证文件路径安全 - 防止路径遍历攻击
+    const resolvedPath = path.resolve(attachment.path);
+    const uploadDir = path.resolve(UPLOAD_CONFIG.uploadDir);
+    if (!resolvedPath.startsWith(uploadDir)) {
+      logger.warn('检测到非法文件访问尝试', { path: attachment.path, user: req.user?.id });
+      res.status(403).json({ error: '无权访问此文件' });
+      return;
+    }
+
     if (!fs.existsSync(attachment.path)) {
       res.status(404).json({ error: '文件已不存在' });
       return;

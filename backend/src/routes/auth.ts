@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   login,
   register,
@@ -11,6 +12,22 @@ import {
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
+
+// 严格速率限制配置 - 用于敏感操作
+const strictLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1小时
+  max: 5, // 每IP每小时5次
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '尝试次数过多，请1小时后再试',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // 成功请求不计入限制
+});
 
 /**
  * @route   POST /api/auth/login
@@ -59,6 +76,6 @@ router.post('/logout', authMiddleware, logout);
  * @desc    公共修改密码（无需登录）
  * @access  Public
  */
-router.post('/change-password-public', publicChangePassword);
+router.post('/change-password-public', strictLimiter, publicChangePassword);
 
 export default router;
