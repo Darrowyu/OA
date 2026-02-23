@@ -54,7 +54,7 @@ export function useNotifications(): UseNotificationsReturn {
 
     const socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // 优先polling，避免某些代理问题
       reconnection: true,
       reconnectionAttempts: maxReconnectAttempts,
       reconnectionDelay: 1000,

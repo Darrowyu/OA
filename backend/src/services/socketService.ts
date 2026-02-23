@@ -33,8 +33,8 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
   io = new SocketIOServer(httpServer, {
     cors: {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // 无 origin（如移动端）或开发环境 localhost 自动通过
-        if (!origin || (isDev && origin.startsWith('http://localhost:'))) {
+        // 无 origin（如移动端）或开发环境自动通过
+        if (!origin || isDev) {
           return callback(null, true);
         }
         // 检查配置的允许列表
