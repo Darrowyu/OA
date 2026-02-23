@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -99,7 +99,7 @@ async function main() {
   console.log('管理员账户创建成功:', admin.username);
 
   // 创建测试用户
-  const users = [
+  const users: Array<{ username: string; name: string; role: UserRole; deptId: string; empId: string }> = [
     { username: 'factory1', name: '厂长1', role: 'FACTORY_MANAGER', deptId: prodDept.id, empId: 'EMP002' },
     { username: 'director1', name: '主任1', role: 'DIRECTOR', deptId: techDept.id, empId: 'EMP003' },
     { username: 'manager1', name: '经理1', role: 'MANAGER', deptId: opsDept.id, empId: 'EMP004' },
@@ -117,7 +117,7 @@ async function main() {
         password: password,
         name: user.name,
         email: `${user.username}@company.com`,
-        role: user.role as any,
+        role: user.role,
         departmentId: user.deptId,
         employeeId: user.empId,
         isActive: true,

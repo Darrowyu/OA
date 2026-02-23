@@ -1,4 +1,4 @@
-import type { NodeProps } from '@xyflow/react';
+import type { Node, NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { Play, User, GitBranch, Users, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,9 @@ export interface FlowNodeData extends Record<string, unknown> {
   selected?: boolean;
   onClick?: () => void;
 }
+
+export type FlowNode = Node<FlowNodeData, FlowNodeType>;
+export type FlowNodeProps = NodeProps<FlowNode>;
 
 // 节点类型配置
 const nodeConfig: Record<FlowNodeType, {
@@ -66,11 +69,9 @@ const nodeConfig: Record<FlowNodeType, {
 };
 
 // 流程节点组件
-// @ts-expect-error - React Flow 类型定义复杂，暂时忽略类型检查
-export function FlowNodeComponent(props: NodeProps<FlowNodeData>) {
-  const { data: rawData, selected, type } = props;
-  const data = rawData as FlowNodeData;
-  const config = nodeConfig[type as FlowNodeType] || nodeConfig.approval;
+export function FlowNodeComponent(props: FlowNodeProps) {
+  const { data, selected, type } = props;
+  const config = nodeConfig[type] || nodeConfig.approval;
   const isParallel = type === 'parallel';
   const isCondition = type === 'condition';
 

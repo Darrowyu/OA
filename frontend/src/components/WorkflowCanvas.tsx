@@ -17,15 +17,14 @@ import {
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 
-import { FlowNodeComponent, FlowNodeData } from './FlowNode';
+import { FlowNodeComponent, FlowNodeData, FlowNodeProps } from './FlowNode';
 import type { ComponentType } from 'react';
 import { FlowEdgeComponent } from './FlowEdge';
 import { NodePalette, PaletteNodeType } from './NodePalette';
 import { cn } from '@/lib/utils';
 
 // 节点类型映射
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodeTypes: Record<string, ComponentType<any>> = {
+const nodeTypes: Record<string, ComponentType<FlowNodeProps>> = {
   start: FlowNodeComponent,
   approval: FlowNodeComponent,
   condition: FlowNodeComponent,
