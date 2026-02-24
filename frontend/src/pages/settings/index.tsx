@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, Mail, Monitor, FileText, Database, Settings2 } from 'lucide-react';
+import { Archive, Mail, Monitor, FileText, Database, Settings2, SlidersHorizontal } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -9,9 +9,11 @@ import { ArchiveTab } from './tabs/ArchiveTab';
 import { EmailTab } from './tabs/EmailTab';
 import { LogsTab } from './tabs/LogsTab';
 import { BackupTab } from './tabs/BackupTab';
+import { ConfigTab } from './tabs/ConfigTab';
 
 const tabs = [
   { value: 'system', label: '系统信息', icon: Monitor },
+  { value: 'config', label: '配置管理', icon: SlidersHorizontal },
   { value: 'archive', label: '数据归档', icon: Archive },
   { value: 'email', label: '邮件提醒', icon: Mail },
   { value: 'logs', label: '系统日志', icon: FileText },
@@ -61,6 +63,10 @@ export function SettingsPage() {
             {/* Tab 内容区 */}
             <TabsContent value="system" className="mt-0">
               <SystemTab />
+            </TabsContent>
+
+            <TabsContent value="config" className="mt-0">
+              <ConfigTab />
             </TabsContent>
 
             <TabsContent value="archive" className="mt-0">
