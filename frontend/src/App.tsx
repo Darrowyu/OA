@@ -16,7 +16,7 @@ const EquipmentModule = lazy(() => import("@/pages/equipment").then(m => ({ defa
 const AttendanceModule = lazy(() => import("@/pages/attendance").then(m => ({ default: m.AttendanceModule })))
 const MeetingsModule = lazy(() => import("@/pages/meetings").then(m => ({ default: m.MeetingsModule })))
 const Users = lazy(() => import("@/pages/Users").then(m => ({ default: m.default })))
-const SettingsHome = lazy(() => import("@/pages/settings/index").then(m => ({ default: m.SettingsHome })))
+const SettingsPage = lazy(() => import("@/pages/settings/index").then(m => ({ default: m.SettingsPage })))
 const Profile = lazy(() => import("@/pages/Profile").then(m => ({ default: m.default })))
 const AuditLogs = lazy(() => import("@/pages/admin/AuditLogs").then(m => ({ default: m.default })))
 const Departments = lazy(() => import("@/pages/admin/Departments").then(m => ({ default: m.default })))
@@ -371,7 +371,7 @@ function App() {
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
               <Suspense fallback={<PageLoading />}>
-                <SettingsHome />
+                <SettingsPage />
               </Suspense>
             </DashboardLayout>
           </ProtectedRoute>
