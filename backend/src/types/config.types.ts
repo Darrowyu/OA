@@ -1,5 +1,16 @@
 import { ConfigValueType } from '@prisma/client';
 
+/**
+ * 解析后的配置值类型
+ */
+export type ParsedConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+
 export interface ConfigCategoryDTO {
   id: string;
   code: string;
@@ -30,8 +41,8 @@ export interface ConfigValidation {
 export interface SystemConfigDTO {
   id: string;
   key: string;
-  value: any;
-  defaultValue?: any;
+  value: ParsedConfigValue;
+  defaultValue?: ParsedConfigValue;
   valueType: ConfigValueType;
   label: string;
   description?: string;
@@ -47,15 +58,15 @@ export interface SystemConfigDTO {
 }
 
 export interface UpdateConfigDTO {
-  value: any;
+  value: ParsedConfigValue;
   reason?: string;
 }
 
 export interface ConfigHistoryDTO {
   id: string;
   configKey: string;
-  oldValue?: any;
-  newValue: any;
+  oldValue?: ParsedConfigValue;
+  newValue: ParsedConfigValue;
   changedBy: string;
   changedByName?: string;
   reason?: string;
