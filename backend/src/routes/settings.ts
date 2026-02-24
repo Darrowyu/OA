@@ -12,6 +12,7 @@ import {
   getEmailSettings,
   saveEmailSettings,
 } from '../controllers/settings';
+import { configController } from '../controllers/config.controller';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
 
@@ -19,6 +20,28 @@ const router = Router();
 
 // 所有路由都需要认证和管理员权限
 router.use(authMiddleware, requireRole(UserRole.ADMIN));
+
+// ========== 新配置管理路由 ==========
+
+// 配置分类
+router.get('/config/categories', configController.getCategories);
+
+// 配置列表和详情
+router.get('/config', configController.getConfigs);
+router.get('/config/value/:key', configController.getConfigValue);
+router.post('/config/values', configController.getConfigValues);
+
+// 配置更新
+router.put('/config/:key', configController.updateConfig);
+router.post('/config/batch', configController.batchUpdateConfigs);
+
+// 配置历史
+router.get('/config/:key/history', configController.getConfigHistory);
+
+// 初始化默认配置
+router.post('/config/initialize', configController.initializeDefaults);
+
+// ========== 保留原有功能路由 ==========
 
 /**
  * @route   GET /api/settings/system-info
