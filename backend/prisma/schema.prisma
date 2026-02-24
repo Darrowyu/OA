@@ -1476,3 +1476,54 @@ model KnowledgeFeedback {
   @@index([userId])
   @@map("knowledge_feedback")
 }
+
+// ============================================
+// 系统设置模块模型
+// ============================================
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  level     String   // 'info' | 'warn' | 'error'
+  message   String
+  source    String
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([timestamp])
+  @@map("system_logs")
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  size      String
+  type      String   // 'auto' | 'manual'
+  status    String   // 'completed' | 'failed' | 'in_progress'
+
+  @@index([createdAt])
+  @@map("backups")
+}
+
+model EmailSettings {
+  id               String   @id @default("default")
+  enabled          Boolean  @default(true)
+  smtpHost         String   @default("")
+  smtpPort         Int      @default(587)
+  smtpUser         String   @default("")
+  smtpPassword     String   @default("")
+  taskReminder     Boolean  @default(true)
+  meetingReminder  Boolean  @default(true)
+  approvalReminder Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+
+  @@map("email_settings")
+}
+
+model SystemSettings {
+  id               String   @id @default("default")
+  autoBackupEnabled Boolean @default(false)
+  updatedAt        DateTime @updatedAt
+
+  @@map("system_settings")
+}
