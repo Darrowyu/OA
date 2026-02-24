@@ -20,22 +20,23 @@ export interface DocumentConfig {
  */
 export async function getDocumentConfig(): Promise<DocumentConfig> {
   try {
-    const [maxFileSizeMB, allowedFileTypesStr, userStorageQuotaMB] = await Promise.all([
+    const [maxFileSizeRaw, allowedFileTypesRaw, userQuotaRaw] = await Promise.all([
       configService.getValue<number>('document.maxFileSizeMB', 50),
       configService.getValue<string>('document.allowedFileTypes', 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,zip,rar'),
       configService.getValue<number>('document.userStorageQuotaMB', 1024),
     ]);
 
     // 解析文件类型
+    const allowedFileTypesStr = allowedFileTypesRaw ?? 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,zip,rar';
     const allowedFileTypes = allowedFileTypesStr
       .split(',')
       .map(t => t.trim().toLowerCase())
       .filter(t => t.length > 0);
 
     return {
-      maxFileSizeMB,
+      maxFileSizeMB: maxFileSizeRaw ?? 50,
       allowedFileTypes,
-      userStorageQuotaMB,
+      userStorageQuotaMB: userQuotaRaw ?? 1024,
     };
   } catch (error) {
     logger.error('获取文档配置失败', { error });
@@ -53,7 +54,8 @@ export async function getDocumentConfig(): Promise<DocumentConfig> {
  */
 export async function getMaxFileSizeMB(): Promise<number> {
   try {
-    return await configService.getValue<number>('document.maxFileSizeMB', 50);
+    const value = await configService.getValue<number>('document.maxFileSizeMB', 50);
+    return value ?? 50;
   } catch (error) {
     logger.error('获取文件大小限制失败', { error });
     return 50;
@@ -77,7 +79,8 @@ export async function getAllowedFileTypes(): Promise<string[]> {
       'document.allowedFileTypes',
       'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,zip,rar'
     );
-    return typesStr
+    const safeTypesStr = typesStr ?? 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,zip,rar';
+    return safeTypesStr
       .split(',')
       .map(t => t.trim().toLowerCase())
       .filter(t => t.length > 0);
@@ -92,7 +95,8 @@ export async function getAllowedFileTypes(): Promise<string[]> {
  */
 export async function getUserStorageQuotaMB(): Promise<number> {
   try {
-    return await configService.getValue<number>('document.userStorageQuotaMB', 1024);
+    const value = await configService.getValue<number>('document.userStorageQuotaMB', 1024);
+    return value ?? 1024;
   } catch (error) {
     logger.error('获取用户存储配额失败', { error });
     return 1024;

@@ -7,6 +7,7 @@ import type {
   ConfigHistoryDTO,
   ConfigQueryParams,
   ParsedConfigValue,
+  ConfigOption,
 } from '@/types/config.types';
 import { configCache } from './config.cache';
 import { maskSecret, shouldMaskValue } from '@/utils/security';
@@ -37,10 +38,6 @@ export class ConfigService {
 
     if (params?.category) {
       where.category = { code: params.category };
-    }
-
-    if (params?.module) {
-      where.module = params.module;
     }
 
     if (params?.search) {
@@ -313,7 +310,6 @@ export class ConfigService {
           isSecret: configData.isSecret ?? false,
           isSystem: configData.isSystem ?? false,
           sortOrder: configData.sortOrder ?? 0,
-          module: configData.categoryCode,
         },
       });
     }
@@ -387,7 +383,7 @@ export class ConfigService {
       label: config.label,
       description: config.description ?? undefined,
       placeholder: config.placeholder ?? undefined,
-      options: config.options as Record<string, unknown>[] | undefined,
+      options: config.options as unknown as ConfigOption[] | undefined,
       validation: config.validation as Record<string, unknown> | undefined,
       isSecret: config.isSecret,
       isEditable: !config.isSystem,
@@ -404,7 +400,7 @@ export class ConfigService {
    * 映射分类到DTO
    */
   private mapCategoryToDTO(
-    category: Prisma.ConfigCategoryGetPayload<record>
+    category: Prisma.ConfigCategoryGetPayload<object>
   ): ConfigCategoryDTO {
     return {
       id: category.id,

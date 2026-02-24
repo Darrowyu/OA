@@ -26,8 +26,8 @@ export async function getTaskDefaults(): Promise<TaskDefaults> {
     ]);
 
     return {
-      defaultPriority,
-      reminderBeforeHours,
+      defaultPriority: defaultPriority ?? 'medium',
+      reminderBeforeHours: reminderBeforeHours ?? 24,
     };
   } catch (error) {
     logger.error('获取任务默认配置失败', { error });
@@ -44,7 +44,8 @@ export async function getTaskDefaults(): Promise<TaskDefaults> {
  */
 export async function getDefaultPriority(): Promise<TaskPriority> {
   try {
-    return await configService.getValue<TaskPriority>('task.defaultPriority', 'medium');
+    const value = await configService.getValue<TaskPriority>('task.defaultPriority', 'medium');
+    return value ?? 'medium';
   } catch (error) {
     logger.error('获取默认任务优先级失败', { error });
     return 'medium';
@@ -56,7 +57,8 @@ export async function getDefaultPriority(): Promise<TaskPriority> {
  */
 export async function getReminderBeforeHours(): Promise<number> {
   try {
-    return await configService.getValue<number>('task.reminderBeforeHours', 24);
+    const value = await configService.getValue<number>('task.reminderBeforeHours', 24);
+    return value ?? 24;
   } catch (error) {
     logger.error('获取任务提醒时间失败', { error });
     return 24;

@@ -20,16 +20,16 @@ export interface ApprovalConfig {
  */
 export async function getApprovalConfig(): Promise<ApprovalConfig> {
   try {
-    const [defaultFlowEnabled, ceoApprovalThreshold, timeoutHours] = await Promise.all([
+    const [defaultFlowEnabledRaw, ceoApprovalThresholdRaw, timeoutHoursRaw] = await Promise.all([
       configService.getValue<boolean>('approval.defaultFlowEnabled', true),
       configService.getValue<number>('approval.ceoApprovalThreshold', 100000),
       configService.getValue<number>('approval.timeoutHours', 48),
     ]);
 
     return {
-      defaultFlowEnabled,
-      ceoApprovalThreshold,
-      timeoutHours,
+      defaultFlowEnabled: defaultFlowEnabledRaw ?? true,
+      ceoApprovalThreshold: ceoApprovalThresholdRaw ?? 100000,
+      timeoutHours: timeoutHoursRaw ?? 48,
     };
   } catch (error) {
     logger.error('获取审批配置失败', { error });
@@ -48,7 +48,8 @@ export async function getApprovalConfig(): Promise<ApprovalConfig> {
  */
 export async function getCEOApprovalThreshold(): Promise<number> {
   try {
-    return await configService.getValue<number>('approval.ceoApprovalThreshold', 100000);
+    const value = await configService.getValue<number>('approval.ceoApprovalThreshold', 100000);
+    return value ?? 100000;
   } catch (error) {
     logger.error('获取CEO审批阈值失败', { error });
     return 100000; // 默认10万元
@@ -60,7 +61,8 @@ export async function getCEOApprovalThreshold(): Promise<number> {
  */
 export async function getApprovalTimeoutHours(): Promise<number> {
   try {
-    return await configService.getValue<number>('approval.timeoutHours', 48);
+    const value = await configService.getValue<number>('approval.timeoutHours', 48);
+    return value ?? 48;
   } catch (error) {
     logger.error('获取审批超时时间失败', { error });
     return 48; // 默认48小时
@@ -72,7 +74,8 @@ export async function getApprovalTimeoutHours(): Promise<number> {
  */
 export async function isDefaultFlowEnabled(): Promise<boolean> {
   try {
-    return await configService.getValue<boolean>('approval.defaultFlowEnabled', true);
+    const value = await configService.getValue<boolean>('approval.defaultFlowEnabled', true);
+    return value ?? true;
   } catch (error) {
     logger.error('获取默认审批流配置失败', { error });
     return true;

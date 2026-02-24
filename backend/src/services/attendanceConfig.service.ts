@@ -29,7 +29,7 @@ export interface AttendanceThresholds {
  */
 export async function getWorkSchedule(): Promise<WorkSchedule> {
   try {
-    const [workStartTime, workEndTime, lateThresholdMinutes, earlyLeaveThresholdMinutes] = await Promise.all([
+    const [workStartTimeRaw, workEndTimeRaw, lateThresholdRaw, earlyLeaveRaw] = await Promise.all([
       configService.getValue<string>('attendance.workStartTime', '09:00'),
       configService.getValue<string>('attendance.workEndTime', '18:00'),
       configService.getValue<number>('attendance.lateThresholdMinutes', 15),
@@ -37,10 +37,10 @@ export async function getWorkSchedule(): Promise<WorkSchedule> {
     ]);
 
     return {
-      workStartTime,
-      workEndTime,
-      lateThresholdMinutes,
-      earlyLeaveThresholdMinutes,
+      workStartTime: workStartTimeRaw ?? '09:00',
+      workEndTime: workEndTimeRaw ?? '18:00',
+      lateThresholdMinutes: lateThresholdRaw ?? 15,
+      earlyLeaveThresholdMinutes: earlyLeaveRaw ?? 15,
     };
   } catch (error) {
     logger.error('获取工作时间配置失败', { error });
@@ -59,14 +59,14 @@ export async function getWorkSchedule(): Promise<WorkSchedule> {
  */
 export async function getThresholds(): Promise<AttendanceThresholds> {
   try {
-    const [lateThresholdMinutes, earlyLeaveThresholdMinutes] = await Promise.all([
+    const [lateThresholdRaw, earlyLeaveRaw] = await Promise.all([
       configService.getValue<number>('attendance.lateThresholdMinutes', 15),
       configService.getValue<number>('attendance.earlyLeaveThresholdMinutes', 15),
     ]);
 
     return {
-      lateThresholdMinutes,
-      earlyLeaveThresholdMinutes,
+      lateThresholdMinutes: lateThresholdRaw ?? 15,
+      earlyLeaveThresholdMinutes: earlyLeaveRaw ?? 15,
     };
   } catch (error) {
     logger.error('获取考勤阈值失败', { error });
@@ -82,7 +82,8 @@ export async function getThresholds(): Promise<AttendanceThresholds> {
  */
 export async function getWorkStartTime(): Promise<string> {
   try {
-    return await configService.getValue<string>('attendance.workStartTime', '09:00');
+    const value = await configService.getValue<string>('attendance.workStartTime', '09:00');
+    return value ?? '09:00';
   } catch (error) {
     logger.error('获取上班时间失败', { error });
     return '09:00';
@@ -94,7 +95,8 @@ export async function getWorkStartTime(): Promise<string> {
  */
 export async function getWorkEndTime(): Promise<string> {
   try {
-    return await configService.getValue<string>('attendance.workEndTime', '18:00');
+    const value = await configService.getValue<string>('attendance.workEndTime', '18:00');
+    return value ?? '18:00';
   } catch (error) {
     logger.error('获取下班时间失败', { error });
     return '18:00';
@@ -106,7 +108,8 @@ export async function getWorkEndTime(): Promise<string> {
  */
 export async function getLateThresholdMinutes(): Promise<number> {
   try {
-    return await configService.getValue<number>('attendance.lateThresholdMinutes', 15);
+    const value = await configService.getValue<number>('attendance.lateThresholdMinutes', 15);
+    return value ?? 15;
   } catch (error) {
     logger.error('获取迟到阈值失败', { error });
     return 15;
@@ -118,7 +121,8 @@ export async function getLateThresholdMinutes(): Promise<number> {
  */
 export async function getEarlyLeaveThresholdMinutes(): Promise<number> {
   try {
-    return await configService.getValue<number>('attendance.earlyLeaveThresholdMinutes', 15);
+    const value = await configService.getValue<number>('attendance.earlyLeaveThresholdMinutes', 15);
+    return value ?? 15;
   } catch (error) {
     logger.error('获取早退阈值失败', { error });
     return 15;
