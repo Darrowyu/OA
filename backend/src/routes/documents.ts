@@ -8,19 +8,11 @@ import { asyncHandler } from '../middleware/errorHandler'
 import { auditMiddleware, manualAudit } from '../middleware/auditMiddleware'
 import logger from '../lib/logger'
 import { documentPermissionMiddleware } from '../middleware/documentPermission'
+import { getMaxFileSizeBytes, getAllowedFileTypes, validateFile, getUserStorageQuotaBytes, formatFileSize } from '../services/documentConfig.service'
+import prisma from '../lib/prisma'
 
 const router = Router()
 
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 // 文档上传目录
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'documents')
@@ -52,20 +44,27 @@ const storage = multer.diskStorage({
   },
 })
 
-// 文件过滤器
-const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // 允许的文件类型
-  const allowedTypes = [
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
-    '.ppt', '.pptx', '.txt', '.jpg', '.jpeg',
-    '.png', '.gif', '.zip', '.rar'
-  ]
-  const ext = path.extname(file.originalname).toLowerCase()
+// 文件过滤器 - 使用系统配置
+const fileFilter = async (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  try {
+    const allowedTypes = await getAllowedFileTypes()
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '')
 
-  if (allowedTypes.includes(ext)) {
-    cb(null, true)
-  } else {
-    cb(new Error(`不支持的文件类型: ${ext}`))
+    if (allowedTypes.includes(ext)) {
+      cb(null, true)
+    } else {
+      cb(new Error(`不支持的文件类型: .${ext}。允许的类型: ${allowedTypes.join(', ')}`))
+    }
+  } catch (error) {
+    logger.error('文件类型检查失败', { error })
+    // 出错时使用默认允许列表
+    const defaultTypes = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar']
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '')
+    if (defaultTypes.includes(ext)) {
+      cb(null, true)
+    } else {
+      cb(new Error(`不支持的文件类型: .${ext}`))
+    }
   }
 }
 
