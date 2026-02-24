@@ -1,4 +1,4 @@
-import { ApplicationStatus, Priority } from '@prisma/client';
+import { ApplicationStatus, Priority, ApprovalAction, Prisma } from '@prisma/client';
 
 /**
  * 生成申请编号
@@ -67,6 +67,7 @@ export function getNextStatus(
       : ApplicationStatus.PENDING_MANAGER,
     [ApplicationStatus.PENDING_MANAGER]: ApplicationStatus.PENDING_CEO,
     [ApplicationStatus.PENDING_CEO]: ApplicationStatus.APPROVED,
+    [ApplicationStatus.PENDING_REVIEWER]: ApplicationStatus.APPROVED,
     [ApplicationStatus.APPROVED]: ApplicationStatus.APPROVED,
     [ApplicationStatus.REJECTED]: ApplicationStatus.REJECTED,
     [ApplicationStatus.ARCHIVED]: ApplicationStatus.ARCHIVED,
@@ -95,6 +96,7 @@ export function getStatusText(status: ApplicationStatus): string {
     [ApplicationStatus.PENDING_DIRECTOR]: '待总监审批',
     [ApplicationStatus.PENDING_MANAGER]: '待经理审批',
     [ApplicationStatus.PENDING_CEO]: '待CEO审批',
+    [ApplicationStatus.PENDING_REVIEWER]: '待审核人审批',
     [ApplicationStatus.APPROVED]: '已通过',
     [ApplicationStatus.REJECTED]: '已拒绝',
     [ApplicationStatus.ARCHIVED]: '已归档',
@@ -154,4 +156,50 @@ export function isApplicationFinal(status: ApplicationStatus): boolean {
  */
 export function shouldNotifyReadonly(amount: number | null): boolean {
   return amount !== null && amount > 100000;
+}
+
+/**
+ * 检查是否所有厂长都已审批通过
+ * 用于并行审批逻辑：所有选中的厂长都通过后才进入下一阶段
+ */
+export async function checkAllFactoryManagersApproved(
+  tx: Prisma.TransactionClient,
+  applicationId: string,
+  factoryManagerIds: string[]
+): Promise<boolean> {
+  const approvals = await tx.factoryApproval.findMany({
+    where: { applicationId, action: ApprovalAction.APPROVE }
+  });
+  const approvedIds = new Set(approvals.map(a => a.approverId));
+
+  // 获取所有厂长对应的user.id
+  const managers = await tx.user.findMany({
+    where: { employeeId: { in: factoryManagerIds } },
+    select: { id: true }
+  });
+
+  return managers.every(m => approvedIds.has(m.id));
+}
+
+/**
+ * 检查是否所有经理都已审批通过
+ * 用于并行审批逻辑：所有选中的经理都通过后才进入CEO阶段
+ */
+export async function checkAllManagersApproved(
+  tx: Prisma.TransactionClient,
+  applicationId: string,
+  managerIds: string[]
+): Promise<boolean> {
+  const approvals = await tx.managerApproval.findMany({
+    where: { applicationId, action: ApprovalAction.APPROVE }
+  });
+  const approvedIds = new Set(approvals.map(a => a.approverId));
+
+  // 获取所有经理对应的user.id
+  const managers = await tx.user.findMany({
+    where: { employeeId: { in: managerIds } },
+    select: { id: true }
+  });
+
+  return managers.every(m => approvedIds.has(m.id));
 }

@@ -7,13 +7,17 @@ import { ApprovedList } from "./approved"
 import { ApplicationDetail } from "./detail"
 import { ApplicationList } from "./list"
 import { ApplicationNew } from "./new"
+import { ApplicationTypeSelect } from "./type-select"
+import { ProductDevelopmentNew } from "./product-development-new"
 
 export function ApplicationsModule() {
   return (
     <Routes>
       <Route element={<ApplicationsLayout />}>
         <Route index element={<ApplicationList />} />
-        <Route path="new" element={<ApplicationNew />} />
+        <Route path="new" element={<ApplicationTypeSelect />} />
+        <Route path="new/standard" element={<ApplicationNew />} />
+        <Route path="new/product-development" element={<ProductDevelopmentNew />} />
         <Route path=":id" element={<ApplicationDetail />} />
         <Route path="pending" element={<PendingList />} />
         <Route path="approved" element={<ApprovedList />} />

@@ -222,6 +222,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
 const roleHierarchy: Record<UserRole, number> = {
   [UserRole.USER]: 1,
   [UserRole.READONLY]: 1,
+  [UserRole.FINANCE]: 1,
   [UserRole.FACTORY_MANAGER]: 2,
   [UserRole.DIRECTOR]: 3,
   [UserRole.MANAGER]: 4,

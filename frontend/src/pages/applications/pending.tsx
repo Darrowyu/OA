@@ -12,8 +12,11 @@ import { formatDate, formatAmount, cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/error-handler"
 import { useSignature } from "@/hooks/useSignature"
 import { SignatureDialog } from "@/components/SignatureDialog"
+import { DirectorApprovalDialog } from "@/components/DirectorApprovalDialog"
 import { statusConfig, priorityConfig } from "@/config/status"
+import { usersApi } from "@/services/users"
 import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle, User as UserIcon, Calendar as CalendarIcon, DollarSign } from "lucide-react"
+import { User } from "@/types"
 import { toast } from "sonner"
 
 const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
@@ -127,6 +130,9 @@ export function PendingList() {
     comment: "",
   })
   const [detailDialog, setDetailDialog] = React.useState({ open: false, application: null as Application | null })
+  const [directorDialogOpen, setDirectorDialogOpen] = React.useState(false)
+  const [selectedApplication, setSelectedApplication] = React.useState<Application | null>(null)
+  const [managers, setManagers] = React.useState<User[]>([])
 
   const loadPendingApplications = React.useCallback(async () => {
     if (!user || !canViewPending(user.role)) return
@@ -194,9 +200,33 @@ export function PendingList() {
     }
   }
 
+  // 加载经理列表
+  const loadManagers = React.useCallback(async () => {
+    try {
+      const response = await usersApi.getManagers()
+      if (response.success) {
+        setManagers(response.data)
+      }
+    } catch (error) {
+      console.error('加载经理列表失败', error)
+    }
+  }, [])
+
+  // 组件挂载时加载经理列表
+  React.useEffect(() => {
+    loadManagers()
+  }, [loadManagers])
+
   // 简化的回调函数
   const handleView = (app: Application) => setDetailDialog({ open: true, application: app })
-  const handleApprove = (app: Application) => openApprovalDialog(app, "APPROVE")
+  const handleApprove = (app: Application) => {
+    if (user?.role === UserRole.DIRECTOR) {
+      setSelectedApplication(app)
+      setDirectorDialogOpen(true)
+    } else {
+      openApprovalDialog(app, "APPROVE")
+    }
+  }
   const handleReject = (app: Application) => openApprovalDialog(app, "REJECT")
 
   // 辅助函数：关闭审批对话框
@@ -436,6 +466,44 @@ export function PendingList() {
 
       {/* 签名设置对话框 */}
       {user && <SignatureDialog isOpen={signatureDialogOpen} onClose={() => setSignatureDialogOpen(false)} username={user.username} />}
+
+      {/* 总监审批对话框 */}
+      <DirectorApprovalDialog
+        open={directorDialogOpen}
+        onClose={() => { setDirectorDialogOpen(false); setSelectedApplication(null); }}
+        onSubmit={async (data) => {
+          if (!selectedApplication || !user) return;
+
+          if (data.action === 'APPROVE') {
+            const signature = await getSignature(user.username);
+            if (!signature) {
+              toast.error('您还没有设置签名，请先设置签名');
+              setSignatureDialogOpen(true);
+              return;
+            }
+          }
+
+          setProcessingId(selectedApplication.id);
+          try {
+            const response = await approvalsApi.directorApprove(selectedApplication.id, {
+              action: data.action,
+              comment: data.comment,
+              flowType: data.flowType,
+              selectedManagerIds: data.selectedManagerIds,
+            });
+            toast.success(response.message || '审批成功');
+            setDirectorDialogOpen(false);
+            setSelectedApplication(null);
+            loadPendingApplications();
+          } catch (error) {
+            toast.error(getErrorMessage(error) || '审批失败');
+          } finally {
+            setProcessingId(null);
+          }
+        }}
+        managers={managers}
+        loading={processingId !== null}
+      />
     </div>
   )
 }

@@ -18,6 +18,7 @@ enum UserRole {
   CEO
   ADMIN
   READONLY
+  FINANCE
 }
 
 enum ApplicationStatus {
@@ -26,6 +27,7 @@ enum ApplicationStatus {
   PENDING_DIRECTOR
   PENDING_MANAGER
   PENDING_CEO
+  PENDING_REVIEWER
   APPROVED
   REJECTED
   ARCHIVED
@@ -48,6 +50,14 @@ enum ApprovalAction {
   APPROVE
   REJECT
   PENDING
+}
+
+enum ApplicationType {
+  STANDARD
+  PRODUCT_DEVELOPMENT
+  FEASIBILITY_STUDY
+  BUSINESS_TRIP
+  OTHER
 }
 
 model Department {
@@ -126,6 +136,8 @@ model User {
   createdWorkflows   Workflow[]         @relation(name: "WorkflowCreator") // 创建的工作流
   knowledgeArticles  KnowledgeArticle[] // 创建的知识库文章
   knowledgeFeedbacks KnowledgeFeedback[] // 知识库反馈
+  reviewedProjects   Application[]      @relation(name: "ProjectReviewer") // 审核的新产品开发项目
+  proposedProjects   Application[]      @relation(name: "ProjectProposer") // 提议的新产品开发项目
 
   @@index([departmentId])
   @@index([role])
@@ -156,6 +168,34 @@ model Application {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  // 新增字段 - 申请类型支持
+  type              ApplicationType   @default(STANDARD)
+  formType          String?
+  customFields      Json?
+
+  // 新产品开发企划表字段
+  projectNo         String?           @unique
+  projectName       String?
+  customerName      String?
+  projectSources    String[]
+  projectContent    Json?
+  projectReviewerId String?
+  projectProposerId String?
+
+  // 可行性评估表字段
+  evaluationItems   Json?
+  evaluationResult  String?
+
+  // 出差申请字段
+  tripStartDate     DateTime?
+  tripEndDate       DateTime?
+  tripDestination   String?
+  tripPurpose       String?
+  selectedSupervisorId String?
+
+  // 通知标记
+  highAmountNotified Boolean          @default(false)
+
   // 关联字段
   applicant         User               @relation(fields: [applicantId], references: [id])
   approvals         Approval[]         // 新的统一审批表
@@ -166,6 +206,8 @@ model Application {
   attachments       Attachment[]
   reminderLogs      ReminderLog[]
   archiveRecord     ArchiveRecord?
+  projectReviewer   User?              @relation(fields: [projectReviewerId], references: [id], name: "ProjectReviewer")
+  projectProposer   User?              @relation(fields: [projectProposerId], references: [id], name: "ProjectProposer")
 
   @@index([status])
   @@index([priority])
@@ -174,6 +216,8 @@ model Application {
   @@index([deletedAt])
   @@index([status, applicantId, submittedAt])
   @@index([status, priority])  // 按状态和优先级查询优化
+  @@index([type])              // 按申请类型查询优化
+  @@index([projectNo])         // 项目编号查询优化
 }
 
 // ============================================
@@ -235,6 +279,7 @@ model DirectorApproval {
   comment            String?
   selectedManagerIds String[]
   skipManager        Boolean        @default(false)
+  flowType           String?        // TO_MANAGER | TO_CEO | COMPLETE
   approvedAt         DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt

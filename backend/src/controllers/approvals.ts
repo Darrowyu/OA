@@ -5,12 +5,13 @@ import {
   getNextStatus,
   shouldNotifyReadonly,
   getStatusText,
+  checkAllFactoryManagersApproved,
 } from '../utils/application';
 import { archiveApplication } from '../services/archive';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
-import { sendApprovalNotification } from '../services/notificationService';
+import { sendApprovalNotification, notifyHighAmountApproval } from '../services/notificationService';
 import { escapeHtml } from '../utils/validation';
 
 // 审批验证 Schema
@@ -29,6 +30,7 @@ const directorApprovalSchema = z.object({
     if (!val) return val;
     return escapeHtml(val);
   }),
+  flowType: z.enum(['TO_MANAGER', 'TO_CEO', 'COMPLETE']).optional().default('TO_MANAGER'),
   selectedManagerIds: z.array(z.string()).optional(),
   skipManager: z.boolean().optional().default(false),
 });
@@ -196,38 +198,72 @@ async function processApproval(
           },
         });
       } else {
-        const updateData: Prisma.ApplicationUpdateInput = { status: newStatus };
+        // 厂长审批：检查是否所有厂长都已通过（并行审批逻辑）
+        if (level === 'FACTORY') {
+          const allApproved = await checkAllFactoryManagersApproved(
+            tx, applicationId, application.factoryManagerIds
+          );
 
-        // CEO审批通过时设置完成时间
-        if (level === 'CEO') {
-          updateData.completedAt = new Date();
-        }
-
-        await tx.application.update({
-          where: { id: applicationId },
-          data: updateData,
-        });
-
-        // 经理审批通过后创建CEO审批记录
-        if (level === 'MANAGER') {
-          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
-          if (ceo) {
-            await tx.ceoApproval.create({
-              data: {
-                applicationId,
-                approverId: ceo.id,
-                action: ApprovalAction.PENDING,
-              },
+          if (allApproved) {
+            // 所有厂长通过，进入总监阶段
+            await tx.application.update({
+              where: { id: applicationId },
+              data: { status: ApplicationStatus.PENDING_DIRECTOR }
             });
           }
-        }
+          // 否则不更新状态，保持 PENDING_FACTORY，等待其他厂长审批
+        } else {
+          const updateData: Prisma.ApplicationUpdateInput = { status: newStatus };
 
-        // 最终审批通过后处理归档
-        if (level === 'CEO') {
-          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
-          const archiveResult = await archiveApplication(applicationId, tx);
-          if (!archiveResult.success) {
-            throw new Error(`归档失败: ${archiveResult.error}`);
+          // CEO审批通过时设置完成时间
+          if (level === 'CEO') {
+            updateData.completedAt = new Date();
+          }
+
+          await tx.application.update({
+            where: { id: applicationId },
+            data: updateData,
+          });
+
+          // 经理审批通过后创建CEO审批记录
+          if (level === 'MANAGER') {
+            const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+            if (ceo) {
+              await tx.ceoApproval.create({
+                data: {
+                  applicationId,
+                  approverId: ceo.id,
+                  action: ApprovalAction.PENDING,
+                },
+              });
+            }
+          }
+
+          // 最终审批通过后处理归档
+          if (level === 'CEO') {
+            await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+
+            // CEO审批通过后，高金额申请通知财务人员
+            if (action === 'APPROVE' && application.amount) {
+              const amount = Number(application.amount);
+              if (amount >= 100000) {
+                // 在事务外异步发送通知，不阻塞主流程
+                setImmediate(() => {
+                  notifyHighAmountApproval(
+                    applicationId,
+                    amount,
+                    application.applicantName
+                  ).catch((err) => {
+                    logger.error('高金额通知发送失败', { error: err });
+                  });
+                });
+              }
+            }
+
+            const archiveResult = await archiveApplication(applicationId, tx);
+            if (!archiveResult.success) {
+              throw new Error(`归档失败: ${archiveResult.error}`);
+            }
           }
         }
       }
@@ -276,7 +312,7 @@ export function factoryApprove(req: Request, res: Response): Promise<void> {
 /**
  * 总监审批
  * POST /api/approvals/director/:applicationId
- * 支持skipManager参数跳过经理审批
+ * 支持三种流向：TO_MANAGER、TO_CEO、COMPLETE
  */
 export async function directorApprove(req: Request, res: Response): Promise<void> {
   try {
@@ -300,7 +336,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       return;
     }
 
-    const { action, comment, selectedManagerIds, skipManager } = parseResult.data;
+    const { action, comment, flowType, selectedManagerIds } = parseResult.data;
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
@@ -316,16 +352,36 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       return;
     }
 
-    // 如果选择通过且未跳过经理，必须选择经理
-    if (action === 'APPROVE' && !skipManager && (!selectedManagerIds || selectedManagerIds.length === 0)) {
+    // 如果选择通过且流向经理，必须选择经理
+    if (action === 'APPROVE' && flowType === 'TO_MANAGER' && (!selectedManagerIds || selectedManagerIds.length === 0)) {
       res.status(400).json(fail('MISSING_MANAGERS', '请选择审批经理'));
       return;
     }
 
     const approvalAction = action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT;
-    const newStatus = getNextStatus(application.status, action, { skipManager });
 
     await prisma.$transaction(async (tx) => {
+      // 确定新状态
+      let nextStatus: ApplicationStatus;
+
+      if (action === 'APPROVE') {
+        switch (flowType) {
+          case 'TO_MANAGER':
+            nextStatus = ApplicationStatus.PENDING_MANAGER;
+            break;
+          case 'TO_CEO':
+            nextStatus = ApplicationStatus.PENDING_CEO;
+            break;
+          case 'COMPLETE':
+            nextStatus = ApplicationStatus.APPROVED;
+            break;
+          default:
+            nextStatus = ApplicationStatus.PENDING_MANAGER;
+        }
+      } else {
+        nextStatus = ApplicationStatus.REJECTED;
+      }
+
       // 创建总监审批记录
       await tx.directorApproval.create({
         data: {
@@ -333,8 +389,9 @@ export async function directorApprove(req: Request, res: Response): Promise<void
           approverId: user.id,
           action: approvalAction,
           comment: comment?.trim() || null,
-          selectedManagerIds: selectedManagerIds || [],
-          skipManager: skipManager,
+          selectedManagerIds: flowType === 'TO_MANAGER' ? (selectedManagerIds || []) : [],
+          skipManager: flowType !== 'TO_MANAGER',
+          flowType,
           approvedAt: new Date(),
         },
       });
@@ -343,24 +400,32 @@ export async function directorApprove(req: Request, res: Response): Promise<void
         await tx.application.update({
           where: { id: applicationId },
           data: {
-            status: newStatus,
+            status: nextStatus,
             rejectedBy: user.id,
             rejectedAt: new Date(),
             rejectReason: comment?.trim() || null,
           },
         });
       } else {
-        // 更新申请状态和经理列表
+        // 更新申请状态
+        const updateData: Prisma.ApplicationUpdateInput = {
+          status: nextStatus,
+          managerIds: flowType === 'TO_MANAGER' ? selectedManagerIds : [],
+        };
+
+        // 直接完成时设置完成时间
+        if (flowType === 'COMPLETE') {
+          updateData.completedAt = new Date();
+        }
+
         await tx.application.update({
           where: { id: applicationId },
-          data: {
-            status: newStatus,
-            managerIds: skipManager ? [] : selectedManagerIds,
-          },
+          data: updateData,
         });
 
-        // 如果不跳过经理，批量创建经理审批记录（避免N+1）
-        if (!skipManager && selectedManagerIds && selectedManagerIds.length > 0) {
+        // 根据流向创建相应的审批记录
+        if (flowType === 'TO_MANAGER' && selectedManagerIds && selectedManagerIds.length > 0) {
+          // 创建经理审批记录
           const managers = await tx.user.findMany({
             where: { employeeId: { in: selectedManagerIds } }
           });
@@ -371,15 +436,42 @@ export async function directorApprove(req: Request, res: Response): Promise<void
               action: ApprovalAction.PENDING,
             })),
           });
+        } else if (flowType === 'TO_CEO') {
+          // 创建CEO审批记录
+          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+          if (ceo) {
+            await tx.ceoApproval.create({
+              data: {
+                applicationId,
+                approverId: ceo.id,
+                action: ApprovalAction.PENDING,
+              },
+            });
+          }
+        } else if (flowType === 'COMPLETE') {
+          // 直接完成，处理归档
+          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+          const archiveResult = await archiveApplication(applicationId, tx);
+          if (!archiveResult.success) {
+            throw new Error(`归档失败: ${archiveResult.error}`);
+          }
         }
       }
+
+      return { nextStatus };
+    });
+
+    // 重新查询获取最终状态
+    const updatedApp = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { status: true }
     });
 
     res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
-      status: newStatus,
-      statusText: getStatusText(newStatus),
-      skipManager,
+      status: updatedApp?.status,
+      statusText: getStatusText(updatedApp?.status || ApplicationStatus.REJECTED),
+      flowType: action === 'APPROVE' ? flowType : undefined,
     }));
   } catch (error) {
     logger.error('总监审批失败', { error: error instanceof Error ? error.message : '未知错误' });

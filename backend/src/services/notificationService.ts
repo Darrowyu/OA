@@ -6,6 +6,7 @@ import {
   broadcastNotification,
   updateUnreadCount,
 } from './socketService';
+import { sendEmailNotification } from './email';
 
 // 创建通知数据类型
 export interface CreateNotificationData {
@@ -299,4 +300,116 @@ export async function getNotificationById(
       userId,
     },
   });
+}
+
+// 高金额阈值：10万元
+const HIGH_AMOUNT_THRESHOLD = 100000;
+
+/**
+ * 高金额申请审批通过通知
+ * CEO审批通过后，通知财务人员
+ */
+export async function notifyHighAmountApproval(
+  applicationId: string,
+  amount: number,
+  applicantName: string
+): Promise<void> {
+  if (amount < HIGH_AMOUNT_THRESHOLD) return;
+
+  try {
+    // 获取财务人员（role为FINANCE或特定用户ID）
+    const financeUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: 'FINANCE' as any },
+          { id: 'E10015' }
+        ],
+        isActive: true
+      }
+    });
+
+    // 发送系统通知
+    for (const user of financeUsers) {
+      await createNotification({
+        userId: user.id,
+        type: NotificationType.SYSTEM,
+        title: '高金额申请审批通过',
+        content: `申请金额 ¥${amount.toLocaleString()} 已审批通过，申请人: ${applicantName}`,
+        data: { applicationId, amount }
+      });
+
+      // 发送邮件通知
+      if (user.email) {
+        await sendEmailNotification(
+          user.email,
+          '高金额申请审批通过通知',
+          generateHighAmountEmailContent(applicationId, amount, applicantName),
+          applicationId
+        );
+      }
+    }
+
+    // 标记已通知
+    await prisma.application.update({
+      where: { id: applicationId },
+      data: { highAmountNotified: true }
+    });
+
+    logger.info(`高金额申请已通知 ${financeUsers.length} 位财务人员`, { applicationId, amount });
+  } catch (error) {
+    logger.error('高金额通知失败', { error: error instanceof Error ? error.message : String(error), applicationId });
+  }
+}
+
+/**
+ * 生成高金额通知邮件内容
+ */
+function generateHighAmountEmailContent(
+  applicationId: string,
+  amount: number,
+  applicantName: string
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #dc2626; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; }
+    .content { background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    .footer { background: #f9fafb; padding: 15px; border-radius: 0 0 8px 8px; font-size: 12px; color: #6b7280; }
+    .info-row { margin: 10px 0; }
+    .label { font-weight: bold; color: #374151; }
+    .amount { color: #dc2626; font-weight: bold; font-size: 18px; }
+    .button { display: inline-block; background: #2563eb; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 style="margin: 0;">高金额申请审批通过通知</h2>
+    </div>
+    <div class="content">
+      <div class="info-row">
+        <span class="label">申请编号：</span>${applicationId}
+      </div>
+      <div class="info-row">
+        <span class="label">申请金额：</span><span class="amount">¥${amount.toLocaleString()}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">申请人：</span>${applicantName}
+      </div>
+      <div class="info-row" style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+        <strong>提示：</strong>该申请金额超过10万元，请财务部门关注后续付款流程。
+      </div>
+    </div>
+    <div class="footer">
+      此邮件由OA系统自动发送，请勿直接回复。
+    </div>
+  </div>
+</body>
+</html>
+  `;
 }
