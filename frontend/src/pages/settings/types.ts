@@ -1,36 +1,29 @@
 // 归档相关类型
 export interface ArchiveStats {
-  activeCount: number;
-  archivedCount: number;
-  dbSize: string;
-  archivableCount: number;
+  totalArchives: number;
+  totalSize: number;
+  lastArchiveDate: string | null;
 }
 
 export interface ArchiveFile {
   id: string;
-  filename: string;
+  name: string;
   createdAt: string;
-  size: string;
-  recordCount: number;
+  size: number;
+  startDate: string;
+  endDate: string;
 }
 
 // 邮件设置类型
-export interface ReminderInterval {
-  initialDelay: number; // 初始延迟（小时）
-  normalInterval: number; // 正常间隔（小时）
-  mediumInterval: number; // 中期间隔（小时）
-  urgentInterval: number; // 紧急间隔（小时）
-}
-
 export interface EmailSettings {
-  urgent: ReminderInterval;
-  medium: ReminderInterval;
-  normal: ReminderInterval;
-  workdayOnly: boolean;
-  workdays: number[]; // 0-6 表示周日到周六
-  workHoursStart: string; // HH:mm 格式
-  workHoursEnd: string; // HH:mm 格式
-  skipDates: string[]; // YYYY-MM-DD 格式
+  enabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword: string;
+  taskReminder: boolean;
+  meetingReminder: boolean;
+  approvalReminder: boolean;
 }
 
 // 系统信息类型
@@ -38,6 +31,10 @@ export interface SystemInfo {
   version: string;
   uptime: string;
   nodeVersion: string;
+  platform?: string;
+  arch?: string;
+  hostname?: string;
+  pid?: number;
   database: {
     type: string;
     version: string;
@@ -46,6 +43,8 @@ export interface SystemInfo {
   memory: {
     used: string;
     total: string;
+    usedBytes: number;
+    totalBytes: number;
   };
 }
 

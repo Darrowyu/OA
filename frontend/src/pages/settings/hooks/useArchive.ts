@@ -1,66 +1,74 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
 import { logger } from '@/lib/logger';
 import type { ArchiveStats, ArchiveFile } from '../types';
 
+interface ArchiveApiItem {
+  fileName: string;
+  archivedAt: string;
+  archivedBy: string;
+  count: number;
+  size: number;
+}
+
+interface ArchiveStatsResponse {
+  totalFiles: number;
+  totalArchived: number;
+  archives: ArchiveApiItem[];
+}
+
 export function useArchive() {
-  const [archiveStats, setArchiveStats] = useState<ArchiveStats>({
-    activeCount: 0,
-    archivedCount: 0,
-    dbSize: '0 MB',
-    archivableCount: 0,
+  const [archives, setArchives] = useState<ArchiveFile[]>([]);
+  const [stats, setStats] = useState<ArchiveStats>({
+    totalArchives: 0,
+    totalSize: 0,
+    lastArchiveDate: null,
   });
-  const [archiveFiles, setArchiveFiles] = useState<ArchiveFile[]>([]);
-  const [showArchiveFiles, setShowArchiveFiles] = useState(false);
-  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isMountedRef = useRef(false);
-
-  const loadArchiveStats = useCallback(async () => {
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
-    setArchiveLoading(true);
+  const loadArchives = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.get<{
         success: boolean;
-        data: ArchiveStats;
+        data: ArchiveStatsResponse;
         error?: { code: string; message: string };
       }>('/admin/archive-stats');
       if (response.success) {
-        setArchiveStats(response.data);
+        const { totalArchived, archives: apiArchives } = response.data;
+
+        // 转换API数据为前端格式
+        const formattedArchives: ArchiveFile[] = apiArchives.map((item, index) => ({
+          id: `${item.fileName}-${index}`,
+          name: item.fileName,
+          createdAt: new Date(item.archivedAt).toLocaleString('zh-CN'),
+          size: item.size,
+          startDate: '-',
+          endDate: '-',
+        }));
+
+        setArchives(formattedArchives);
+        setStats({
+          totalArchives: totalArchived,
+          totalSize: apiArchives.reduce((sum, item) => sum + item.size, 0),
+          lastArchiveDate: apiArchives.length > 0 ? apiArchives[0].archivedAt : null,
+        });
       }
     } catch (err) {
       logger.error('加载归档统计失败', { err });
+      setError('加载归档数据失败，请重试');
+      toast.error('加载归档数据失败');
     } finally {
-      setArchiveLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  const loadArchiveFiles = useCallback(async () => {
-    setArchiveLoading(true);
-    try {
-      const response = await apiClient.get<{
-        success: boolean;
-        data: ArchiveFile[];
-        error?: { code: string; message: string };
-      }>('/admin/archive-files');
-      if (response.success) {
-        setArchiveFiles(response.data);
-      }
-    } catch (err) {
-      logger.error('加载归档文件列表失败', { err });
-    } finally {
-      setArchiveLoading(false);
-    }
-  }, []);
-
-  const handleArchive = useCallback(async () => {
-    if (!confirm('确定要执行数据归档吗？这将把符合条件的已完成申请归档到文件中。')) {
-      return;
-    }
-    setArchiveLoading(true);
+  const createArchive = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.post<{
         success: boolean;
@@ -68,34 +76,33 @@ export function useArchive() {
         error?: { code: string; message: string };
       }>('/admin/archive');
       if (response.success) {
-        toast.success(`归档执行成功，共归档 ${response.data?.archivedCount || 0} 条记录`);
-        loadArchiveStats();
+        toast.success(`归档创建成功，共归档 ${response.data?.archivedCount || 0} 条记录`);
+        loadArchives();
       } else {
-        toast.error(response.error?.message || '归档执行失败');
+        const msg = response.error?.message || '归档创建失败';
+        toast.error(msg);
+        setError(msg);
       }
     } catch (err) {
-      logger.error('归档执行失败', { err });
-      toast.error('归档执行失败');
+      logger.error('创建归档失败', { err });
+      toast.error('归档创建失败');
+      setError('归档创建失败，请重试');
     } finally {
-      setArchiveLoading(false);
+      setLoading(false);
     }
-  }, [loadArchiveStats]);
+  }, [loadArchives]);
 
-  const toggleArchiveFiles = useCallback(() => {
-    if (!showArchiveFiles && archiveFiles.length === 0) {
-      loadArchiveFiles();
-    }
-    setShowArchiveFiles((prev) => !prev);
-  }, [showArchiveFiles, archiveFiles.length, loadArchiveFiles]);
+  const deleteArchive = useCallback(async (_id: string) => {
+    toast.info('归档删除功能开发中');
+  }, []);
 
   return {
-    archiveStats,
-    archiveFiles,
-    showArchiveFiles,
-    archiveLoading,
-    loadArchiveStats,
-    loadArchiveFiles,
-    handleArchive,
-    toggleArchiveFiles,
+    archives,
+    stats,
+    loading,
+    error,
+    loadArchives,
+    createArchive,
+    deleteArchive,
   };
 }

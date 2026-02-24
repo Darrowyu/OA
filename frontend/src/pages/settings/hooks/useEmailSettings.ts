@@ -1,183 +1,92 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
 import { logger } from '@/lib/logger';
-import type { EmailSettings, ReminderInterval } from '../types';
 
-const defaultEmailSettings: EmailSettings = {
-  urgent: {
-    initialDelay: 2,
-    normalInterval: 4,
-    mediumInterval: 2,
-    urgentInterval: 1,
-  },
-  medium: {
-    initialDelay: 4,
-    normalInterval: 8,
-    mediumInterval: 4,
-    urgentInterval: 2,
-  },
-  normal: {
-    initialDelay: 8,
-    normalInterval: 24,
-    mediumInterval: 12,
-    urgentInterval: 4,
-  },
-  workdayOnly: true,
-  workdays: [1, 2, 3, 4, 5],
-  workHoursStart: '09:00',
-  workHoursEnd: '18:00',
-  skipDates: [],
+interface EmailSettingsState {
+  enabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword: string;
+  taskReminder: boolean;
+  meetingReminder: boolean;
+  approvalReminder: boolean;
+}
+
+const defaultSettings: EmailSettingsState = {
+  enabled: true,
+  smtpHost: '',
+  smtpPort: 587,
+  smtpUser: '',
+  smtpPassword: '',
+  taskReminder: true,
+  meetingReminder: true,
+  approvalReminder: true,
 };
 
 export function useEmailSettings() {
-  const [emailSettings, setEmailSettings] = useState<EmailSettings>(defaultEmailSettings);
-  const [newSkipDate, setNewSkipDate] = useState('');
-  const [skipDateRangeStart, setSkipDateRangeStart] = useState('');
-  const [skipDateRangeEnd, setSkipDateRangeEnd] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const isMountedRef = useRef(false);
+  const [settings, setSettings] = useState<EmailSettingsState>(defaultSettings);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
-    setIsLoading(true);
+    setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.get<{
         success: boolean;
-        data: EmailSettings;
+        data: EmailSettingsState;
         error?: { code: string; message: string };
-      }>('/settings/reminders');
+      }>('/settings/email');
       if (response.success) {
-        setEmailSettings((prev) => ({ ...prev, ...response.data }));
+        setSettings((prev) => ({ ...prev, ...response.data }));
       }
     } catch (err) {
       logger.error('加载邮件设置失败', { err });
+      setError('加载邮件设置失败，请重试');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, []);
 
   const saveSettings = useCallback(async () => {
-    setIsSaving(true);
+    setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.post<{
         success: boolean;
         error?: { code: string; message: string };
-      }>('/settings/reminders', emailSettings);
+      }>('/settings/email', settings);
       if (response.success) {
         toast.success('邮件设置保存成功');
       } else {
-        toast.error(response.error?.message || '保存邮件设置失败');
+        const msg = response.error?.message || '保存失败';
+        toast.error(msg);
+        setError(msg);
       }
     } catch (err) {
       logger.error('保存邮件设置失败', { err });
-      toast.error('保存邮件设置失败');
+      toast.error('保存失败');
+      setError('保存邮件设置失败，请重试');
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
-  }, [emailSettings]);
+  }, [settings]);
 
-  const updateInterval = useCallback(
-    (priority: 'urgent' | 'medium' | 'normal', field: keyof ReminderInterval, value: number) => {
-      setEmailSettings((prev) => ({
-        ...prev,
-        [priority]: {
-          ...prev[priority],
-          [field]: value,
-        },
-      }));
-    },
-    []
-  );
-
-  const toggleWorkday = useCallback((day: number) => {
-    setEmailSettings((prev) => ({
-      ...prev,
-      workdays: prev.workdays.includes(day)
-        ? prev.workdays.filter((d) => d !== day)
-        : [...prev.workdays, day].sort(),
-    }));
-  }, []);
-
-  const addSkipDate = useCallback(() => {
-    if (!newSkipDate) return;
-    if (emailSettings.skipDates.includes(newSkipDate)) {
-      toast.error('该日期已存在');
-      return;
-    }
-    setEmailSettings((prev) => ({
-      ...prev,
-      skipDates: [...prev.skipDates, newSkipDate].sort(),
-    }));
-    setNewSkipDate('');
-  }, [newSkipDate, emailSettings.skipDates]);
-
-  const addSkipDateRange = useCallback(() => {
-    if (!skipDateRangeStart || !skipDateRangeEnd) {
-      toast.error('请选择开始和结束日期');
-      return;
-    }
-    if (skipDateRangeStart > skipDateRangeEnd) {
-      toast.error('开始日期不能晚于结束日期');
-      return;
-    }
-
-    const start = new Date(skipDateRangeStart);
-    const end = new Date(skipDateRangeEnd);
-    const newDates: string[] = [];
-
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      if (!emailSettings.skipDates.includes(dateStr)) {
-        newDates.push(dateStr);
-      }
-    }
-
-    setEmailSettings((prev) => ({
-      ...prev,
-      skipDates: [...prev.skipDates, ...newDates].sort(),
-    }));
-    setSkipDateRangeStart('');
-    setSkipDateRangeEnd('');
-  }, [skipDateRangeStart, skipDateRangeEnd, emailSettings.skipDates]);
-
-  const removeSkipDate = useCallback((date: string) => {
-    setEmailSettings((prev) => ({
-      ...prev,
-      skipDates: prev.skipDates.filter((d) => d !== date),
-    }));
-  }, []);
-
-  const setWorkdayOnly = useCallback((value: boolean) => {
-    setEmailSettings((prev) => ({ ...prev, workdayOnly: value }));
-  }, []);
-
-  const setWorkHours = useCallback((field: 'workHoursStart' | 'workHoursEnd', value: string) => {
-    setEmailSettings((prev) => ({ ...prev, [field]: value }));
+  const updateSetting = useCallback(<K extends keyof EmailSettingsState>(
+    key: K,
+    value: EmailSettingsState[K]
+  ) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   return {
-    emailSettings,
-    newSkipDate,
-    skipDateRangeStart,
-    skipDateRangeEnd,
-    isSaving,
-    isLoading,
-    setNewSkipDate,
-    setSkipDateRangeStart,
-    setSkipDateRangeEnd,
+    settings,
+    loading,
+    error,
     loadSettings,
     saveSettings,
-    updateInterval,
-    toggleWorkday,
-    addSkipDate,
-    addSkipDateRange,
-    removeSkipDate,
-    setWorkdayOnly,
-    setWorkHours,
+    updateSetting,
   };
 }
