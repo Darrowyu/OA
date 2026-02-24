@@ -75,9 +75,9 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
   const approvalSubItems: SubMenuItem[] = useMemo(
     () => [
       { path: '/approval', name: '全部申请', icon: 'List' },
+      { path: '/approval/new', name: '新建申请', icon: 'Plus' },
       { path: '/approval/pending', name: '待我审批', icon: 'FileCheck', badge: pendingCount, show: isApprover },
       { path: '/approval/approved', name: '已审批', icon: 'CheckCircle' },
-      { path: '/approval/new', name: '新建申请', icon: 'Plus' },
     ],
     [pendingCount, isApprover]
   );
@@ -159,8 +159,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
   // 系统管理项
   const adminNavItems: NavItemType[] = useMemo(
     () => [
-      { path: '/users', name: '用户管理', icon: 'UserCog' },
-      { path: '/workflow', name: '工作流管理', icon: 'GitBranch' },
+      { path: '/settings', name: '系统设置', icon: 'Settings' },
     ],
     []
   );

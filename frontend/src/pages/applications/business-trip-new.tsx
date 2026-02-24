@@ -1,46 +1,54 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ProductDevelopmentForm, ProductDevelopmentData } from '@/components/ProductDevelopmentForm';
-import { ArrowLeft, Lightbulb } from 'lucide-react';
+import { BusinessTripForm, BusinessTripData } from '@/components/BusinessTripForm';
+import { ArrowLeft, Plane } from 'lucide-react';
 import { toast } from 'sonner';
 import { usersApi } from '@/services/users';
 import { User } from '@/types';
 import { logger } from '@/lib/logger';
 import { Loader2 } from 'lucide-react';
 
-export function ProductDevelopmentNew() {
+export function BusinessTripNew() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
+        // 加载用户列表
         const response = await usersApi.getUsers();
         setUsers(response.data?.items || []);
+
+        // 获取当前登录用户
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          setCurrentUser(JSON.parse(userStr));
+        }
       } catch (error) {
-        logger.error('加载用户列表失败', { error });
-        toast.error('加载用户列表失败');
+        logger.error('加载数据失败', { error });
+        toast.error('加载数据失败');
       } finally {
         setLoading(false);
       }
     };
-    loadUsers();
+    loadData();
   }, []);
 
-  const handleSubmit = async (data: ProductDevelopmentData) => {
+  const handleSubmit = async (data: BusinessTripData) => {
     setSubmitting(true);
     try {
-      // TODO: 调用API创建新产品开发企划表
-      // await applicationsApi.createProductDevelopment(data);
-      logger.info('提交新产品开发企划表', { data });
-      toast.success('新产品开发企划表创建成功');
-      navigate('/approval');
+      // TODO: 调用API创建出差申请
+      // await applicationsApi.createBusinessTrip(data);
+      logger.info('提交出差申请', { data });
+      toast.success('出差申请创建成功');
+      navigate('/approval/new');
     } catch (error) {
-      logger.error('创建新产品开发企划表失败', { error });
+      logger.error('创建出差申请失败', { error });
       toast.error('创建失败');
     } finally {
       setSubmitting(false);
@@ -61,22 +69,22 @@ export function ProductDevelopmentNew() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">新产品开发企划表</h1>
-            <p className="text-sm text-gray-500 mt-0.5">填写新产品开发项目提案</p>
+            <h1 className="text-2xl font-bold text-gray-900">出差申请单</h1>
+            <p className="text-sm text-gray-500 mt-0.5">简化流程，单级审批</p>
           </div>
         </div>
       </div>
 
       {/* 表单卡片 */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-violet-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
-              <Lightbulb className="h-5 w-5 text-blue-500" />
+              <Plane className="h-5 w-5 text-purple-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">填写项目信息</h2>
-              <p className="text-sm text-gray-500">请完整填写以下7个维度的项目内容</p>
+              <h2 className="text-lg font-semibold text-gray-900">填写出差信息</h2>
+              <p className="text-sm text-gray-500">请填写出差人员、目的地及事由</p>
             </div>
           </div>
         </div>
@@ -84,12 +92,13 @@ export function ProductDevelopmentNew() {
         <div className="p-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="animate-spin h-8 w-8 text-blue-500 mb-3" />
+              <Loader2 className="animate-spin h-8 w-8 text-purple-500 mb-3" />
               <p className="text-gray-500">加载中...</p>
             </div>
           ) : (
-            <ProductDevelopmentForm
+            <BusinessTripForm
               users={users}
+              currentUser={currentUser}
               onSubmit={handleSubmit}
               onCancel={() => navigate('/approval/new')}
               loading={submitting}

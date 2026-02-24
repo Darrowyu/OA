@@ -57,7 +57,7 @@ export function ApplicationNew() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/approval")}
+            onClick={() => navigate("/approval/new")}
             className="rounded-xl hover:bg-blue-500 hover:text-white text-blue-500"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -94,7 +94,7 @@ export function ApplicationNew() {
               factoryManagers={factoryManagers}
               managers={managers}
               onSubmit={handleSubmit}
-              onCancel={() => navigate("/approval")}
+              onCancel={() => navigate("/approval/new")}
               loading={submitting}
             />
           )}

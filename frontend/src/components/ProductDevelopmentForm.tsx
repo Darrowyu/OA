@@ -145,9 +145,13 @@ export function ProductDevelopmentForm({ users, onSubmit, onCancel, loading }: P
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>项目审核人 *</Label>
-          <Select value={reviewerId} onValueChange={(v) => { setReviewerId(v); setErrors(p => ({ ...p, reviewer: '' })); }}>
+          <Select
+            value={reviewerId}
+            onValueChange={(v) => { setReviewerId(v); setErrors(p => ({ ...p, reviewer: '' })); }}
+            disabled={users.length === 0}
+          >
             <SelectTrigger className={errors.reviewer ? 'border-red-500' : ''}>
-              <SelectValue placeholder="请选择审核人" />
+              <SelectValue placeholder={users.length === 0 ? '暂无可用用户' : '请选择审核人'} />
             </SelectTrigger>
             <SelectContent>
               {users.map((user) => (
@@ -158,12 +162,17 @@ export function ProductDevelopmentForm({ users, onSubmit, onCancel, loading }: P
             </SelectContent>
           </Select>
           {errors.reviewer && <p className="text-sm text-red-500 mt-1">{errors.reviewer}</p>}
+          {users.length === 0 && <p className="text-sm text-amber-600 mt-1">系统中没有可用用户</p>}
         </div>
         <div>
           <Label>项目申请人 *</Label>
-          <Select value={proposerId} onValueChange={(v) => { setProposerId(v); setErrors(p => ({ ...p, proposer: '' })); }}>
+          <Select
+            value={proposerId}
+            onValueChange={(v) => { setProposerId(v); setErrors(p => ({ ...p, proposer: '' })); }}
+            disabled={users.length === 0}
+          >
             <SelectTrigger className={errors.proposer ? 'border-red-500' : ''}>
-              <SelectValue placeholder="请选择申请人" />
+              <SelectValue placeholder={users.length === 0 ? '暂无可用用户' : '请选择申请人'} />
             </SelectTrigger>
             <SelectContent>
               {users.map((user) => (
@@ -174,6 +183,7 @@ export function ProductDevelopmentForm({ users, onSubmit, onCancel, loading }: P
             </SelectContent>
           </Select>
           {errors.proposer && <p className="text-sm text-red-500 mt-1">{errors.proposer}</p>}
+          {users.length === 0 && <p className="text-sm text-amber-600 mt-1">系统中没有可用用户</p>}
         </div>
       </div>
 
