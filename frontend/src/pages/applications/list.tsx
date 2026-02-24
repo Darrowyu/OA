@@ -134,7 +134,6 @@ export function ApplicationList() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
   const [factoryManagers, setFactoryManagers] = React.useState<User[]>([])
-  const [managers, setManagers] = React.useState<User[]>([])
   const [loadingUsers, setLoadingUsers] = React.useState(false)
   const [stats, setStats] = React.useState({
     totalAmount: 0,
@@ -194,12 +193,8 @@ export function ApplicationList() {
   const fetchApprovers = React.useCallback(async () => {
     setLoadingUsers(true)
     try {
-      const [factoryResponse, managerResponse] = await Promise.all([
-        usersApi.getFactoryManagers(),
-        usersApi.getManagers(),
-      ])
+      const factoryResponse = await usersApi.getFactoryManagers()
       setFactoryManagers(factoryResponse.data || [])
-      setManagers(managerResponse.data || [])
     } catch (error) {
       logger.error("获取审批人列表失败", { error })
     } finally {
@@ -517,7 +512,6 @@ export function ApplicationList() {
             ) : (
               <ApplicationForm
                 factoryManagers={factoryManagers}
-                managers={managers}
                 onSubmit={handleCreateApplication}
                 onCancel={() => setIsCreateDialogOpen(false)}
                 loading={submitting}

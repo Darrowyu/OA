@@ -3,15 +3,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import { NativeSelect as Select } from "@/components/ui/select"
 import { FileUpload } from "./FileUpload"
-import { CreateApplicationRequest, User, Priority } from "@/types"
+import { FlowInfoTooltip } from "./FlowInfoTooltip"
+import { CreateApplicationRequest, Priority } from "@/types"
 import { UploadResponse } from "@/services/uploads"
 import { Upload } from "lucide-react"
 
-interface ApplicationFormProps {
-  factoryManagers: User[]
+interface OtherApplicationFormProps {
   onSubmit: (data: CreateApplicationRequest) => void
   onCancel: () => void
   loading?: boolean
@@ -25,18 +24,22 @@ const priorityOptions = [
   { value: Priority.URGENT, label: "紧急" },
 ]
 
+// 审批级别选项
+const approvalLevelOptions = [
+  { value: 'DIRECTOR', label: "报总监审批" },
+  { value: 'CEO', label: "报CEO审批" },
+]
 
-export function ApplicationForm({
-  factoryManagers,
+export function OtherApplicationForm({
   onSubmit,
   onCancel,
   loading = false,
-}: ApplicationFormProps) {
+}: OtherApplicationFormProps) {
   const [title, setTitle] = React.useState("")
   const [content, setContent] = React.useState("")
   const [amount, setAmount] = React.useState<string>("")
   const [priority, setPriority] = React.useState<Priority>(Priority.NORMAL)
-  const [selectedFactoryManagers, setSelectedFactoryManagers] = React.useState<string[]>([])
+  const [targetLevel, setTargetLevel] = React.useState<'DIRECTOR' | 'CEO'>('DIRECTOR')
   const [attachments, setAttachments] = React.useState<UploadResponse[]>([])
   const [errors, setErrors] = React.useState<Record<string, string>>({})
 
@@ -62,10 +65,6 @@ export function ApplicationForm({
       newErrors.amount = "金额不能为负数"
     }
 
-    if (selectedFactoryManagers.length === 0) {
-      newErrors.factoryManagers = "请至少选择一位审批厂长"
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -80,8 +79,11 @@ export function ApplicationForm({
       title: title.trim(),
       content: content.trim(),
       priority,
-      type: 'STANDARD',
-      factoryManagerIds: selectedFactoryManagers,
+      type: 'OTHER',
+      flowConfig: {
+        skipFactory: true,
+        targetLevel,
+      },
       attachmentIds: attachments.map((att) => att.id),
     }
 
@@ -91,18 +93,6 @@ export function ApplicationForm({
     }
 
     onSubmit(data)
-  }
-
-  // 处理厂长选择
-  const handleFactoryManagerToggle = (managerId: string) => {
-    setSelectedFactoryManagers((prev) =>
-      prev.includes(managerId)
-        ? prev.filter((id) => id !== managerId)
-        : [...prev, managerId]
-    )
-    if (errors.factoryManagers) {
-      setErrors((prev) => ({ ...prev, factoryManagers: "" }))
-    }
   }
 
   // 处理文件上传完成
@@ -117,6 +107,24 @@ export function ApplicationForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 审批级别选择 */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Label htmlFor="targetLevel" className="mb-0">审批级别</Label>
+          <FlowInfoTooltip type="other" targetLevel={targetLevel} />
+        </div>
+        <Select
+          id="targetLevel"
+          value={targetLevel}
+          onChange={(e) => setTargetLevel(e.target.value as 'DIRECTOR' | 'CEO')}
+          disabled={loading}
+          options={approvalLevelOptions}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          选择"报总监审批"则流程结束于总监；选择"报CEO审批"则直接提交给CEO
+        </p>
+      </div>
+
       {/* 标题 */}
       <div>
         <Label htmlFor="title">
@@ -189,40 +197,6 @@ export function ApplicationForm({
           disabled={loading}
           options={priorityOptions}
         />
-      </div>
-
-      {/* 审批厂长选择 */}
-      <div>
-        <Label>
-          选择审批厂长 <span className="text-red-500">*</span>
-        </Label>
-        <div className={`mt-2 border rounded-lg p-4 ${errors.factoryManagers ? "border-red-500" : "border-gray-200"}`}>
-          {factoryManagers.length === 0 ? (
-            <p className="text-sm text-gray-500">暂无可用厂长</p>
-          ) : (
-            <div className="space-y-2">
-              {factoryManagers.map((manager) => (
-                <div key={manager.id} className="flex items-center">
-                  <Checkbox
-                    id={`factory-${manager.id}`}
-                    checked={selectedFactoryManagers.includes(manager.id)}
-                    onCheckedChange={() => handleFactoryManagerToggle(manager.id)}
-                    disabled={loading}
-                  />
-                  <label
-                    htmlFor={`factory-${manager.id}`}
-                    className="ml-2 text-sm text-gray-700 cursor-pointer"
-                  >
-                    {manager.name} ({manager.department || "无部门"})
-                  </label>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {errors.factoryManagers && (
-          <p className="text-sm text-red-500 mt-1">{errors.factoryManagers}</p>
-        )}
       </div>
 
       {/* 附件上传 */}

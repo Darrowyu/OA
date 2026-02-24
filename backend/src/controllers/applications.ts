@@ -49,8 +49,14 @@ const createApplicationSchema = z.object({
   content: z.string().min(1, '内容不能为空').max(5000, '内容最多5000字符'),
   amount: z.union([z.string(), z.number()]).optional().nullable(),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).default('NORMAL'),
-  factoryManagerIds: z.array(z.string().min(1, '厂长ID不能为空')).min(1, '请选择至少一位厂长'),
+  factoryManagerIds: z.array(z.string().min(1, '厂长ID不能为空')).optional(),
   attachmentIds: z.array(z.string()).optional(),
+  // 新增：申请类型和流程配置
+  type: z.enum(['STANDARD', 'PRODUCT_DEVELOPMENT', 'FEASIBILITY_STUDY', 'BUSINESS_TRIP', 'OTHER']).default('STANDARD'),
+  flowConfig: z.object({
+    skipFactory: z.boolean(),
+    targetLevel: z.enum(['DIRECTOR', 'CEO']),
+  }).optional(),
 });
 
 const updateApplicationSchema = z.object({
@@ -322,7 +328,13 @@ export async function createApplication(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const { title, content, amount, priority, factoryManagerIds, attachmentIds } = parseResult.data;
+    const { title, content, amount, priority, factoryManagerIds, attachmentIds, type, flowConfig } = parseResult.data;
+
+    // 验证：标准申请必须选择厂长
+    if (type === 'STANDARD' && (!factoryManagerIds || factoryManagerIds.length === 0)) {
+      res.status(400).json(fail('VALIDATION_ERROR', '标准申请请至少选择一位厂长'));
+      return;
+    }
 
     // 生成申请编号 - 只查询当天最新编号，避免全表扫描
     const today = new Date();
@@ -359,8 +371,10 @@ export async function createApplication(req: Request, res: Response): Promise<vo
         applicantId: user.id,
         applicantName: user.name || '',
         applicantDept: user.department || '',
-        factoryManagerIds,
+        factoryManagerIds: factoryManagerIds || [],
         managerIds: [], // 初始为空，由总监选择
+        type: type as any,
+        flowConfig: flowConfig || undefined,
       },
     });
 
@@ -557,37 +571,84 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
       return;
     }
 
-    // 创建厂长审批记录
+    // 根据申请类型确定提交流程
     const result = await prisma.$transaction(async (tx) => {
-      // 更新申请状态
-      await tx.application.update({
-        where: { id },
-        data: {
-          status: ApplicationStatus.PENDING_FACTORY,
-          submittedAt: new Date(),
-        },
-      });
+      // 解析flowConfig
+      const flowConfig = existingApp.flowConfig as { skipFactory?: boolean; targetLevel?: 'DIRECTOR' | 'CEO' } | null;
+      const isOtherType = existingApp.type === 'OTHER';
+      const skipFactory = isOtherType && flowConfig?.skipFactory;
+      const targetLevel = flowConfig?.targetLevel;
 
-      // 为每个厂长创建审批记录（批量查询+批量创建，避免N+1）
-      const managers = await tx.user.findMany({
-        where: { employeeId: { in: existingApp.factoryManagerIds } }
-      });
-      await tx.factoryApproval.createMany({
-        data: managers.map(manager => ({
-          applicationId: id,
-          approverId: manager.id,
-          action: 'PENDING',
-        })),
-      });
+      if (isOtherType && skipFactory) {
+        // 其他申请且跳过厂长：直接进入目标审批级别
+        const nextStatus = targetLevel === 'CEO'
+          ? ApplicationStatus.PENDING_CEO
+          : ApplicationStatus.PENDING_DIRECTOR;
 
-      return { managers, application: existingApp };
+        await tx.application.update({
+          where: { id },
+          data: {
+            status: nextStatus,
+            submittedAt: new Date(),
+          },
+        });
+
+        // 创建对应级别的审批记录
+        if (targetLevel === 'CEO') {
+          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+          if (ceo) {
+            await tx.ceoApproval.create({
+              data: {
+                applicationId: id,
+                approverId: ceo.id,
+                action: 'PENDING',
+              },
+            });
+          }
+          return { targetUsers: ceo ? [ceo] : [], application: existingApp };
+        } else {
+          // 总监审批 - 所有总监都能审批
+          const directors = await tx.user.findMany({ where: { role: 'DIRECTOR' } });
+          await tx.directorApproval.createMany({
+            data: directors.map(director => ({
+              applicationId: id,
+              approverId: director.id,
+              action: 'PENDING',
+            })),
+          });
+          return { targetUsers: directors, application: existingApp };
+        }
+      } else {
+        // 标准流程：提交给厂长
+        await tx.application.update({
+          where: { id },
+          data: {
+            status: ApplicationStatus.PENDING_FACTORY,
+            submittedAt: new Date(),
+          },
+        });
+
+        // 为每个厂长创建审批记录（批量查询+批量创建，避免N+1）
+        const managers = await tx.user.findMany({
+          where: { employeeId: { in: existingApp.factoryManagerIds } }
+        });
+        await tx.factoryApproval.createMany({
+          data: managers.map(manager => ({
+            applicationId: id,
+            approverId: manager.id,
+            action: 'PENDING',
+          })),
+        });
+
+        return { targetUsers: managers, application: existingApp };
+      }
     });
 
-    // P0修复: 集成通知到业务流程 - 通知厂长有新的审批待处理
+    // P0修复: 集成通知到业务流程 - 通知审批人有新的审批待处理
     try {
-      if (result?.managers && result.managers.length > 0) {
-        const notifications = result.managers.map(manager => ({
-          userId: manager.id,
+      if (result?.targetUsers && result.targetUsers.length > 0) {
+        const notifications = result.targetUsers.map(user => ({
+          userId: user.id,
           type: 'APPROVAL' as const,
           title: '新的审批待处理',
           content: `申请 "${result.application.title}" 需要您审批`,

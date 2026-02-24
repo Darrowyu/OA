@@ -18,6 +18,8 @@ import { formatDate, formatFileSize } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/error-handler"
 import { logger } from "@/lib/logger"
 import { statusConfig, priorityConfig } from "@/config/status"
+import { DirectorApprovalDialog } from "@/components/DirectorApprovalDialog"
+import { usersApi } from "@/services/users"
 import {
   ArrowLeft,
   User as UserIcon,
@@ -48,6 +50,8 @@ export function ApplicationDetail() {
   const [comment, setComment] = React.useState("")
   const [actionLoading, setActionLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [managers, setManagers] = React.useState<{ id: string; name: string; department?: string }[]>([])
+  const [directorDialogOpen, setDirectorDialogOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState("basic")
 
   const fetchApplication = React.useCallback(async () => {
@@ -81,6 +85,19 @@ export function ApplicationDetail() {
     fetchApplication()
     fetchApprovalHistory()
   }, [fetchApplication, fetchApprovalHistory])
+
+  // 加载经理列表（用于总监审批选择）
+  React.useEffect(() => {
+    const loadManagers = async () => {
+      try {
+        const response = await usersApi.getManagers()
+        setManagers(response.data || [])
+      } catch (err) {
+        logger.error("加载经理列表失败", { error: err })
+      }
+    }
+    loadManagers()
+  }, [])
 
   const canApprove = React.useMemo(() => {
     if (!application || !user) return false
@@ -150,6 +167,31 @@ export function ApplicationDetail() {
       await Promise.all([fetchApplication(), fetchApprovalHistory()])
     } catch (err: unknown) {
       setError(getErrorMessage(err) || "撤回操作失败，请重试")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // 处理总监审批（支持选择流向）
+  const handleDirectorApprove = async (data: {
+    action: 'APPROVE' | 'REJECT'
+    comment?: string
+    flowType?: 'TO_MANAGER' | 'TO_CEO' | 'COMPLETE'
+    selectedManagerIds?: string[]
+  }) => {
+    if (!id || !application) return
+    setActionLoading(true)
+    try {
+      await approvalsApi.directorApprove(id, {
+        action: data.action,
+        comment: data.comment,
+        flowType: data.flowType,
+        selectedManagerIds: data.selectedManagerIds,
+      })
+      setDirectorDialogOpen(false)
+      await Promise.all([fetchApplication(), fetchApprovalHistory()])
+    } catch (err) {
+      setError("审批操作失败，请重试")
     } finally {
       setActionLoading(false)
     }
@@ -467,7 +509,13 @@ export function ApplicationDetail() {
           </Button>
           <Button
             className="flex-1 h-12 rounded-xl bg-coral hover:bg-coral-dark shadow-lg shadow-coral/30"
-            onClick={() => setApprovalDialogOpen(true)}
+            onClick={() => {
+              if (application?.status === ApplicationStatus.PENDING_DIRECTOR) {
+                setDirectorDialogOpen(true)
+              } else {
+                setApprovalDialogOpen(true)
+              }
+            }}
           >
             <CheckCircle className="h-5 w-5 mr-2" /> 通过
           </Button>
@@ -589,6 +637,17 @@ export function ApplicationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 总监审批对话框（支持选择流向） */}
+      {application?.status === ApplicationStatus.PENDING_DIRECTOR && (
+        <DirectorApprovalDialog
+          open={directorDialogOpen}
+          onClose={() => setDirectorDialogOpen(false)}
+          onSubmit={handleDirectorApprove}
+          managers={managers}
+          loading={actionLoading}
+        />
+      )}
     </div>
   )
 }

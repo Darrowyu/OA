@@ -6,7 +6,13 @@ export interface CreateApplicationRequest {
   content: string;
   amount?: number;
   priority: Priority;
-  factoryManagerIds: string[];
+  factoryManagerIds?: string[];
+  type?: 'STANDARD' | 'OTHER' | 'PRODUCT_DEVELOPMENT' | 'FEASIBILITY_STUDY' | 'BUSINESS_TRIP';
+  flowConfig?: {
+    skipFactory: boolean;
+    targetLevel: 'DIRECTOR' | 'CEO';
+  };
+  attachmentIds?: string[];
 }
 
 export interface UpdateApplicationRequest {

@@ -53,11 +53,11 @@ enum ApprovalAction {
 }
 
 enum ApplicationType {
-  STANDARD
-  PRODUCT_DEVELOPMENT
-  FEASIBILITY_STUDY
-  BUSINESS_TRIP
-  OTHER
+  STANDARD              // 标准申请：厂长→总监→经理→CEO
+  PRODUCT_DEVELOPMENT   // 新产品开发企划
+  FEASIBILITY_STUDY     // 可行性评估
+  BUSINESS_TRIP         // 出差申请
+  OTHER                 // 其他申请：可选厂长→总监 或 厂长→CEO
 }
 
 model Department {
@@ -173,6 +173,9 @@ model Application {
   type              ApplicationType   @default(STANDARD)
   formType          String?
   customFields      Json?
+
+  // 其他申请特有字段 - 流程配置
+  flowConfig        Json?             // { skipFactory: boolean, targetLevel: 'DIRECTOR' | 'CEO' }
 
   // 新产品开发企划表字段
   projectNo         String?           @unique

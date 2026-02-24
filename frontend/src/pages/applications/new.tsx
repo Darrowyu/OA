@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { ApplicationForm } from "@/components/ApplicationForm"
+import { FlowInfoTooltip } from "@/components/FlowInfoTooltip"
 import { Button } from "@/components/ui/button"
 import { CreateApplicationRequest, User } from "@/types"
 import { applicationsApi } from "@/services/applications"
@@ -13,18 +14,13 @@ export function ApplicationNew() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = React.useState(false)
   const [factoryManagers, setFactoryManagers] = React.useState<User[]>([])
-  const [managers, setManagers] = React.useState<User[]>([])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadApprovers = async () => {
       try {
-        const [factoryRes, managerRes] = await Promise.all([
-          usersApi.getFactoryManagers(),
-          usersApi.getManagers(),
-        ])
+        const factoryRes = await usersApi.getFactoryManagers()
         setFactoryManagers(factoryRes.data || [])
-        setManagers(managerRes.data || [])
       } catch (error) {
         logger.error("加载审批人失败", { error })
         toast.error("加载审批人列表失败")
@@ -62,22 +58,25 @@ export function ApplicationNew() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">新建申请</h1>
-            <p className="text-sm text-gray-500 mt-0.5">填写费用申请信息</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">新建标准申请</h1>
+            <FlowInfoTooltip type="standard" />
           </div>
         </div>
       </div>
 
+      {/* 副标题 */}
+      <p className="text-sm text-gray-500 mb-6">一般业务申请、采购申请</p>
+
       {/* 表单卡片 */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-coral-light to-orange-50">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-blue-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
               <FilePlus className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">填写申请信息</h2>
+              <h2 className="text-lg font-semibold text-gray-900">填写标准申请信息</h2>
               <p className="text-sm text-gray-500">请完整填写以下信息</p>
             </div>
           </div>
@@ -86,13 +85,12 @@ export function ApplicationNew() {
         <div className="p-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="animate-spin h-8 w-8 text-coral mb-3" />
+              <Loader2 className="animate-spin h-8 w-8 text-blue-500 mb-3" />
               <p className="text-gray-500">加载中...</p>
             </div>
           ) : (
             <ApplicationForm
               factoryManagers={factoryManagers}
-              managers={managers}
               onSubmit={handleSubmit}
               onCancel={() => navigate("/approval/new")}
               loading={submitting}

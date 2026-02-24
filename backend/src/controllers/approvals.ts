@@ -314,6 +314,8 @@ export function factoryApprove(req: Request, res: Response): Promise<void> {
  * 总监审批
  * POST /api/approvals/director/:applicationId
  * 支持三种流向：TO_MANAGER、TO_CEO、COMPLETE
+ *
+ * 注意：对于其他申请(OTHER类型)且skipFactory=true的情况，总监审批后直接批准
  */
 export async function directorApprove(req: Request, res: Response): Promise<void> {
   try {
@@ -353,6 +355,130 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       return;
     }
 
+    // 解析flowConfig
+    const flowConfig = application.flowConfig as { skipFactory?: boolean; targetLevel?: 'DIRECTOR' | 'CEO' } | null;
+    const isOtherSkipFactory = application.type === 'OTHER' && flowConfig?.skipFactory;
+    const targetLevel = flowConfig?.targetLevel;
+
+    // 其他申请且目标是总监：总监审批后直接批准，不需要flowType选择
+    if (isOtherSkipFactory && targetLevel === 'DIRECTOR') {
+      await prisma.$transaction(async (tx) => {
+        // 创建总监审批记录
+        await tx.directorApproval.create({
+          data: {
+            applicationId,
+            approverId: user.id,
+            action: action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT,
+            comment: comment?.trim() || null,
+            skipManager: true,
+            flowType: action === 'APPROVE' ? 'COMPLETE' : undefined,
+            approvedAt: new Date(),
+          },
+        });
+
+        if (action === 'REJECT') {
+          await tx.application.update({
+            where: { id: applicationId },
+            data: {
+              status: ApplicationStatus.REJECTED,
+              rejectedBy: user.id,
+              rejectedAt: new Date(),
+              rejectReason: comment?.trim() || null,
+            },
+          });
+        } else {
+          // 直接批准
+          await tx.application.update({
+            where: { id: applicationId },
+            data: {
+              status: ApplicationStatus.APPROVED,
+              completedAt: new Date(),
+            },
+          });
+          // 归档
+          await handleReadonlyNotification(applicationId, application.amount ? Number(application.amount) : null);
+          const archiveResult = await archiveApplication(applicationId, tx);
+          if (!archiveResult.success) {
+            throw new Error(`归档失败: ${archiveResult.error}`);
+          }
+        }
+      });
+
+      const updatedApp = await prisma.application.findUnique({
+        where: { id: applicationId },
+        select: { status: true }
+      });
+
+      res.json(ok({
+        message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
+        status: updatedApp?.status,
+        statusText: getStatusText(updatedApp?.status || ApplicationStatus.REJECTED),
+      }));
+      return;
+    }
+
+    // 其他申请且目标是CEO：总监审批后直接流向CEO
+    if (isOtherSkipFactory && targetLevel === 'CEO') {
+      await prisma.$transaction(async (tx) => {
+        // 创建总监审批记录
+        await tx.directorApproval.create({
+          data: {
+            applicationId,
+            approverId: user.id,
+            action: action === 'APPROVE' ? ApprovalAction.APPROVE : ApprovalAction.REJECT,
+            comment: comment?.trim() || null,
+            skipManager: true,
+            flowType: action === 'APPROVE' ? 'TO_CEO' : undefined,
+            approvedAt: new Date(),
+          },
+        });
+
+        if (action === 'REJECT') {
+          await tx.application.update({
+            where: { id: applicationId },
+            data: {
+              status: ApplicationStatus.REJECTED,
+              rejectedBy: user.id,
+              rejectedAt: new Date(),
+              rejectReason: comment?.trim() || null,
+            },
+          });
+        } else {
+          // 更新状态为待CEO审批
+          await tx.application.update({
+            where: { id: applicationId },
+            data: {
+              status: ApplicationStatus.PENDING_CEO,
+            },
+          });
+          // 创建CEO审批记录
+          const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+          if (ceo) {
+            await tx.ceoApproval.create({
+              data: {
+                applicationId,
+                approverId: ceo.id,
+                action: ApprovalAction.PENDING,
+              },
+            });
+          }
+        }
+      });
+
+      const updatedApp = await prisma.application.findUnique({
+        where: { id: applicationId },
+        select: { status: true }
+      });
+
+      res.json(ok({
+        message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
+        status: updatedApp?.status,
+        statusText: getStatusText(updatedApp?.status || ApplicationStatus.REJECTED),
+      }));
+      return;
+    }
+
+    // 标准申请：需要选择flowType
     // 如果选择通过且流向经理，必须选择经理
     if (action === 'APPROVE' && flowType === 'TO_MANAGER' && (!selectedManagerIds || selectedManagerIds.length === 0)) {
       res.status(400).json(fail('MISSING_MANAGERS', '请选择审批经理'));

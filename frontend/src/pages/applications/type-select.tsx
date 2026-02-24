@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FileText, Lightbulb, ClipboardCheck, Plane } from 'lucide-react';
+import { FileText, Lightbulb, ClipboardCheck, Plane, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -36,6 +36,14 @@ const applicationTypes = [
     icon: Plane,
     path: '/approval/new/business-trip',
     color: 'bg-purple-500',
+  },
+  {
+    id: 'other',
+    title: '其他申请',
+    description: '特殊业务申请，可选择直接提交给总监或CEO审批（不经过厂长）',
+    icon: MoreHorizontal,
+    path: '/approval/new/other',
+    color: 'bg-gray-500',
   },
 ];
 

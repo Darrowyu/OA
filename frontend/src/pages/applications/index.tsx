@@ -11,6 +11,7 @@ import { ApplicationTypeSelect } from "./type-select"
 import { ProductDevelopmentNew } from "./product-development-new"
 import { FeasibilityNew } from "./feasibility-new"
 import { BusinessTripNew } from "./business-trip-new"
+import { OtherApplicationNew } from "./other"
 
 export function ApplicationsModule() {
   return (
@@ -22,6 +23,7 @@ export function ApplicationsModule() {
         <Route path="new/product-development" element={<ProductDevelopmentNew />} />
         <Route path="new/feasibility" element={<FeasibilityNew />} />
         <Route path="new/business-trip" element={<BusinessTripNew />} />
+        <Route path="new/other" element={<OtherApplicationNew />} />
         <Route path=":id" element={<ApplicationDetail />} />
         <Route path="pending" element={<PendingList />} />
         <Route path="approved" element={<ApprovedList />} />

@@ -35,6 +35,7 @@ import reportRoutes from './routes/reports';
 import knowledgeRoutes from './routes/knowledge';
 import productDevelopmentRoutes from './routes/productDevelopment';
 import settingsRoutes from './routes/settings';
+import configRoutes from './routes/config';
 import { createServer } from 'http';
 import * as logger from './lib/logger';
 
@@ -137,6 +138,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/product-development', productDevelopmentRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/config', configRoutes);
 
 // 404处理
 app.use(notFoundHandler);

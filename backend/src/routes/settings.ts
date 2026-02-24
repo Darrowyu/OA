@@ -21,25 +21,27 @@ const router = Router();
 // 所有路由都需要认证和管理员权限
 router.use(authMiddleware, requireRole(UserRole.ADMIN));
 
-// ========== 新配置管理路由 ==========
+// ========== 新配置管理路由（保持向后兼容） ==========
 
 // 配置分类
 router.get('/config/categories', configController.getCategories);
 
+// 初始化默认配置（放在具体路由之前）
+router.post('/config/initialize', configController.initializeDefaults);
+
+// 批量操作（放在具体路由之前）
+router.post('/config/batch', configController.batchUpdateConfigs);
+router.post('/config/values', configController.getConfigValues);
+
 // 配置列表和详情
 router.get('/config', configController.getConfigs);
 router.get('/config/value/:key', configController.getConfigValue);
-router.post('/config/values', configController.getConfigValues);
-
-// 配置更新
-router.put('/config/:key', configController.updateConfig);
-router.post('/config/batch', configController.batchUpdateConfigs);
 
 // 配置历史
 router.get('/config/:key/history', configController.getConfigHistory);
 
-// 初始化默认配置
-router.post('/config/initialize', configController.initializeDefaults);
+// 配置更新
+router.put('/config/:key', configController.updateConfig);
 
 // ========== 保留原有功能路由 ==========
 

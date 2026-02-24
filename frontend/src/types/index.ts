@@ -110,9 +110,12 @@ export interface CreateApplicationRequest {
   content: string;
   amount?: number;
   priority: Priority;
-  factoryManagerIds: string[];
-  managerIds: string[];
-  skipManager: boolean;
+  factoryManagerIds?: string[];  // 标准申请使用
+  type: 'STANDARD' | 'OTHER' | 'PRODUCT_DEVELOPMENT' | 'FEASIBILITY_STUDY' | 'BUSINESS_TRIP';
+  flowConfig?: {
+    skipFactory: boolean;
+    targetLevel: 'DIRECTOR' | 'CEO';
+  };
   attachmentIds?: string[];
 }
 
