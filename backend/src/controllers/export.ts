@@ -240,3 +240,243 @@ function getStartDateFromRange(timeRange: string): Date {
       return new Date(0);
   }
 }
+
+/**
+ * 导出新产品开发企划表到Excel
+ * GET /api/export/product-development/:id
+ */
+export async function exportProductDevelopment(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const application = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        projectReviewer: { select: { name: true, signature: true } },
+        projectProposer: { select: { name: true, signature: true } },
+      }
+    });
+
+    if (!application || application.type !== 'PRODUCT_DEVELOPMENT') {
+      errorResponse(res, 'NOT_FOUND', '申请不存在或类型不匹配', 404);
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('新产品开发企划表');
+
+    // 设置列宽
+    worksheet.columns = [
+      { width: 15 }, { width: 20 }, { width: 15 }, { width: 20 },
+      { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }
+    ];
+
+    // 标题
+    worksheet.mergeCells('A1:H1');
+    worksheet.getCell('A1').value = '新产品开发企划表';
+    worksheet.getCell('A1').font = { size: 18, bold: true };
+    worksheet.getCell('A1').alignment = { horizontal: 'center' };
+    worksheet.getRow(1).height = 30;
+
+    // 项目信息
+    worksheet.addRow(['']);
+    worksheet.addRow(['项目编号', application.projectNo, '项目名称', application.projectName || '', '', '', '', '']);
+    worksheet.mergeCells('D3:H3');
+    worksheet.addRow(['客户名称', application.customerName || '', '提案日期', application.createdAt.toLocaleDateString('zh-CN'), '', '', '', '']);
+    worksheet.mergeCells('B4:D4');
+    worksheet.addRow(['']);
+
+    // 开发源由
+    worksheet.addRow(['开发源由']);
+    worksheet.getCell('A6').font = { bold: true };
+    const sources = [
+      '因市场需求趋势而提出开发',
+      '因本公司产品策略而主动提出开发',
+      '因客户需求而提出开发',
+      '因本公司上级决策而提出开发',
+      '因客户对现有产品进行改善开发',
+      '因本公司内部产品改善建议而提出开发',
+    ];
+    let currentRow = 7;
+    sources.forEach((source) => {
+      const isSelected = application.projectSources?.includes(source);
+      worksheet.addRow([isSelected ? '☑' : '☐', source]);
+      worksheet.mergeCells(`B${currentRow}:H${currentRow}`);
+      currentRow++;
+    });
+
+    // 项目内容
+    worksheet.addRow(['']);
+    currentRow++;
+    worksheet.addRow(['项目内容']);
+    worksheet.getCell(`A${currentRow}`).font = { bold: true };
+    currentRow++;
+
+    const content = application.projectContent as Record<string, string> | null;
+    const contentLabels = [
+      { key: 'nature', label: '新产品性质介绍（材质、规格、包装方式等）' },
+      { key: 'successProbability', label: '新产品开发成功可能性预估（客户接受之可能性）' },
+      { key: 'competition', label: '是否有同类型的新产品竞争' },
+      { key: 'developmentCost', label: '新产品开发费用的预估' },
+      { key: 'productionCost', label: '新产品开发成本的预估' },
+      { key: 'compliance', label: '是否符合法令规定要求（NIOSH/CE/CNS/JIS/LL等）' },
+      { key: 'profitForecast', label: '新产品开发成功量产后本公司的获利情况预估' },
+    ];
+
+    contentLabels.forEach(({ key, label }) => {
+      worksheet.addRow([label]);
+      worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+      worksheet.getCell(`A${currentRow}`).font = { bold: true };
+      currentRow++;
+
+      const value = content?.[key] || '';
+      worksheet.addRow([value]);
+      worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+      worksheet.getRow(currentRow).height = 60;
+      worksheet.getCell(`A${currentRow}`).alignment = { wrapText: true, vertical: 'top' };
+      currentRow++;
+    });
+
+    // 签名区域
+    worksheet.addRow(['']);
+    currentRow++;
+    const signRow = currentRow;
+    worksheet.addRow(['项目审核人', '', '项目申请人', '']);
+    worksheet.mergeCells(`A${signRow}:B${signRow}`);
+    worksheet.mergeCells(`C${signRow}:D${signRow}`);
+    worksheet.getCell(`A${signRow}`).font = { bold: true };
+    worksheet.getCell(`C${signRow}`).font = { bold: true };
+    currentRow++;
+
+    worksheet.addRow([
+      application.projectReviewer?.name || '',
+      '',
+      application.projectProposer?.name || '',
+      ''
+    ]);
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${application.projectNo || 'export'}.xlsx"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    logger.error('导出新产品开发企划表失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '导出失败');
+  }
+}
+
+/**
+ * 导出可行性评估表到Excel
+ * GET /api/export/feasibility-study/:id
+ */
+export async function exportFeasibilityStudy(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const application = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        projectReviewer: { select: { name: true, signature: true } },
+        projectProposer: { select: { name: true, signature: true } },
+      }
+    });
+
+    if (!application || application.type !== 'FEASIBILITY_STUDY') {
+      errorResponse(res, 'NOT_FOUND', '申请不存在或类型不匹配', 404);
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('可行性评估表');
+
+    // 设置列宽
+    worksheet.columns = [
+      { width: 15 }, { width: 20 }, { width: 15 }, { width: 20 },
+      { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }
+    ];
+
+    // 标题
+    worksheet.mergeCells('A1:H1');
+    worksheet.getCell('A1').value = '可行性评估表';
+    worksheet.getCell('A1').font = { size: 18, bold: true };
+    worksheet.getCell('A1').alignment = { horizontal: 'center' };
+    worksheet.getRow(1).height = 30;
+
+    // 项目信息
+    worksheet.addRow(['']);
+    worksheet.addRow(['项目编号', application.projectNo, '项目名称', application.projectName || '', '', '', '', '']);
+    worksheet.mergeCells('D3:H3');
+    worksheet.addRow(['客户名称', application.customerName || '', '提案日期', application.createdAt.toLocaleDateString('zh-CN'), '', '', '', '']);
+    worksheet.mergeCells('B4:D4');
+    worksheet.addRow(['']);
+
+    // 评估项目
+    worksheet.addRow(['评估项目']);
+    worksheet.getCell('A6').font = { bold: true };
+
+    const evaluationItems = application.evaluationItems as Record<string, { score: number; comment: string }> | null;
+    const evaluationLabels = [
+      { key: 'market', label: '市场评估' },
+      { key: 'technology', label: '技术评估' },
+      { key: 'cost', label: '成本评估' },
+      { key: 'risk', label: '风险评估' },
+      { key: 'schedule', label: '进度评估' },
+    ];
+
+    let currentRow = 7;
+    worksheet.addRow(['评估项', '评分', '说明']);
+    worksheet.getCell(`A${currentRow}`).font = { bold: true };
+    worksheet.getCell(`B${currentRow}`).font = { bold: true };
+    worksheet.getCell(`C${currentRow}`).font = { bold: true };
+    currentRow++;
+
+    evaluationLabels.forEach(({ key, label }) => {
+      const item = evaluationItems?.[key];
+      worksheet.addRow([label, item?.score?.toString() || '', item?.comment || '']);
+      worksheet.mergeCells(`C${currentRow}:H${currentRow}`);
+      currentRow++;
+    });
+
+    // 评估结果
+    worksheet.addRow(['']);
+    currentRow++;
+    worksheet.addRow(['评估结果', application.evaluationResult || '']);
+    worksheet.mergeCells(`B${currentRow}:H${currentRow}`);
+    worksheet.getCell(`A${currentRow}`).font = { bold: true };
+    currentRow++;
+
+    // 签名区域
+    worksheet.addRow(['']);
+    currentRow++;
+    const signRow = currentRow;
+    worksheet.addRow(['项目审核人', '', '项目申请人', '']);
+    worksheet.mergeCells(`A${signRow}:B${signRow}`);
+    worksheet.mergeCells(`C${signRow}:D${signRow}`);
+    worksheet.getCell(`A${signRow}`).font = { bold: true };
+    worksheet.getCell(`C${signRow}`).font = { bold: true };
+    currentRow++;
+
+    worksheet.addRow([
+      application.projectReviewer?.name || '',
+      '',
+      application.projectProposer?.name || '',
+      ''
+    ]);
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${application.projectNo || 'feasibility'}.xlsx"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    logger.error('导出可行性评估表失败', { error });
+    errorResponse(res, 'INTERNAL_ERROR', '导出失败');
+  }
+}

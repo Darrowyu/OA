@@ -16,7 +16,7 @@ const EquipmentModule = lazy(() => import("@/pages/equipment").then(m => ({ defa
 const AttendanceModule = lazy(() => import("@/pages/attendance").then(m => ({ default: m.AttendanceModule })))
 const MeetingsModule = lazy(() => import("@/pages/meetings").then(m => ({ default: m.MeetingsModule })))
 const Users = lazy(() => import("@/pages/Users").then(m => ({ default: m.default })))
-const Settings = lazy(() => import("@/pages/Settings").then(m => ({ default: m.default })))
+const SettingsPage = lazy(() => import("@/pages/settings/index").then(m => ({ default: m.SettingsPage })))
 const Profile = lazy(() => import("@/pages/Profile").then(m => ({ default: m.default })))
 const AuditLogs = lazy(() => import("@/pages/admin/AuditLogs").then(m => ({ default: m.default })))
 const Departments = lazy(() => import("@/pages/admin/Departments").then(m => ({ default: m.default })))
@@ -116,7 +116,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* 主内容区 */}
       <div
-        className="flex-1 h-screen overflow-auto transition-all duration-350 w-full"
+        className="flex-1 min-h-screen transition-all duration-350 w-full"
         style={{
           marginLeft: isMobile ? 0 : (isCollapsed ? '72px' : '260px'),
           transition: 'margin-left 0.35s cubic-bezier(0.22, 1, 0.36, 1)'
@@ -371,7 +371,7 @@ function App() {
           <ProtectedRoute requireAdmin>
             <DashboardLayout>
               <Suspense fallback={<PageLoading />}>
-                <Settings />
+                <SettingsPage />
               </Suspense>
             </DashboardLayout>
           </ProtectedRoute>

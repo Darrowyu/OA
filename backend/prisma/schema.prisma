@@ -18,6 +18,7 @@ enum UserRole {
   CEO
   ADMIN
   READONLY
+  FINANCE
 }
 
 enum ApplicationStatus {
@@ -26,6 +27,7 @@ enum ApplicationStatus {
   PENDING_DIRECTOR
   PENDING_MANAGER
   PENDING_CEO
+  PENDING_REVIEWER
   APPROVED
   REJECTED
   ARCHIVED
@@ -48,6 +50,14 @@ enum ApprovalAction {
   APPROVE
   REJECT
   PENDING
+}
+
+enum ApplicationType {
+  STANDARD
+  PRODUCT_DEVELOPMENT
+  FEASIBILITY_STUDY
+  BUSINESS_TRIP
+  OTHER
 }
 
 model Department {
@@ -126,6 +136,9 @@ model User {
   createdWorkflows   Workflow[]         @relation(name: "WorkflowCreator") // 创建的工作流
   knowledgeArticles  KnowledgeArticle[] // 创建的知识库文章
   knowledgeFeedbacks KnowledgeFeedback[] // 知识库反馈
+  reviewedProjects   Application[]      @relation(name: "ProjectReviewer") // 审核的新产品开发项目
+  proposedProjects   Application[]      @relation(name: "ProjectProposer") // 提议的新产品开发项目
+  configHistories    ConfigHistory[]    // 配置修改历史
 
   @@index([departmentId])
   @@index([role])
@@ -156,6 +169,34 @@ model Application {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  // 新增字段 - 申请类型支持
+  type              ApplicationType   @default(STANDARD)
+  formType          String?
+  customFields      Json?
+
+  // 新产品开发企划表字段
+  projectNo         String?           @unique
+  projectName       String?
+  customerName      String?
+  projectSources    String[]
+  projectContent    Json?
+  projectReviewerId String?
+  projectProposerId String?
+
+  // 可行性评估表字段
+  evaluationItems   Json?
+  evaluationResult  String?
+
+  // 出差申请字段
+  tripStartDate     DateTime?
+  tripEndDate       DateTime?
+  tripDestination   String?
+  tripPurpose       String?
+  selectedSupervisorId String?
+
+  // 通知标记
+  highAmountNotified Boolean          @default(false)
+
   // 关联字段
   applicant         User               @relation(fields: [applicantId], references: [id])
   approvals         Approval[]         // 新的统一审批表
@@ -166,6 +207,8 @@ model Application {
   attachments       Attachment[]
   reminderLogs      ReminderLog[]
   archiveRecord     ArchiveRecord?
+  projectReviewer   User?              @relation(fields: [projectReviewerId], references: [id], name: "ProjectReviewer")
+  projectProposer   User?              @relation(fields: [projectProposerId], references: [id], name: "ProjectProposer")
 
   @@index([status])
   @@index([priority])
@@ -174,6 +217,8 @@ model Application {
   @@index([deletedAt])
   @@index([status, applicantId, submittedAt])
   @@index([status, priority])  // 按状态和优先级查询优化
+  @@index([type])              // 按申请类型查询优化
+  @@index([projectNo])         // 项目编号查询优化
 }
 
 // ============================================
@@ -235,6 +280,7 @@ model DirectorApproval {
   comment            String?
   selectedManagerIds String[]
   skipManager        Boolean        @default(false)
+  flowType           String?        // TO_MANAGER | TO_CEO | COMPLETE
   approvedAt         DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -1430,4 +1476,139 @@ model KnowledgeFeedback {
   @@index([articleId])
   @@index([userId])
   @@map("knowledge_feedback")
+}
+
+// ============================================
+// 系统设置模块模型 (新配置中心架构)
+// ============================================
+
+// 配置值类型枚举
+enum ConfigValueType {
+  STRING    // 字符串
+  NUMBER    // 数字
+  BOOLEAN   // 布尔值
+  JSON      // JSON对象
+  ARRAY     // 数组
+  PASSWORD  // 密码(加密存储)
+}
+
+// 配置分类
+model ConfigCategory {
+  id          String    @id @default(cuid())
+  code        String    @unique  // 分类代码: system, security, approval, task, attendance, equipment, notification
+  name        String              // 分类名称
+  description String?             // 分类描述
+  icon        String?             // 图标
+  sortOrder   Int       @default(0)
+  isEnabled   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  configs     SystemConfig[]
+
+  @@index([isEnabled])
+  @@index([sortOrder])
+  @@map("config_categories")
+}
+
+// 系统配置项
+model SystemConfig {
+  id           String          @id @default(cuid())
+  categoryId   String
+  key          String          // 配置键名
+  value        String          // 配置值(JSON字符串)
+  defaultValue String?         // 默认值
+  valueType    ConfigValueType // 值类型
+  label        String          // 显示名称
+  description  String?         // 配置说明
+  placeholder  String?         // 输入提示
+  options      Json?           // 选项(用于select/radio等) [{label, value}]
+  validation   Json?           // 验证规则 {required, min, max, pattern}
+  isSystem     Boolean         @default(false) // 是否系统级(不可删除)
+  isSecret     Boolean         @default(false) // 是否敏感(如密码)
+  sortOrder    Int             @default(0)
+  isEnabled    Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // 关联字段
+  category ConfigCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  histories ConfigHistory[]
+
+  @@unique([categoryId, key])
+  @@index([isEnabled])
+  @@index([isSystem])
+  @@index([sortOrder])
+  @@map("system_configs")
+}
+
+// 配置修改历史
+model ConfigHistory {
+  id          String   @id @default(cuid())
+  configId    String
+  oldValue    String?  // 旧值
+  newValue    String   // 新值
+  changedBy   String   // 修改人ID
+  changeReason String? // 修改原因
+  createdAt   DateTime @default(now())
+
+  // 关联字段
+  config SystemConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [changedBy], references: [id])
+
+  @@index([configId])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("config_histories")
+}
+
+// ============================================
+// 系统设置模块模型 (旧版 - 保留用于数据迁移)
+// ============================================
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  level     String   // 'info' | 'warn' | 'error'
+  message   String
+  source    String
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([timestamp])
+  @@map("system_logs")
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  size      String
+  type      String   // 'auto' | 'manual'
+  status    String   // 'completed' | 'failed' | 'in_progress'
+
+  @@index([createdAt])
+  @@map("backups")
+}
+
+model EmailSettings {
+  id               String   @id @default("default")
+  enabled          Boolean  @default(true)
+  smtpHost         String   @default("")
+  smtpPort         Int      @default(587)
+  smtpUser         String   @default("")
+  smtpPassword     String   @default("")
+  taskReminder     Boolean  @default(true)
+  meetingReminder  Boolean  @default(true)
+  approvalReminder Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+
+  @@map("email_settings")
+}
+
+model SystemSettings {
+  id               String   @id @default("default")
+  autoBackupEnabled Boolean @default(false)
+  updatedAt        DateTime @updatedAt
+
+  @@map("system_settings")
 }

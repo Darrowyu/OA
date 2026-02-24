@@ -243,7 +243,14 @@ export function useNotifications(): UseNotificationsReturn {
     }
   }, []);
 
+  // 防止 React 严格模式下重复请求
+  const isMountedRef = useRef(false);
+
   useEffect(() => {
+    // 避免重复请求
+    if (isMountedRef.current) return;
+    isMountedRef.current = true;
+
     connectSocket();
     fetchNotifications(1, false);
     fetchUnreadCount();

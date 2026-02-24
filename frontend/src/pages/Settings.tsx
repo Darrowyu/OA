@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Archive,
@@ -14,6 +14,9 @@ import {
   FileText,
   Database,
   HardDrive,
+  Users,
+  GitBranch,
+  ArrowRight,
 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -136,7 +139,7 @@ export default function Settings() {
         error?: { code: string; message: string };
       }>('/settings/reminders');
       if (response.success) {
-        setEmailSettings(response.data);
+        setEmailSettings(prev => ({ ...prev, ...response.data }));
       } else {
         setError(response.error?.message || '加载邮件设置失败');
       }
@@ -326,12 +329,16 @@ export default function Settings() {
     setShowArchiveFiles(!showArchiveFiles);
   };
 
+  // 防止 React 严格模式下重复请求
+  const isMountedRef = useRef(false);
+
   // 初始加载
   useEffect(() => {
-    if (isAdmin) {
-      loadArchiveStats();
-      loadEmailSettings();
-    }
+    if (!isAdmin || isMountedRef.current) return;
+    isMountedRef.current = true;
+
+    loadArchiveStats();
+    loadEmailSettings();
   }, [isAdmin]);
 
   // 自动清除消息
@@ -493,6 +500,44 @@ export default function Settings() {
                   )}
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 用户管理卡片 */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/users')}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-indigo-600" />
+                <CardTitle>用户管理</CardTitle>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+            <CardDescription>管理系统用户、角色和权限</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-indigo-50 rounded-lg p-4">
+              <p className="text-sm text-indigo-700">点击进入用户管理页面，添加、编辑或删除系统用户，配置用户角色和权限。</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 工作流管理卡片 */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/workflow')}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-emerald-600" />
+                <CardTitle>工作流管理</CardTitle>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+            <CardDescription>配置审批流程和工作流规则</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-emerald-50 rounded-lg p-4">
+              <p className="text-sm text-emerald-700">点击进入工作流管理页面，设计和配置审批流程，设置各阶段的审批规则。</p>
             </div>
           </CardContent>
         </Card>

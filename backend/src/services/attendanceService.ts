@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import type { AttendanceStatus, ClockInType, LeaveType, LeaveRequestStatus } from '@prisma/client'
+import { isLate, isEarlyLeave } from './attendanceConfig.service'
 
 export interface ClockInData {
   type: ClockInType
@@ -77,31 +78,15 @@ export class AttendanceService {
       throw new Error('今日已上班打卡')
     }
 
-    // 获取用户今日排班
-    const schedule = await prisma.schedule.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: today,
-        },
-      },
-      include: {
-        shift: true,
-      },
-    })
-
     // 计算打卡状态（是否迟到）
     const now = new Date()
     let status: AttendanceStatus = 'NORMAL'
 
-    if (schedule?.shift) {
-      const shiftStart = this.parseTimeString(schedule.shift.startTime)
-      const clockInTime = now.getHours() * 60 + now.getMinutes()
-
-      // 假设 9:05 后算迟到
-      if (clockInTime > shiftStart + 5) {
-        status = 'LATE'
-      }
+    // 使用系统配置判断迟到
+    const clockInTimeMinutes = now.getHours() * 60 + now.getMinutes()
+    const isLateResult = await isLate(clockInTimeMinutes)
+    if (isLateResult) {
+      status = 'LATE'
     }
 
     if (existing) {
@@ -162,26 +147,12 @@ export class AttendanceService {
 
     // 检查是否早退
     let status = record.status
-    const schedule = await prisma.schedule.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: today,
-        },
-      },
-      include: {
-        shift: true,
-      },
-    })
 
-    if (schedule?.shift) {
-      const shiftEnd = this.parseTimeString(schedule.shift.endTime)
-      const clockOutTime = now.getHours() * 60 + now.getMinutes()
-
-      // 早于下班时间算早退
-      if (clockOutTime < shiftEnd - 5 && status === 'NORMAL') {
-        status = 'EARLY_LEAVE'
-      }
+    // 使用系统配置判断早退
+    const clockOutTimeMinutes = now.getHours() * 60 + now.getMinutes()
+    const isEarlyLeaveResult = await isEarlyLeave(clockOutTimeMinutes)
+    if (isEarlyLeaveResult && status === 'NORMAL') {
+      status = 'EARLY_LEAVE'
     }
 
     return prisma.attendanceRecord.update({
@@ -454,11 +425,6 @@ export class AttendanceService {
     })
   }
 
-  // 辅助方法：解析时间字符串（如 "09:00"）为分钟数
-  private parseTimeString(timeStr: string): number {
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    return hours * 60 + (minutes || 0)
-  }
 }
 
 export const attendanceService = new AttendanceService()

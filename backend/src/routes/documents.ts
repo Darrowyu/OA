@@ -8,19 +8,10 @@ import { asyncHandler } from '../middleware/errorHandler'
 import { auditMiddleware, manualAudit } from '../middleware/auditMiddleware'
 import logger from '../lib/logger'
 import { documentPermissionMiddleware } from '../middleware/documentPermission'
+import { validateFile, getUserStorageQuotaBytes, formatFileSize } from '../services/documentConfig.service'
+import prisma from '../lib/prisma'
 
 const router = Router()
-
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 // 文档上传目录
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'documents')
@@ -52,29 +43,29 @@ const storage = multer.diskStorage({
   },
 })
 
-// 文件过滤器
+// 同步文件过滤器 - 使用默认允许列表
+const defaultAllowedTypes = [
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+  '.ppt', '.pptx', '.txt', '.jpg', '.jpeg',
+  '.png', '.gif', '.zip', '.rar'
+]
+
 const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // 允许的文件类型
-  const allowedTypes = [
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
-    '.ppt', '.pptx', '.txt', '.jpg', '.jpeg',
-    '.png', '.gif', '.zip', '.rar'
-  ]
   const ext = path.extname(file.originalname).toLowerCase()
 
-  if (allowedTypes.includes(ext)) {
+  if (defaultAllowedTypes.includes(ext)) {
     cb(null, true)
   } else {
     cb(new Error(`不支持的文件类型: ${ext}`))
   }
 }
 
-// Multer 实例
+// Multer 实例 - 使用较大限制，在路由中再进行精确验证
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB
+    fileSize: 500 * 1024 * 1024, // 500MB 临时限制，实际限制在配置中
   },
 })
 
@@ -111,7 +102,7 @@ router.delete('/folders/:id', auditMiddleware({
 // 文档路由 - 根路径 /api/documents
 // ============================================
 
-// 上传文档 - 带审计日志
+// 上传文档 - 带审计日志和配置验证
 router.post(
   '/',
   upload.single('file'),
@@ -129,6 +120,40 @@ router.post(
     })
 
     try {
+      // 验证文件（使用系统配置）
+      if (file) {
+        const validation = await validateFile(file.originalname, file.size)
+        if (!validation.valid) {
+          // 删除已上传的文件
+          fs.unlinkSync(file.path)
+          res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validation.error } })
+          return
+        }
+
+        // 检查用户存储配额
+        const quotaBytes = await getUserStorageQuotaBytes()
+        const userDocs = await prisma.document.findMany({
+          where: { ownerId: userId },
+          select: { size: true }
+        })
+        const currentUsage = userDocs.reduce((sum, doc) => sum + (doc.size || 0), 0)
+
+        if (currentUsage + file.size > quotaBytes) {
+          // 删除已上传的文件
+          fs.unlinkSync(file.path)
+          const quotaMB = Math.round(quotaBytes / (1024 * 1024))
+          const usedMB = Math.round(currentUsage / (1024 * 1024))
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'QUOTA_EXCEEDED',
+              message: `存储空间不足。配额: ${quotaMB}MB, 已使用: ${usedMB}MB`
+            }
+          })
+          return
+        }
+      }
+
       // 执行实际的上传处理
       await documentController.upload(req, res)
 
@@ -158,6 +183,11 @@ router.post(
         })
       }
     } catch (error) {
+      // 删除已上传的文件（如果存在）
+      if (file && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path)
+      }
+
       // 记录上传失败日志
       logger.error('文件上传失败', {
         userId,
@@ -169,7 +199,7 @@ router.post(
   })
 )
 
-// 更新文档（上传新版本）- 带审计日志
+// 更新文档（上传新版本）- 带审计日志和配置验证
 router.put(
   '/:id',
   upload.single('file'),
@@ -186,6 +216,40 @@ router.put(
     })
 
     try {
+      // 验证文件（使用系统配置）
+      if (file) {
+        const validation = await validateFile(file.originalname, file.size)
+        if (!validation.valid) {
+          // 删除已上传的文件
+          fs.unlinkSync(file.path)
+          res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validation.error } })
+          return
+        }
+
+        // 检查用户存储配额
+        const quotaBytes = await getUserStorageQuotaBytes()
+        const userDocs = await prisma.document.findMany({
+          where: { ownerId: userId },
+          select: { size: true }
+        })
+        const currentUsage = userDocs.reduce((sum, doc) => sum + (doc.size || 0), 0)
+
+        if (currentUsage + file.size > quotaBytes) {
+          // 删除已上传的文件
+          fs.unlinkSync(file.path)
+          const quotaMB = Math.round(quotaBytes / (1024 * 1024))
+          const usedMB = Math.round(currentUsage / (1024 * 1024))
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'QUOTA_EXCEEDED',
+              message: `存储空间不足。配额: ${quotaMB}MB, 已使用: ${usedMB}MB`
+            }
+          })
+          return
+        }
+      }
+
       await documentController.update(req, res)
 
       if (file) {
@@ -210,6 +274,11 @@ router.put(
         })
       }
     } catch (error) {
+      // 删除已上传的文件（如果存在）
+      if (file && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path)
+      }
+
       logger.error('文档版本更新失败', {
         userId,
         documentId: id,

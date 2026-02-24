@@ -3,6 +3,8 @@ import apiClient from '@/lib/api';
 export interface ApprovalRequest {
   action: 'APPROVE' | 'REJECT';
   comment?: string;
+  flowType?: 'TO_MANAGER' | 'TO_CEO' | 'COMPLETE';
+  selectedManagerIds?: string[];
 }
 
 import { ApprovalRecord } from '@/types';

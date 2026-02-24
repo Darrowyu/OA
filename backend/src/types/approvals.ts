@@ -1,5 +1,13 @@
 import { UserRole, ApprovalAction } from '@prisma/client';
 
+// 总监审批选项
+export interface DirectorApprovalOptions {
+  action: 'APPROVE' | 'REJECT';
+  comment?: string;
+  flowType: 'TO_MANAGER' | 'TO_CEO' | 'COMPLETE';
+  selectedManagerIds?: string[];
+}
+
 // 审批人信息
 export interface ApproverInfo {
   id: string;

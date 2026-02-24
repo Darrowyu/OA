@@ -12,19 +12,23 @@ import type {
   UpdateProjectInput,
   TaskProjectWithOwner,
   TaskStatus,
-  TaskPriority,
 } from '../types/task'
 import { TaskStatus as TaskStatusEnum } from '../types/task'
+import { getDefaultPriority } from './taskConfig.service'
+import { TaskPriority } from '../types/task'
 
 export class TaskService {
   // 创建任务
   async create(data: CreateTaskInput, userId: string): Promise<TaskWithRelations> {
+    // 从配置获取默认优先级
+    const defaultPriority = await getDefaultPriority()
+
     const task = await prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
         status: data.status || TaskStatusEnum.TODO,
-        priority: data.priority || 'MEDIUM',
+        priority: data.priority || (defaultPriority.toUpperCase() as TaskPriority),
         assigneeId: data.assigneeId,
         creatorId: userId,
         projectId: data.projectId,

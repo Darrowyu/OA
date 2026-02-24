@@ -33,6 +33,8 @@ import notificationRoutes from './routes/notifications';
 import workflowRoutes from './routes/workflows';
 import reportRoutes from './routes/reports';
 import knowledgeRoutes from './routes/knowledge';
+import productDevelopmentRoutes from './routes/productDevelopment';
+import settingsRoutes from './routes/settings';
 import { createServer } from 'http';
 import * as logger from './lib/logger';
 
@@ -133,6 +135,8 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/product-development', productDevelopmentRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 404处理
 app.use(notFoundHandler);

@@ -48,6 +48,8 @@
     "src/services/equipmentService.ts",
     "src/services/maintenanceRecordService.ts",
     "src/services/maintenancePlanService.ts",
-    "src/services/maintenanceTemplateService.ts"
+    "src/services/maintenanceTemplateService.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }
