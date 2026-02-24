@@ -1,6 +1,5 @@
 import { memo, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getIcon } from './iconMap';
@@ -10,16 +9,14 @@ import type { NavItem as NavItemType } from './types';
 interface NavItemProps {
   item: NavItemType;
   isCollapsed: boolean;
-  textVariants: Variants;
   isNested?: boolean;
   onClick?: () => void;
 }
 
-// 导航项组件
+// 导航项组件 - 单图标固定方案
 export const NavItem = memo(function NavItem({
   item,
   isCollapsed,
-  textVariants,
   isNested = false,
   onClick,
 }: NavItemProps) {
@@ -43,40 +40,45 @@ export const NavItem = memo(function NavItem({
       to={item.path}
       onClick={handleClick}
       className={cn(
-        'flex items-center rounded-lg text-sm transition-all duration-300 group relative',
+        'flex items-center rounded-lg text-sm transition-colors duration-150 group relative',
         isActive
           ? 'bg-gray-100 text-gray-900 font-medium'
           : 'text-gray-600 hover:bg-gray-50',
-        isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
+        isCollapsed ? 'px-3 py-2.5' : 'px-3 py-2',
         isNested && 'px-3 py-1.5'
       )}
     >
-      <Icon className={cn('flex-shrink-0', isNested ? 'h-4 w-4' : 'h-5 w-5')} />
+      {/* 图标 - 始终固定在左侧，位置永不移动 */}
+      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+        <Icon className={cn(isNested ? 'h-4 w-4' : 'h-5 w-5')} />
+      </div>
 
-      <AnimatePresence>
-        {!isCollapsed && (
-          <motion.span
-            variants={textVariants}
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-1 whitespace-nowrap overflow-hidden"
-          >
-            {item.name}
-          </motion.span>
+      {/* 文字容器 - 宽度动画实现平滑展开/收起 */}
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-200 ease-out',
+          isCollapsed ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-3'
         )}
-      </AnimatePresence>
+      >
+        <span className="whitespace-nowrap">{item.name}</span>
+      </div>
 
-      {/* 徽章 */}
-      {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
-        <Badge
-          variant="secondary"
-          className="h-5 min-w-5 flex items-center justify-center text-xs bg-red-100 text-red-600"
-        >
-          {item.badge > 99 ? '99+' : item.badge}
-        </Badge>
-      )}
+      {/* 徽章 - 仅展开时显示 */}
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-200 ease-out flex-shrink-0',
+          isCollapsed || !item.badge || item.badge <= 0 ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-2'
+        )}
+      >
+        {item.badge !== undefined && item.badge > 0 && (
+          <Badge
+            variant="secondary"
+            className="h-5 min-w-5 flex items-center justify-center text-xs bg-red-100 text-red-600"
+          >
+            {item.badge > 99 ? '99+' : item.badge}
+          </Badge>
+        )}
+      </div>
 
       {/* 折叠状态下的tooltip */}
       {isCollapsed && (

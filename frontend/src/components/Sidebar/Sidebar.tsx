@@ -18,15 +18,10 @@ interface SidebarProps {
   pendingCount?: number;
 }
 
-// 动画变体
+// 动画变体 - 使用CSS变量避免宽度跳动
 const sidebarVariants: Variants = {
   expanded: { width: 260 },
   collapsed: { width: 72 },
-};
-
-const textVariants: Variants = {
-  expanded: { opacity: 1, x: 0, width: 'auto' },
-  collapsed: { opacity: 0, x: -10, width: 0 },
 };
 
 // Sidebar组件
@@ -173,48 +168,41 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
       animate={showExpanded ? 'expanded' : 'collapsed'}
       variants={sidebarVariants}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50 overflow-hidden"
+      className="h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-50"
     >
-      {/* Logo + 移动端关闭按钮 */}
-      <div
-        className={cn(
-          'p-4 flex items-center border-b border-gray-100',
-          showExpanded ? 'justify-between gap-3' : 'justify-center'
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0">
-            <LayoutGrid className="h-5 w-5 text-white" />
-          </div>
-          <AnimatePresence>
-            {showExpanded && (
-              <motion.div
-                variants={textVariants}
-                initial="collapsed"
-                animate="expanded"
-                exit="collapsed"
-                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 min-w-0 overflow-hidden"
-              >
-                <p className="text-lg font-bold text-gray-900">智慧OA</p>
-                <p className="text-xs text-gray-500">企业办公系统</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* Logo + 移动端关闭按钮 - 单图标固定方案 */}
+      <div className="p-4 flex items-center border-b border-gray-100">
+        {/* Logo图标 - 始终固定 */}
+        <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0">
+          <LayoutGrid className="h-5 w-5 text-white" />
         </div>
 
-        {/* 移动端关闭按钮 */}
-        {isMobile && (
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        )}
+        {/* 文字容器 */}
+        <div
+          className={cn(
+            'overflow-hidden transition-all duration-200 ease-out',
+            showExpanded ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0'
+          )}
+        >
+          <div className="flex items-center justify-between flex-1">
+            <div>
+              <p className="text-lg font-bold text-gray-900 whitespace-nowrap">智慧OA</p>
+              <p className="text-xs text-gray-500 whitespace-nowrap">企业办公系统</p>
+            </div>
+            {/* 移动端关闭按钮 */}
+            {isMobile && (
+              <button
+                onClick={() => setIsMobileOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors ml-4"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
       {/* 新建按钮 */}
-      <CreateButton isCollapsed={!showExpanded} textVariants={textVariants} />
+      <CreateButton isCollapsed={!showExpanded} />
 
       {/* 主导航 */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2">
@@ -223,9 +211,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
           <li>
             <NavItem
               item={mainNavItems[0]}
-              isCollapsed={!showExpanded}
-              textVariants={textVariants}
-            />
+              isCollapsed={!showExpanded}            />
           </li>
 
           {/* 审批中心 */}
@@ -236,9 +222,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
               items={approvalSubItems}
               isExpanded={expandedMenus.approval}
               isCollapsed={!showExpanded}
-              isActive={location.pathname.startsWith('/approval')}
-              textVariants={textVariants}
-              onToggle={() => toggleMenu('approval')}
+              isActive={location.pathname.startsWith('/approval')}              onToggle={() => toggleMenu('approval')}
             />
           </li>
 
@@ -252,7 +236,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
                 isExpanded={expandedMenus.equipment}
                 isCollapsed={!showExpanded}
                 isActive={location.pathname.startsWith('/equipment')}
-                textVariants={textVariants}
                 onToggle={() => toggleMenu('equipment')}
               />
               <AnimatePresence>
@@ -296,7 +279,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
                                     <NavItem
                                       item={{ ...item, active: isActive }}
                                       isCollapsed={false}
-                                      textVariants={textVariants}
                                       isNested
                                     />
                                   </li>
@@ -340,7 +322,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
                                     <NavItem
                                       item={{ ...item, active: isActive }}
                                       isCollapsed={false}
-                                      textVariants={textVariants}
                                       isNested
                                     />
                                   </li>
@@ -365,9 +346,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
               items={scheduleSubItems}
               isExpanded={expandedMenus.schedule}
               isCollapsed={!showExpanded}
-              isActive={location.pathname.startsWith('/schedule')}
-              textVariants={textVariants}
-              onToggle={() => toggleMenu('schedule')}
+              isActive={location.pathname.startsWith('/schedule')}              onToggle={() => toggleMenu('schedule')}
             />
           </li>
 
@@ -379,9 +358,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
               items={attendanceSubItems}
               isExpanded={expandedMenus.attendance}
               isCollapsed={!showExpanded}
-              isActive={location.pathname.startsWith('/attendance')}
-              textVariants={textVariants}
-              onToggle={() => toggleMenu('attendance')}
+              isActive={location.pathname.startsWith('/attendance')}              onToggle={() => toggleMenu('attendance')}
             />
           </li>
 
@@ -393,9 +370,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
               items={meetingsSubItems}
               isExpanded={expandedMenus.meetings}
               isCollapsed={!showExpanded}
-              isActive={location.pathname.startsWith('/meetings')}
-              textVariants={textVariants}
-              onToggle={() => toggleMenu('meetings')}
+              isActive={location.pathname.startsWith('/meetings')}              onToggle={() => toggleMenu('meetings')}
             />
           </li>
 
@@ -403,15 +378,13 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
           <li>
             <NavItem
               item={{ path: '/reports', name: '报表中心', icon: 'BarChart3' }}
-              isCollapsed={!showExpanded}
-              textVariants={textVariants}
-            />
+              isCollapsed={!showExpanded}            />
           </li>
 
           {/* 其他主导航 */}
           {mainNavItems.slice(1).map((item) => (
             <li key={item.path}>
-              <NavItem item={item} isCollapsed={!showExpanded} textVariants={textVariants} />
+              <NavItem item={item} isCollapsed={!showExpanded} />
             </li>
           ))}
         </ul>
@@ -421,7 +394,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
           title="快捷入口"
           items={favouriteItems}
           isCollapsed={!showExpanded}
-          textVariants={textVariants}
         />
 
         {/* 系统管理 */}
@@ -430,7 +402,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
             title="系统管理"
             items={adminNavItems}
             isCollapsed={!showExpanded}
-            textVariants={textVariants}
           />
         )}
       </nav>
@@ -440,7 +411,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
         <NavItem
           item={{ path: '/knowledge', name: '帮助中心', icon: 'HelpCircle' }}
           isCollapsed={!showExpanded}
-          textVariants={textVariants}
         />
       </div>
     </motion.aside>

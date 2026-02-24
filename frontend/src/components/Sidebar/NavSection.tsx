@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { NavItem } from './NavItem';
 import type { NavItem as NavItemType } from './types';
@@ -9,17 +9,23 @@ interface NavSectionProps {
   title?: string;
   items: NavItemType[];
   isCollapsed: boolean;
-  textVariants: Variants;
   className?: string;
   showTitle?: boolean;
 }
+
+// 动画配置
+const titleAnimation = {
+  initial: { opacity: 0, y: -4 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: 0.15 }
+};
 
 // 导航区块组件
 export const NavSection = memo(function NavSection({
   title,
   items,
   isCollapsed,
-  textVariants,
   className,
   showTitle = true,
 }: NavSectionProps) {
@@ -30,23 +36,25 @@ export const NavSection = memo(function NavSection({
 
   return (
     <div className={cn('mt-6', className)}>
-      {/* 区块标题 */}
-      <AnimatePresence>
-        {!isCollapsed && showTitle && title && (
-          <motion.div
-            variants={textVariants}
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center justify-between px-3 mb-2 overflow-hidden"
-          >
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              {title}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 区块标题 - 固定高度，折叠时保持占位 */}
+      <div className="h-5 px-3 mb-2">
+        <AnimatePresence mode="wait" initial={false}>
+          {!isCollapsed && showTitle && title && (
+            <motion.div
+              key={`section-title-${title}`}
+              variants={titleAnimation}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex items-center justify-between"
+            >
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {title}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* 导航项列表 */}
       <ul className="space-y-1">
@@ -55,7 +63,6 @@ export const NavSection = memo(function NavSection({
             <NavItem
               item={item}
               isCollapsed={isCollapsed}
-              textVariants={textVariants}
             />
           </li>
         ))}
