@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { ApplicationStatus, ApprovalAction, UserRole, Prisma } from '@prisma/client';
 import {
   getNextStatus,
-  shouldNotifyReadonly,
   getStatusText,
   checkAllFactoryManagersApproved,
 } from '../utils/application';
@@ -12,6 +11,7 @@ import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
 import { sendApprovalNotification, notifyHighAmountApproval } from '../services/notificationService';
+import { getCEOApprovalThreshold, requiresCEOApproval } from '../services/approvalConfig.service';
 import { escapeHtml } from '../utils/validation';
 
 // 审批验证 Schema
@@ -246,7 +246,8 @@ async function processApproval(
             // CEO审批通过后，高金额申请通知财务人员
             if (action === 'APPROVE' && application.amount) {
               const amount = Number(application.amount);
-              if (amount >= 100000) {
+              const needCEOApproval = await requiresCEOApproval(amount);
+              if (needCEOApproval) {
                 // 在事务外异步发送通知，不阻塞主流程
                 setImmediate(() => {
                   notifyHighAmountApproval(
@@ -497,10 +498,12 @@ export function ceoApprove(req: Request, res: Response): Promise<void> {
 
 /**
  * 处理只读用户通知
- * 规则: 金额 > 100000 的审批通过后通知只读用户
+ * 规则: 金额 >= CEO审批阈值的审批通过后通知只读用户
  */
 async function handleReadonlyNotification(applicationId: string, amount: number | null): Promise<void> {
-  if (!shouldNotifyReadonly(amount)) return;
+  // 使用配置中的CEO审批阈值判断是否通知
+  const threshold = await getCEOApprovalThreshold();
+  if (!amount || amount < threshold) return;
 
   try {
     const readonlyUsers = await prisma.user.findMany({

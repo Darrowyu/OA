@@ -14,7 +14,8 @@ import type {
   TaskStatus,
 } from '../types/task'
 import { TaskStatus as TaskStatusEnum } from '../types/task'
-import { getDefaultPriority, TaskPriority } from './taskConfig.service'
+import { getDefaultPriority } from './taskConfig.service'
+import { TaskPriority } from '../types/task'
 
 export class TaskService {
   // 创建任务
@@ -27,7 +28,7 @@ export class TaskService {
         title: data.title,
         description: data.description,
         status: data.status || TaskStatusEnum.TODO,
-        priority: (data.priority || defaultPriority).toUpperCase(),
+        priority: data.priority || (defaultPriority.toUpperCase() as TaskPriority),
         assigneeId: data.assigneeId,
         creatorId: userId,
         projectId: data.projectId,
