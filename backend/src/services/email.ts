@@ -2,6 +2,38 @@ import nodemailer from 'nodemailer';
 import { config } from '../config';
 import logger from '../lib/logger';
 
+// ============================================
+// 邮件配置验证
+// ============================================
+
+/** 验证邮件配置是否完整 */
+export function validateEmailConfig(): { valid: boolean; missing: string[] } {
+  const missing: string[] = [];
+
+  if (!config.email.smtp.host) missing.push('SMTP_HOST');
+  if (!config.email.smtp.port) missing.push('SMTP_PORT');
+  if (!config.email.smtp.auth.user) missing.push('SMTP_USER');
+  if (!config.email.smtp.auth.pass) missing.push('SMTP_PASS');
+  if (!config.email.from) missing.push('EMAIL_FROM');
+  if (!process.env.FRONTEND_URL) missing.push('FRONTEND_URL（邮件中的链接将使用默认值）');
+
+  return { valid: missing.length === 0, missing };
+}
+
+/** 在启动时验证邮件配置 */
+export function initializeEmailService(): void {
+  const { valid, missing } = validateEmailConfig();
+
+  if (!valid) {
+    logger.warn('邮件服务配置不完整，邮件通知功能可能无法正常工作', {
+      missingConfig: missing,
+      fallbackUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    });
+  } else {
+    logger.info('邮件服务配置验证通过');
+  }
+}
+
 // 邮件传输器配置
 const transporter = nodemailer.createTransport({
   host: config.email.smtp.host,

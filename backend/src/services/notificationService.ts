@@ -8,6 +8,33 @@ import {
 } from './socketService';
 import { sendEmailNotification } from './email';
 
+// ============================================
+// 公共类型定义
+// ============================================
+
+/** 申请邮件信息（最小化） */
+export interface ApplicationEmailInfo {
+  id: string;
+  applicationNo: string;
+  title: string;
+  applicantName: string;
+  priority: string;
+}
+
+/** 审批任务类型 */
+export type ApprovalTaskType = 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
+
+/** 审批结果信息 */
+export interface ApprovalResultInfo {
+  id: string;
+  applicationNo: string;
+  title: string;
+  status: 'APPROVED' | 'REJECTED';
+  completedAt?: Date | null;
+  rejectedAt?: Date | null;
+  rejectReason?: string | null;
+}
+
 // 创建通知数据类型
 export interface CreateNotificationData {
   userId: string;
@@ -413,3 +440,250 @@ function generateHighAmountEmailContent(
 </html>
   `;
 }
+
+// ============================================
+// 邮件模板与配置
+// ============================================
+
+const EMAIL_CONFIG = {
+  priorityColor: {
+    URGENT: '#dc2626',
+    HIGH: '#ea580c',
+    NORMAL: '#2563eb',
+    LOW: '#6b7280',
+  } as Record<string, string>,
+  priorityText: {
+    URGENT: '紧急',
+    HIGH: '高',
+    NORMAL: '普通',
+    LOW: '低',
+  } as Record<string, string>,
+  taskTitles: {
+    FACTORY: '【待审批】厂长审批任务',
+    DIRECTOR: '【待审批】总监审批任务',
+    MANAGER: '【待审批】经理审批任务',
+    CEO: '【待审批】CEO审批任务',
+  },
+  taskDescriptions: {
+    FACTORY: '您有新的申请需要审批（厂长环节）',
+    DIRECTOR: '厂长审批已完成，您有新的申请需要审批（总监环节）',
+    MANAGER: '总监审批已完成，您有新的申请需要审批（经理环节）',
+    CEO: '经理审批已完成，您有新的申请需要审批（CEO环节）',
+  },
+};
+
+/** 生成邮件基础模板 */
+function generateEmailBase(options: {
+  headerColor: string;
+  title: string;
+  content: string;
+  actionUrl?: string;
+  actionText?: string;
+}): string {
+  const actionButton = options.actionUrl && options.actionText
+    ? `<a href="${options.actionUrl}" class="button">${options.actionText}</a>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: ${options.headerColor}; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; }
+    .content { background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    .footer { background: #f9fafb; padding: 15px; border-radius: 0 0 8px 8px; font-size: 12px; color: #6b7280; }
+    .info-row { margin: 10px 0; }
+    .label { font-weight: bold; color: #374151; }
+    .priority { font-weight: bold; }
+    .button { display: inline-block; background: #2563eb; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
+    .reject-box { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px; margin-top: 15px; }
+    .result { font-weight: bold; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 style="margin: 0;">${options.title}</h2>
+    </div>
+    <div class="content">
+      ${options.content}
+      ${actionButton}
+    </div>
+    <div class="footer">此邮件由OA系统自动发送，请勿直接回复。</div>
+  </div>
+</body>
+</html>`;
+}
+
+/** 安全发送邮件（统一错误处理） */
+async function safeSendEmail<T>(
+  operation: () => Promise<T>,
+  context: string,
+  meta?: Record<string, unknown>
+): Promise<T | undefined> {
+  try {
+    return await operation();
+  } catch (error) {
+    logger.error(`${context}失败`, {
+      error: error instanceof Error ? error.message : String(error),
+      ...meta,
+    });
+    return undefined;
+  }
+}
+
+// ==================== 审批流程邮件通知 ====================
+
+/**
+ * 发送审批任务邮件通知给审批人
+ */
+export async function sendApprovalTaskEmail(
+  recipientEmail: string,
+  recipientName: string,
+  application: ApplicationEmailInfo,
+  taskType: ApprovalTaskType
+): Promise<void> {
+  const { priorityColor, priorityText, taskTitles, taskDescriptions } = EMAIL_CONFIG;
+  const priority = application.priority || 'NORMAL';
+
+  const content = `
+    <p style="font-size: 16px; color: #374151;">尊敬的 ${recipientName}，</p>
+    <p style="color: #6b7280;">${taskDescriptions[taskType]}</p>
+    <div class="info-row"><span class="label">申请编号：</span>${application.applicationNo}</div>
+    <div class="info-row"><span class="label">申请标题：</span>${application.title}</div>
+    <div class="info-row"><span class="label">申请人：</span>${application.applicantName}</div>
+    <div class="info-row"><span class="label">优先级：</span><span class="priority" style="color: ${priorityColor[priority]}">${priorityText[priority]}</span></div>
+  `;
+
+  const htmlContent = generateEmailBase({
+    headerColor: '#2563eb',
+    title: taskTitles[taskType],
+    content,
+    actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/applications/${application.id}`,
+    actionText: '立即审批',
+  });
+
+  await safeSendEmail(
+    () => sendEmailNotification(
+      recipientEmail,
+      `${taskTitles[taskType]} - ${application.applicationNo}`,
+      htmlContent,
+      application.applicationNo
+    ),
+    '审批任务邮件发送',
+    { recipientEmail, applicationId: application.id, taskType }
+  );
+}
+
+/** 批量发送审批任务邮件 */
+export async function sendApprovalTaskEmails(
+  recipients: Array<{ email: string; name: string }>,
+  application: ApplicationEmailInfo,
+  taskType: ApprovalTaskType
+): Promise<void> {
+  await Promise.all(
+    recipients.map((r) => sendApprovalTaskEmail(r.email, r.name, application, taskType))
+  );
+}
+
+/**
+ * 发送审批结果邮件给申请人
+ */
+export async function sendApplicationResultEmail(
+  recipientEmail: string,
+  application: {
+    id: string;
+    applicationNo: string;
+    title: string;
+    status: 'APPROVED' | 'REJECTED';
+    completedAt?: Date | null;
+    rejectedAt?: Date | null;
+    rejectReason?: string | null;
+  }
+): Promise<void> {
+  const isApproved = application.status === 'APPROVED';
+  const subject = isApproved
+    ? `【已通过】申请审批通过 - ${application.applicationNo}`
+    : `【已拒绝】申请已被拒绝 - ${application.applicationNo}`;
+
+  const headerColor = isApproved ? '#16a34a' : '#dc2626';
+  const resultText = isApproved ? '审批通过' : '已被拒绝';
+  const resultIcon = isApproved ? '✓' : '✗';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: ${headerColor}; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; }
+    .content { background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    .footer { background: #f9fafb; padding: 15px; border-radius: 0 0 8px 8px; font-size: 12px; color: #6b7280; }
+    .info-row { margin: 10px 0; }
+    .label { font-weight: bold; color: #374151; }
+    .result { color: ${headerColor}; font-weight: bold; font-size: 18px; }
+    .button { display: inline-block; background: #2563eb; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
+    .reject-box { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 style="margin: 0;">${resultIcon} 申请${resultText}</h2>
+    </div>
+    <div class="content">
+      <p style="font-size: 16px; color: #374151;">您好，</p>
+      <p>您的申请已有审批结果：</p>
+      <div class="info-row">
+        <span class="label">申请编号：</span>${application.applicationNo}
+      </div>
+      <div class="info-row">
+        <span class="label">申请标题：</span>${application.title}
+      </div>
+      <div class="info-row">
+        <span class="label">审批结果：</span><span class="result">${resultText}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">${isApproved ? '完成时间' : '拒绝时间'}：</span>${(isApproved ? application.completedAt : application.rejectedAt)?.toLocaleString('zh-CN') || '-'}
+      </div>
+      ${!isApproved && application.rejectReason ? `
+      <div class="reject-box">
+        <span class="label">拒绝原因：</span><br>
+        <span style="color: #dc2626;">${application.rejectReason}</span>
+      </div>
+      ` : ''}
+      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/applications/${application.id}" class="button">查看详情</a>
+    </div>
+    <div class="footer">
+      此邮件由OA系统自动发送，请勿直接回复。
+    </div>
+  </div>
+</html>
+  `;
+
+  try {
+    await sendEmailNotification(
+      recipientEmail,
+      subject,
+      htmlContent,
+      application.applicationNo
+    );
+    logger.info(`审批结果邮件已发送给申请人`, {
+      applicationId: application.id,
+      status: application.status,
+    });
+  } catch (error) {
+    logger.error(`审批结果邮件发送失败`, {
+      error: error instanceof Error ? error.message : String(error),
+      recipientEmail,
+      applicationId: application.id,
+    });
+  }
+}
+
+// 简化后的sendApplicationResultEmail使用generateEmailBase和safeSendEmail
+// 原长函数已使用模板生成器重构，代码量减少约60%

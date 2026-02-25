@@ -9,7 +9,7 @@ import {
 } from '../utils/application';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
-import { createNotifications } from '../services/notificationService';
+import { createNotifications, sendApprovalTaskEmails } from '../services/notificationService';
 import { fail } from '../utils/response';
 import { parsePaginationParams } from '../utils/validation';
 
@@ -659,6 +659,25 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
           },
         }));
         await createNotifications(notifications);
+
+        // 发送邮件通知给审批人
+        const recipients = result.targetUsers
+          .filter((u) => Boolean(u.email))
+          .map((u) => ({ email: u.email!, name: u.name || u.username }));
+
+        if (recipients.length) {
+          const flowConfig = existingApp.flowConfig as { skipFactory?: boolean; targetLevel?: 'DIRECTOR' | 'CEO' } | null;
+          const skipFactory = existingApp.type === 'OTHER' && flowConfig?.skipFactory;
+          const taskType = skipFactory ? (flowConfig?.targetLevel === 'CEO' ? 'CEO' : 'DIRECTOR') : 'FACTORY';
+
+          await sendApprovalTaskEmails(recipients, {
+            id: existingApp.id,
+            applicationNo: existingApp.applicationNo,
+            title: existingApp.title,
+            applicantName: existingApp.applicantName,
+            priority: existingApp.priority,
+          }, taskType);
+        }
       }
     } catch (notifyError) {
       logger.error('提交申请通知发送失败', { error: notifyError });

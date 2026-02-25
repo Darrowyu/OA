@@ -5,13 +5,104 @@ import {
   getNextStatus,
   getStatusText,
   checkAllFactoryManagersApproved,
+  checkAllManagersApproved,
 } from '../utils/application';
 import { archiveApplication } from '../services/archive';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { ok, fail } from '../utils/response';
-import { sendApprovalNotification, notifyHighAmountApproval } from '../services/notificationService';
+import {
+  sendApprovalNotification,
+  notifyHighAmountApproval,
+  sendApprovalTaskEmails,
+  sendApplicationResultEmail,
+  type ApplicationEmailInfo,
+  type ApprovalTaskType,
+} from '../services/notificationService';
+
 import { getCEOApprovalThreshold, requiresCEOApproval } from '../services/approvalConfig.service';
+
+// ============================================
+// 审批人查询缓存
+// ============================================
+
+interface CachedApprovers {
+  users: Array<{ email: string; name: string }>;
+  timestamp: number;
+}
+
+const approverCache = new Map<string, CachedApprovers>();
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+
+/** 获取缓存的审批人列表 */
+async function getCachedApproversByRole(
+  role: 'DIRECTOR' | 'CEO'
+): Promise<Array<{ email: string; name: string }>> {
+  const cached = approverCache.get(role);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.users;
+  }
+
+  const users = await prisma.user.findMany({
+    where: { role },
+    select: { email: true, name: true },
+  });
+
+  const validUsers = users
+    .filter((u): u is typeof u & { email: string } => Boolean(u.email))
+    .map((u) => ({ email: u.email!, name: u.name || '' }));
+
+  approverCache.set(role, { users: validUsers, timestamp: Date.now() });
+
+  return validUsers;
+}
+
+/** 清除审批人缓存（当用户变更时调用） */
+export function clearApproverCache(role?: 'DIRECTOR' | 'CEO'): void {
+  if (role) {
+    approverCache.delete(role);
+  } else {
+    approverCache.clear();
+  }
+}
+
+// ============================================
+// 邮件通知辅助函数
+// ============================================
+
+/** 通知指定角色的审批人（按角色查询并发送邮件） */
+async function notifyApproversByRole(
+  role: 'DIRECTOR' | 'CEO',
+  application: ApplicationEmailInfo,
+  taskType: ApprovalTaskType
+): Promise<void> {
+  const recipients = await getCachedApproversByRole(role);
+
+  if (recipients.length > 0) {
+    await sendApprovalTaskEmails(recipients, application, taskType);
+  }
+}
+
+/** 根据工号列表通知审批人 */
+async function notifyApproversByIds(
+  employeeIds: string[],
+  application: ApplicationEmailInfo,
+  taskType: ApprovalTaskType
+): Promise<void> {
+  const users = await prisma.user.findMany({
+    where: { employeeId: { in: employeeIds } },
+    select: { email: true, name: true },
+  });
+
+  const recipients = users
+    .filter((u): u is typeof u & { email: string } => Boolean(u.email))
+    .map((u) => ({ email: u.email!, name: u.name || '' }));
+
+  if (recipients.length > 0) {
+    await sendApprovalTaskEmails(recipients, application, taskType);
+  }
+}
 import { escapeHtml } from '../utils/validation';
 
 // 审批验证 Schema
@@ -225,18 +316,26 @@ async function processApproval(
             data: updateData,
           });
 
-          // 经理审批通过后创建CEO审批记录
+          // 经理审批：检查是否所有经理都已通过（并行审批逻辑）
           if (level === 'MANAGER') {
-            const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
-            if (ceo) {
-              await tx.ceoApproval.create({
-                data: {
-                  applicationId,
-                  approverId: ceo.id,
-                  action: ApprovalAction.PENDING,
-                },
-              });
+            const allApproved = await checkAllManagersApproved(
+              tx, applicationId, application.managerIds
+            );
+
+            if (allApproved) {
+              // 所有经理通过，进入CEO阶段
+              const ceo = await tx.user.findFirst({ where: { role: 'CEO' } });
+              if (ceo) {
+                await tx.ceoApproval.create({
+                  data: {
+                    applicationId,
+                    approverId: ceo.id,
+                    action: ApprovalAction.PENDING,
+                  },
+                });
+              }
             }
+            // 否则不更新状态，保持 PENDING_MANAGER，等待其他经理审批
           }
 
           // 最终审批通过后处理归档
@@ -273,6 +372,7 @@ async function processApproval(
     });
 
     const newStatus = getNextStatus(application.status, action);
+    const oldStatus = application.status;
 
     // P0修复: 集成通知到业务流程 - 通知申请人审批结果
     try {
@@ -288,6 +388,61 @@ async function processApproval(
       logger.error('审批通知发送失败', {
         error: notifyError instanceof Error ? notifyError.message : String(notifyError),
       });
+    }
+
+    // 发送邮件通知申请人审批结果（通过/拒绝）
+    try {
+      const applicant = await prisma.user.findUnique({
+        where: { id: application.applicantId },
+        select: { email: true },
+      });
+
+      if (applicant?.email) {
+        await sendApplicationResultEmail(applicant.email, {
+          id: applicationId,
+          applicationNo: application.applicationNo,
+          title: application.title,
+          status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+          completedAt: action === 'APPROVE' ? new Date() : null,
+          rejectedAt: action === 'REJECT' ? new Date() : null,
+          rejectReason: comment?.trim() || null,
+        });
+      }
+    } catch (emailError) {
+      logger.error('审批结果邮件发送失败', {
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      });
+    }
+
+    // 流程流转邮件通知
+    const appInfo: ApplicationEmailInfo = {
+      id: applicationId,
+      applicationNo: application.applicationNo,
+      title: application.title,
+      applicantName: application.applicantName,
+      priority: application.priority,
+    };
+
+    // 厂长通过 → 通知总监
+    if (level === 'FACTORY' && action === 'APPROVE' && oldStatus === ApplicationStatus.PENDING_FACTORY) {
+      try {
+        const allApproved = await checkAllFactoryManagersApproved(
+          prisma, applicationId, application.factoryManagerIds
+        );
+        if (allApproved) await notifyApproversByRole('DIRECTOR', appInfo, 'DIRECTOR');
+      } catch (flowError) {
+        logger.error('厂长流转总监邮件通知失败', { error: String(flowError) });
+      }
+    }
+
+    // 经理通过 → 通知CEO
+    if (level === 'MANAGER' && action === 'APPROVE' && oldStatus === ApplicationStatus.PENDING_MANAGER) {
+      try {
+        const allApproved = await checkAllManagersApproved(prisma, applicationId, application.managerIds);
+        if (allApproved) await notifyApproversByRole('CEO', appInfo, 'CEO');
+      } catch (flowError) {
+        logger.error('经理流转CEO邮件通知失败', { error: String(flowError) });
+      }
     }
 
     res.json(ok({
@@ -593,6 +748,49 @@ export async function directorApprove(req: Request, res: Response): Promise<void
       where: { id: applicationId },
       select: { status: true }
     });
+
+    // 总监审批流转邮件通知
+    const appInfo: ApplicationEmailInfo = {
+      id: applicationId,
+      applicationNo: application.applicationNo,
+      title: application.title,
+      applicantName: application.applicantName,
+      priority: application.priority,
+    };
+
+    if (action === 'APPROVE') {
+      try {
+        if (flowType === 'TO_MANAGER' && selectedManagerIds?.length) {
+          await notifyApproversByIds(selectedManagerIds, appInfo, 'MANAGER');
+        } else if (flowType === 'TO_CEO') {
+          await notifyApproversByRole('CEO', appInfo, 'CEO');
+        }
+      } catch (emailError) {
+        logger.error('总监审批流转邮件通知失败', { error: String(emailError) });
+      }
+    }
+
+    // 总监拒绝时通知申请人
+    if (action === 'REJECT') {
+      try {
+        const applicant = await prisma.user.findUnique({
+          where: { id: application.applicantId },
+          select: { email: true },
+        });
+        if (applicant?.email) {
+          await sendApplicationResultEmail(applicant.email, {
+            id: applicationId,
+            applicationNo: application.applicationNo,
+            title: application.title,
+            status: 'REJECTED',
+            rejectedAt: new Date(),
+            rejectReason: comment?.trim() || null,
+          });
+        }
+      } catch (emailError) {
+        logger.error('总监拒绝邮件通知失败', { error: String(emailError) });
+      }
+    }
 
     res.json(ok({
       message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',

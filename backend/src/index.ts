@@ -29,6 +29,7 @@ import meetingRoutes from './routes/meetings';
 import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeSocket } from './services/socketService';
+import { initializeEmailService } from './services/email';
 import notificationRoutes from './routes/notifications';
 import workflowRoutes from './routes/workflows';
 import reportRoutes from './routes/reports';
@@ -159,6 +160,9 @@ server.listen(config.port, () => {
     port: config.port,
     time: new Date().toLocaleString(),
   });
+
+  // 验证邮件配置
+  initializeEmailService();
 
   // 启动提醒定时任务
   startReminderScheduler();
