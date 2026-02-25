@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { NativeSelect as Select } from "@/components/ui/select"
 import { FileUpload } from "./FileUpload"
 import { FlowInfoTooltip } from "./FlowInfoTooltip"
-import { CreateApplicationRequest, Priority } from "@/types"
+import { CreateApplicationRequest, Priority, ApplicationType } from "@/types"
 import { UploadResponse } from "@/services/uploads"
 import { Upload } from "lucide-react"
 
@@ -79,7 +79,7 @@ export function OtherApplicationForm({
       title: title.trim(),
       content: content.trim(),
       priority,
-      type: 'OTHER',
+      type: ApplicationType.OTHER,
       flowConfig: {
         skipFactory: true,
         targetLevel,

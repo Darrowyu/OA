@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { NativeSelect as Select } from "@/components/ui/select"
 import { FileUpload } from "./FileUpload"
-import { CreateApplicationRequest, User, Priority } from "@/types"
+import { CreateApplicationRequest, User, Priority, ApplicationType } from "@/types"
 import { UploadResponse } from "@/services/uploads"
 import { Upload } from "lucide-react"
 
@@ -80,7 +80,7 @@ export function ApplicationForm({
       title: title.trim(),
       content: content.trim(),
       priority,
-      type: 'STANDARD',
+      type: ApplicationType.STANDARD,
       factoryManagerIds: selectedFactoryManagers,
       attachmentIds: attachments.map((att) => att.id),
     }

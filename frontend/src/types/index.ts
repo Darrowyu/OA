@@ -38,6 +38,21 @@ export enum UserRole {
 // 审批动作类型
 export type ApprovalAction = 'APPROVE' | 'REJECT' | 'PENDING';
 
+// 申请类型枚举
+export enum ApplicationType {
+  STANDARD = 'STANDARD',
+  PRODUCT_DEVELOPMENT = 'PRODUCT_DEVELOPMENT',
+  FEASIBILITY_STUDY = 'FEASIBILITY_STUDY',
+  BUSINESS_TRIP = 'BUSINESS_TRIP',
+  OTHER = 'OTHER',
+}
+
+// 流程配置类型
+export interface FlowConfig {
+  skipFactory: boolean;
+  targetLevel: 'DIRECTOR' | 'CEO';
+}
+
 // 用户类型
 export interface User {
   id: string;
@@ -78,6 +93,8 @@ export interface Application {
   amount: number | null;
   priority: Priority;
   status: ApplicationStatus;
+  type: ApplicationType;
+  flowConfig: FlowConfig | null;
   submitterId: string;
   submitterName: string;
   submitterDepartment: string;
@@ -111,11 +128,8 @@ export interface CreateApplicationRequest {
   amount?: number;
   priority: Priority;
   factoryManagerIds?: string[];  // 标准申请使用
-  type: 'STANDARD' | 'OTHER' | 'PRODUCT_DEVELOPMENT' | 'FEASIBILITY_STUDY' | 'BUSINESS_TRIP';
-  flowConfig?: {
-    skipFactory: boolean;
-    targetLevel: 'DIRECTOR' | 'CEO';
-  };
+  type: ApplicationType;
+  flowConfig?: FlowConfig;
   attachmentIds?: string[];
 }
 
