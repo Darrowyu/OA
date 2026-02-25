@@ -2,6 +2,20 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+// Dialog Context for close functionality
+interface DialogContextType {
+  onClose: () => void
+}
+const DialogContext = React.createContext<DialogContextType | null>(null)
+
+const useDialog = () => {
+  const context = React.useContext(DialogContext)
+  if (!context) {
+    throw new Error("Dialog components must be used within a Dialog")
+  }
+  return context
+}
+
 interface DialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -11,16 +25,22 @@ interface DialogProps {
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   if (open === false) return null
 
+  const handleClose = React.useCallback(() => {
+    onOpenChange?.(false)
+  }, [onOpenChange])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/50"
-        onClick={() => onOpenChange?.(false)}
-      />
-      <div className="relative z-50 w-full max-w-lg mx-4">
-        {children}
+    <DialogContext.Provider value={{ onClose: handleClose }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="fixed inset-0 bg-black/50"
+          onClick={handleClose}
+        />
+        <div className="relative z-50 w-full max-w-lg mx-4">
+          {children}
+        </div>
       </div>
-    </div>
+    </DialogContext.Provider>
   )
 }
 
@@ -49,27 +69,29 @@ interface DialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const DialogHeader = React.forwardRef<HTMLDivElement, DialogHeaderProps>(
-  ({ className, children, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "flex items-center justify-between px-6 py-4 border-b",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <button
-        className="p-1 rounded-md hover:bg-gray-100 transition-colors"
-        onClick={() => {
-          const dialog = document.querySelector('[data-dialog-close]')
-          dialog?.dispatchEvent(new CustomEvent('close'))
-        }}
+  ({ className, children, ...props }, ref) => {
+    const { onClose } = useDialog()
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex items-center justify-between px-6 py-4 border-b",
+          className
+        )}
+        {...props}
       >
-        <X className="h-5 w-5 text-gray-500" />
-      </button>
-    </div>
-  )
+        {children}
+        <button
+          type="button"
+          className="p-1 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+          onClick={onClose}
+          aria-label="关闭"
+        >
+          <X className="h-5 w-5 text-gray-500" />
+        </button>
+      </div>
+    )
+  }
 )
 DialogHeader.displayName = "DialogHeader"
 

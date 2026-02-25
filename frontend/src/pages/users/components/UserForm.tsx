@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserPlus, UserCog } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -123,130 +124,170 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading }: UserFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? '编辑用户' : '新建用户'}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[540px] p-0 overflow-hidden">
+        {/* 头部 - 系统默认配色 */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center">
+                {isEdit ? (
+                  <UserCog className="h-5 w-5 text-gray-700" />
+                ) : (
+                  <UserPlus className="h-5 w-5 text-gray-700" />
+                )}
+              </div>
+              <div>
+                <DialogTitle className="text-xl text-gray-900 font-semibold">
+                  {isEdit ? '编辑用户' : '新建用户'}
+                </DialogTitle>
+                <DialogDescription className="text-gray-500 mt-0.5">
+                  {isEdit ? '修改用户的基本信息' : '创建一个新的系统用户账号'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">
-                用户名 {!isEdit && <span className="text-red-500">*</span>}
-              </Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="请输入用户名"
-                disabled={isEdit}
-                className={errors.username ? 'border-red-500' : ''}
-              />
-              {errors.username && (
-                <p className="text-xs text-red-500">{errors.username}</p>
-              )}
-              {!isEdit && !errors.username && (
-                <p className="text-xs text-gray-400">3-20位字母、数字或下划线</p>
-              )}
+        {/* 表单内容 */}
+        <form onSubmit={handleSubmit} className="px-6 py-5">
+          <div className="space-y-5">
+            {/* 第一行：用户名和密码 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-medium">
+                  用户名 {!isEdit && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="请输入用户名"
+                  disabled={isEdit}
+                  className={`h-10 ${errors.username ? 'border-red-500 focus-visible:ring-red-500' : ''} ${isEdit ? 'bg-gray-100' : ''}`}
+                />
+                {errors.username && (
+                  <p className="text-xs text-red-500">{errors.username}</p>
+                )}
+                {!isEdit && !errors.username && (
+                  <p className="text-xs text-gray-400">3-20位字母、数字或下划线</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  密码 {!isEdit && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder={isEdit ? '不修改请留空' : '请输入密码'}
+                  disabled={isEdit}
+                  className={`h-10 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''} ${isEdit ? 'bg-gray-100' : ''}`}
+                />
+                {errors.password && (
+                  <p className="text-xs text-red-500">{errors.password}</p>
+                )}
+              </div>
             </div>
 
+            {/* 第二行：姓名和工号 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  姓名 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="请输入姓名"
+                  className={`h-10 ${errors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                />
+                {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="employeeId" className="text-sm font-medium">
+                  工号 {!isEdit && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="employeeId"
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                  placeholder="请输入工号"
+                  disabled={isEdit}
+                  className={`h-10 ${errors.employeeId ? 'border-red-500 focus-visible:ring-red-500' : ''} ${isEdit ? 'bg-gray-100' : ''}`}
+                />
+                {errors.employeeId && (
+                  <p className="text-xs text-red-500">{errors.employeeId}</p>
+                )}
+              </div>
+            </div>
+
+            {/* 第三行：邮箱 */}
             <div className="space-y-2">
-              <Label htmlFor="password">
-                密码 {!isEdit && <span className="text-red-500">*</span>}
+              <Label htmlFor="email" className="text-sm font-medium">
+                邮箱 <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={isEdit ? '不修改请留空' : '请输入密码'}
-                disabled={isEdit}
-                className={errors.password ? 'border-red-500' : ''}
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="请输入邮箱地址"
+                className={`h-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               />
-              {errors.password && (
-                <p className="text-xs text-red-500">{errors.password}</p>
-              )}
+              {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+            </div>
+
+            {/* 第四行：部门和角色 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="department" className="text-sm font-medium">
+                  部门
+                </Label>
+                <DepartmentSelect
+                  value={formData.departmentId}
+                  onChange={(id) => setFormData({ ...formData, departmentId: id })}
+                  placeholder="请选择部门"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role" className="text-sm font-medium">
+                  角色 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                  options={ROLE_OPTIONS}
+                  className="h-10"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                姓名 <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="请输入姓名"
-                className={errors.name ? 'border-red-500' : ''}
-              />
-              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="employeeId">
-                工号 {!isEdit && <span className="text-red-500">*</span>}
-              </Label>
-              <Input
-                id="employeeId"
-                value={formData.employeeId}
-                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                placeholder="请输入工号"
-                disabled={isEdit}
-                className={errors.employeeId ? 'border-red-500' : ''}
-              />
-              {errors.employeeId && (
-                <p className="text-xs text-red-500">{errors.employeeId}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              邮箱 <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="请输入邮箱"
-              className={errors.email ? 'border-red-500' : ''}
-            />
-            {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="department">部门</Label>
-              <DepartmentSelect
-                value={formData.departmentId}
-                onChange={(id) => setFormData({ ...formData, departmentId: id })}
-                placeholder="请选择部门"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">
-                角色 <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                id="role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                options={ROLE_OPTIONS}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {/* 底部按钮 */}
+          <DialogFooter className="pt-6 mt-6 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+              className="min-w-[80px]"
+            >
               取消
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="min-w-[80px]"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? '保存' : '创建'}
+              {isEdit ? '保存修改' : '创建用户'}
             </Button>
           </DialogFooter>
         </form>

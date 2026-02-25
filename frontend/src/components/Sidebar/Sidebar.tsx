@@ -421,7 +421,10 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
       </nav>
 
       {/* 帮助中心 */}
-      <div className="p-4 border-t border-gray-200">
+      <div className={cn(
+        'border-t border-gray-200',
+        showExpanded ? 'p-4' : 'px-2 py-4'
+      )}>
         <NavItem
           item={{ path: '/knowledge', name: '帮助中心', icon: 'HelpCircle' }}
           isCollapsed={!showExpanded}

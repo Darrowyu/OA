@@ -73,8 +73,10 @@ function SheetContent({ children, className, side = "right" }: SheetContentProps
         )}
       >
         <button
+          type="button"
           onClick={() => setOpen(false)}
-          className="absolute top-4 right-4 p-1 rounded-md hover:bg-gray-100"
+          className="absolute top-4 right-4 z-50 p-1 rounded-md hover:bg-gray-100 cursor-pointer"
+          aria-label="关闭"
         >
           <X className="w-4 h-4" />
         </button>

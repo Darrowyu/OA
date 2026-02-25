@@ -1,15 +1,15 @@
 import { useState, useRef, useCallback } from 'react';
-import { Upload, Download, X, FileSpreadsheet, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, Download, X, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CreateUserRequest } from '@/services/users';
@@ -142,145 +142,186 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            批量导入用户
-          </DialogTitle>
-        </DialogHeader>
-
-        {result ? (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 bg-green-50 p-4 rounded-lg text-center">
-                <p className="text-3xl font-semibold text-green-600">{result.success}</p>
-                <p className="text-sm text-green-700">导入成功</p>
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
+        {/* 头部 - 系统默认配色 */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center">
+                <Users className="h-5 w-5 text-gray-700" />
               </div>
-              {result.failed > 0 && (
-                <div className="flex-1 bg-red-50 p-4 rounded-lg text-center">
-                  <p className="text-3xl font-semibold text-red-600">{result.failed}</p>
-                  <p className="text-sm text-red-700">导入失败</p>
-                </div>
-              )}
+              <div>
+                <DialogTitle className="text-xl text-gray-900 font-semibold">
+                  批量导入用户
+                </DialogTitle>
+                <DialogDescription className="text-gray-500 mt-0.5">
+                  通过 CSV 文件批量导入用户数据
+                </DialogDescription>
+              </div>
             </div>
+          </DialogHeader>
+        </div>
 
-            {result.errors.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="text-sm font-medium mb-2">错误详情</h4>
-                  <ScrollArea className="h-[200px] border rounded-md p-2">
-                    <div className="space-y-2">
+        <div className="px-6 py-5">
+          {result ? (
+            <div className="space-y-5">
+              {/* 导入结果卡片 */}
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">导入完成</h3>
+                <p className="text-sm text-gray-500">用户数据已成功导入系统</p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1 bg-green-50 p-4 rounded-xl text-center">
+                  <p className="text-3xl font-bold text-green-600">{result.success}</p>
+                  <p className="text-sm text-green-700 mt-1">导入成功</p>
+                </div>
+                {result.failed > 0 && (
+                  <div className="flex-1 bg-red-50 p-4 rounded-xl text-center">
+                    <p className="text-3xl font-bold text-red-600">{result.failed}</p>
+                    <p className="text-sm text-red-700 mt-1">导入失败</p>
+                  </div>
+                )}
+              </div>
+
+              {result.errors.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-5">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    错误详情
+                  </h4>
+                  <ScrollArea className="h-[200px] border rounded-lg bg-white">
+                    <div className="p-3 space-y-2">
                       {result.errors.map((error, index) => (
                         <div key={index} className="flex items-start gap-2 text-sm text-red-600">
+                          <span className="text-red-400">•</span>
                           <span>第 {error.row} 行: {error.message}</span>
                         </div>
                       ))}
                     </div>
                   </ScrollArea>
                 </div>
-              </>
-            )}
-
-            <DialogFooter>
-              <Button onClick={handleClose}>完成</Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <Alert>
-              <AlertDescription className="flex items-center justify-between">
-                <span>请下载模板文件，按照格式填写后上传</span>
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                  <Download className="mr-2 h-4 w-4" />
-                  下载模板
-                </Button>
-              </AlertDescription>
-            </Alert>
-
-            <div
-              className={cn(
-                'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-                dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300',
-                file ? 'bg-gray-50' : ''
               )}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                className="hidden"
-                accept=".csv"
-                onChange={handleFileChange}
-              />
 
-              {file ? (
-                <div className="flex items-center justify-center gap-3">
-                  <FileSpreadsheet className="h-8 w-8 text-green-600" />
-                  <div className="text-left">
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+              <DialogFooter className="pt-2">
+                <Button onClick={handleClose} className="min-w-[100px]">完成</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* 模板下载提示 */}
+              <div className="bg-blue-50 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">导入模板</p>
+                      <p className="text-xs text-gray-500">下载模板文件，按照格式填写后上传</p>
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFile(null);
-                      setParsedData(null);
-                      setParseErrors([]);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={downloadTemplate} className="shrink-0">
+                    <Download className="mr-2 h-4 w-4" />
+                    下载模板
                   </Button>
                 </div>
-              ) : (
-                <>
-                  <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm font-medium">点击或拖拽文件到此处上传</p>
-                  <p className="text-xs text-gray-500 mt-1">目前仅支持 CSV 格式</p>
-                </>
-              )}
-            </div>
+              </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+              {/* 文件上传区域 */}
+              <div
+                className={cn(
+                  'border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer',
+                  dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400',
+                  file ? 'bg-gray-50' : ''
+                )}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => inputRef.current?.click()}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                />
 
-            {parseErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  解析时发现 {parseErrors.length} 个错误，已跳过这些行
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {parsedData && parsedData.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium">数据预览</h4>
-                    <span className="text-xs text-gray-500">共 {parsedData.length} 条记录</span>
+                {file ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">{file.name}</p>
+                      <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFile(null);
+                        setParsedData(null);
+                        setParseErrors([]);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <ScrollArea className="h-[150px] border rounded-md">
+                ) : (
+                  <>
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Upload className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">点击或拖拽文件到此处上传</p>
+                    <p className="text-xs text-gray-500 mt-1">目前仅支持 CSV 格式</p>
+                  </>
+                )}
+              </div>
+
+              {error && (
+                <Alert variant="destructive" className="bg-red-50 border-red-200">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-red-700">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {parseErrors.length > 0 && (
+                <Alert variant="destructive" className="bg-red-50 border-red-200">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-red-700">
+                    解析时发现 {parseErrors.length} 个错误，已跳过这些行
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* 数据预览 */}
+              {parsedData && parsedData.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                      数据预览
+                    </h4>
+                    <span className="text-xs bg-white px-2 py-1 rounded-md text-gray-500">
+                      共 {parsedData.length} 条记录
+                    </span>
+                  </div>
+                  <ScrollArea className="h-[150px] border rounded-lg bg-white">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left">用户名</th>
-                          <th className="px-3 py-2 text-left">姓名</th>
-                          <th className="px-3 py-2 text-left">邮箱</th>
-                          <th className="px-3 py-2 text-left">角色</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-600">用户名</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-600">姓名</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-600">邮箱</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-600">角色</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -295,29 +336,36 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
                       </tbody>
                     </table>
                     {parsedData.length > 5 && (
-                      <p className="text-xs text-gray-500 text-center py-2 border-t">
+                      <p className="text-xs text-gray-500 text-center py-2 border-t bg-gray-50">
                         还有 {parsedData.length - 5} 条记录...
                       </p>
                     )}
                   </ScrollArea>
                 </div>
-              </>
-            )}
+              )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                取消
-              </Button>
-              <Button
-                onClick={handleImport}
-                disabled={!parsedData || parsedData.length === 0 || loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                开始导入
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={loading}
+                  className="min-w-[80px]"
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={!parsedData || parsedData.length === 0 || loading}
+                  className="min-w-[100px]"
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  开始导入
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

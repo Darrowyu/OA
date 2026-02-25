@@ -52,7 +52,7 @@ interface ApiResponse<T> {
 export const departmentApi = {
   // 获取部门列表
   getDepartments: (): Promise<ApiResponse<Department[]>> =>
-    apiClient.get<ApiResponse<Department[]>>('/departments'),
+    apiClient.get<ApiResponse<Department[]>>('/departments/list'),
 
   // 获取部门树
   getDepartmentTree: (): Promise<ApiResponse<DepartmentTreeNode[]>> =>
