@@ -561,8 +561,29 @@ export async function directorApprove(req: Request, res: Response): Promise<void
 
       const updatedApp = await prisma.application.findUnique({
         where: { id: applicationId },
-        select: { status: true }
+        select: { status: true, applicantId: true, applicationNo: true, title: true }
       });
+
+      // 发送邮件通知给申请人（其他申请总监直接完成）
+      try {
+        const applicant = await prisma.user.findUnique({
+          where: { id: updatedApp?.applicantId },
+          select: { email: true },
+        });
+        if (applicant?.email && updatedApp) {
+          await sendApplicationResultEmail(applicant.email, {
+            id: applicationId,
+            applicationNo: updatedApp.applicationNo,
+            title: updatedApp.title,
+            status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+            completedAt: action === 'APPROVE' ? new Date() : null,
+            rejectedAt: action === 'REJECT' ? new Date() : null,
+            rejectReason: comment?.trim() || null,
+          });
+        }
+      } catch (emailError) {
+        logger.error('其他申请总监审批结果邮件通知失败', { error: String(emailError) });
+      }
 
       res.json(ok({
         message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
@@ -622,8 +643,44 @@ export async function directorApprove(req: Request, res: Response): Promise<void
 
       const updatedApp = await prisma.application.findUnique({
         where: { id: applicationId },
-        select: { status: true }
+        select: { status: true, applicantId: true, applicationNo: true, title: true }
       });
+
+      // 发送邮件通知（其他申请流向CEO）
+      if (action === 'APPROVE') {
+        // 通知CEO有新的审批任务
+        try {
+          await notifyApproversByRole('CEO', {
+            id: applicationId,
+            applicationNo: application.applicationNo,
+            title: application.title,
+            applicantName: application.applicantName,
+            priority: application.priority,
+          }, 'CEO');
+        } catch (emailError) {
+          logger.error('其他申请流向CEO邮件通知失败', { error: String(emailError) });
+        }
+      } else {
+        // 拒绝时通知申请人
+        try {
+          const applicant = await prisma.user.findUnique({
+            where: { id: updatedApp?.applicantId },
+            select: { email: true },
+          });
+          if (applicant?.email && updatedApp) {
+            await sendApplicationResultEmail(applicant.email, {
+              id: applicationId,
+              applicationNo: updatedApp.applicationNo,
+              title: updatedApp.title,
+              status: 'REJECTED',
+              rejectedAt: new Date(),
+              rejectReason: comment?.trim() || null,
+            });
+          }
+        } catch (emailError) {
+          logger.error('其他申请总监拒绝邮件通知失败', { error: String(emailError) });
+        }
+      }
 
       res.json(ok({
         message: action === 'APPROVE' ? '审批通过' : '审批已拒绝',
