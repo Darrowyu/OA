@@ -33,6 +33,7 @@ export enum UserRole {
   CEO = 'CEO',
   ADMIN = 'ADMIN',
   READONLY = 'READONLY',
+  FINANCE = 'FINANCE',
 }
 
 // 审批动作类型
@@ -61,7 +62,13 @@ export interface User {
   name: string;
   role: UserRole;
   department: string;
+  departmentId?: string;
   email: string;
+  phone?: string;
+  position?: string;
+  isActive: boolean;
+  avatar?: string;
+  signature?: string;
   canSubmitApplication: boolean;
   createdAt: string;
   updatedAt?: string;

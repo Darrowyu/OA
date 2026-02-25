@@ -15,7 +15,7 @@ const ApplicationsModule = lazy(() => import("@/pages/applications").then(m => (
 const EquipmentModule = lazy(() => import("@/pages/equipment").then(m => ({ default: m.EquipmentModule })))
 const AttendanceModule = lazy(() => import("@/pages/attendance").then(m => ({ default: m.AttendanceModule })))
 const MeetingsModule = lazy(() => import("@/pages/meetings").then(m => ({ default: m.MeetingsModule })))
-const Users = lazy(() => import("@/pages/Users").then(m => ({ default: m.default })))
+const Users = lazy(() => import("@/pages/users").then(m => ({ default: m.default })))
 const SettingsPage = lazy(() => import("@/pages/settings/index").then(m => ({ default: m.SettingsPage })))
 const Profile = lazy(() => import("@/pages/Profile").then(m => ({ default: m.default })))
 const AuditLogs = lazy(() => import("@/pages/admin/AuditLogs").then(m => ({ default: m.default })))

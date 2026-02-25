@@ -38,6 +38,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
     meetings: location.pathname.startsWith('/meetings'),
     maintenance: false,
     parts: false,
+    settings: location.pathname === '/settings' || location.pathname === '/users',
   });
 
   // 获取用户信息
@@ -151,10 +152,11 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
     []
   );
 
-  // 系统管理项
-  const adminNavItems: NavItemType[] = useMemo(
+  // 系统管理子菜单
+  const settingsSubItems: SubMenuItem[] = useMemo(
     () => [
       { path: '/settings', name: '系统设置', icon: 'Settings' },
+      { path: '/users', name: '用户管理', icon: 'Users' },
     ],
     []
   );
@@ -398,11 +400,23 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
 
         {/* 系统管理 */}
         {isAdmin && (
-          <NavSection
-            title="系统管理"
-            items={adminNavItems}
-            isCollapsed={!showExpanded}
-          />
+          <div className="mt-4">
+            <p className={cn(
+              'px-3 text-xs font-medium text-gray-400 mb-2 transition-all duration-200',
+              !showExpanded && 'opacity-0 h-0 mb-0 overflow-hidden'
+            )}>
+              系统管理
+            </p>
+            <SubMenu
+              title="系统配置"
+              icon="Settings2"
+              items={settingsSubItems}
+              isExpanded={expandedMenus.settings}
+              isCollapsed={!showExpanded}
+              isActive={location.pathname === '/settings' || location.pathname === '/users'}
+              onToggle={() => toggleMenu('settings')}
+            />
+          </div>
         )}
       </nav>
 
