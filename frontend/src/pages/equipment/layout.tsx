@@ -1,13 +1,46 @@
 import { Outlet } from "react-router-dom"
+import { motion } from "framer-motion"
 import { Header } from "@/components/Header"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
+
+export { containerVariants, itemVariants }
 
 export function EquipmentLayout() {
   return (
     <div className="h-screen overflow-auto">
       <Header />
-      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)]">
-        <Outlet />
-      </main>
+      <motion.main
+        className="p-4 md:p-6 min-h-[calc(100vh-4rem)]"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={itemVariants}>
+          <Outlet />
+        </motion.div>
+      </motion.main>
     </div>
   )
 }

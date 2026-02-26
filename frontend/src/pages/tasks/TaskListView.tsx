@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { motion } from 'framer-motion'
 import {
   Table,
   TableBody,
@@ -30,6 +31,29 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 interface TaskListViewProps {
   onTaskClick?: (task: Task) => void
@@ -119,9 +143,17 @@ export function TaskListView({ onTaskClick, onAddTask, refreshTrigger }: TaskLis
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
+    <motion.div
+      className="bg-white rounded-lg border border-gray-200"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* 搜索栏 */}
-      <div className="p-4 border-b border-gray-200 flex items-center gap-4">
+      <motion.div
+        className="p-4 border-b border-gray-200 flex items-center gap-4"
+        variants={itemVariants}
+      >
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
@@ -136,10 +168,10 @@ export function TaskListView({ onTaskClick, onAddTask, refreshTrigger }: TaskLis
         <Button variant="outline" onClick={onAddTask}>
           新建任务
         </Button>
-      </div>
+      </motion.div>
 
       {/* 任务表格 */}
-      <div className="overflow-x-auto">
+      <motion.div className="overflow-x-auto" variants={itemVariants}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -250,10 +282,13 @@ export function TaskListView({ onTaskClick, onAddTask, refreshTrigger }: TaskLis
             )}
           </TableBody>
         </Table>
-      </div>
+      </motion.div>
 
       {/* 分页 */}
-      <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+      <motion.div
+        className="p-4 border-t border-gray-200 flex items-center justify-between"
+        variants={itemVariants}
+      >
         <div className="text-sm text-gray-500">
           共 {totalCount} 条记录
         </div>
@@ -278,7 +313,7 @@ export function TaskListView({ onTaskClick, onAddTask, refreshTrigger }: TaskLis
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

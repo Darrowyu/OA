@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
 import { ApplicationForm } from "@/components/ApplicationForm"
 import { FlowInfoTooltip } from "@/components/FlowInfoTooltip"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,29 @@ import { usersApi } from "@/services/users"
 import { Loader2, ArrowLeft, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 export function ApplicationNew() {
   const navigate = useNavigate()
@@ -46,9 +70,14 @@ export function ApplicationNew() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-4xl mx-auto"
+    >
       {/* 页面标题栏 */}
-      <div className="flex items-center justify-between mb-6">
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -63,13 +92,13 @@ export function ApplicationNew() {
             <FlowInfoTooltip type="standard" />
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 副标题 */}
-      <p className="text-sm text-gray-500 mb-6">一般业务申请、采购申请</p>
+      <motion.p variants={itemVariants} className="text-sm text-gray-500 mb-6">一般业务申请、采购申请</motion.p>
 
       {/* 表单卡片 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-blue-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
@@ -97,7 +126,7 @@ export function ApplicationNew() {
             />
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

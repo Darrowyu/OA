@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Calendar, Users, Building2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,29 @@ import { MeetingDetailDialog } from './components/MeetingDetailDialog';
 import { RoomBooking } from './RoomBooking';
 import { MeetingMinutes } from './MeetingMinutes';
 import type { MeetingRoom } from '@/services/meetings';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 /**
  * 会议室标签页内容
@@ -176,10 +199,15 @@ export function MeetingsPage() {
   return (
     <>
       <Header />
-      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <motion.main
+        className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="max-w-7xl mx-auto">
           {/* 页面标题 */}
-          <div className="flex items-center justify-between mb-6">
+          <motion.div className="flex items-center justify-between mb-6" variants={itemVariants}>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">会议管理</h1>
               <p className="text-gray-500 mt-1">会议室预订与会议管理</p>
@@ -188,10 +216,11 @@ export function MeetingsPage() {
               <Plus className="h-4 w-4 mr-2" />
               创建会议
             </Button>
-          </div>
+          </motion.div>
 
           {/* 标签页 */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <motion.div variants={itemVariants}>
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="bg-white border">
               <TabsTrigger value="rooms" className="data-[state=active]:bg-gray-100">
                 <Building2 className="h-4 w-4 mr-2" />
@@ -240,8 +269,9 @@ export function MeetingsPage() {
               />
             )}
           </Tabs>
+          </motion.div>
         </div>
-      </main>
+      </motion.main>
 
       <CreateMeetingDialog
         open={createDialogOpen}

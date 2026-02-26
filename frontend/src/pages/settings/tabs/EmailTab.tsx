@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Mail, Bell, Clock, Save, AlertTriangle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,18 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useEmailSettings } from '../hooks/useEmailSettings';
 
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
+
 export function EmailTab() {
   const { settings, loading, error, loadSettings, saveSettings, updateSetting } = useEmailSettings();
 
@@ -16,17 +29,31 @@ export function EmailTab() {
   }, [loadSettings]);
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="max-w-4xl space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive" className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 总开关 */}
-      <Card className="border-blue-200 bg-blue-50/50">
+      <motion.div variants={itemVariants}>
+        <Card className="border-blue-200 bg-blue-50/50">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -45,9 +72,11 @@ export function EmailTab() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* SMTP 配置 */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader>
           <CardTitle>SMTP 配置</CardTitle>
           <CardDescription>配置邮件服务器连接信息</CardDescription>
@@ -95,9 +124,11 @@ export function EmailTab() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* 提醒策略 */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader>
           <CardTitle>提醒策略</CardTitle>
           <CardDescription>配置各类邮件提醒的发送规则</CardDescription>
@@ -146,14 +177,15 @@ export function EmailTab() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* 保存按钮 */}
-      <div className="flex justify-end">
+      <motion.div variants={itemVariants} className="flex justify-end">
         <Button onClick={saveSettings} disabled={loading} size="lg">
           <Save className="h-4 w-4 mr-2" />
           保存设置
         </Button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

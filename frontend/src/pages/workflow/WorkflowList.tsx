@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Plus,
   Search,
@@ -12,6 +13,29 @@ import {
   FileText,
 } from 'lucide-react';
 import { Header } from '@/components/Header';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -200,9 +224,17 @@ export default function WorkflowList() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="p-6 max-w-7xl mx-auto">
+      <motion.main
+        className="p-6 max-w-7xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* 页面头部 */}
-        <div className="flex items-center justify-between mb-6">
+        <motion.div
+          className="flex items-center justify-between mb-6"
+          variants={itemVariants}
+        >
           <div>
             <h1 className="text-2xl font-bold text-gray-900">工作流管理</h1>
             <p className="text-gray-500 mt-1">设计和管理审批流程模板</p>
@@ -212,10 +244,13 @@ export default function WorkflowList() {
             <Plus className="h-4 w-4 mr-2" />
             新建工作流
           </Button>
-        </div>
+        </motion.div>
 
         {/* 筛选栏 */}
-        <div className="flex items-center gap-4 mb-6">
+        <motion.div
+          className="flex items-center gap-4 mb-6"
+          variants={itemVariants}
+        >
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -238,10 +273,13 @@ export default function WorkflowList() {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
 
         {/* 工作流列表 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          variants={itemVariants}
+        >
           {filteredWorkflows.map((workflow) => (
             <Card
               key={workflow.id}
@@ -378,18 +416,21 @@ export default function WorkflowList() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </motion.div>
 
         {filteredWorkflows.length === 0 && !loading && (
-          <div className="text-center py-12">
+          <motion.div
+            className="text-center py-12"
+            variants={itemVariants}
+          >
             <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900">暂无工作流</h3>
             <p className="text-gray-500 mt-1">
               点击"新建工作流"开始创建第一个流程模板
             </p>
-          </div>
+          </motion.div>
         )}
-      </main>
+      </motion.main>
 
       {/* 删除确认对话框 */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

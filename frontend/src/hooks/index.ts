@@ -14,3 +14,7 @@ export { useSignature } from './useSignature';
 export { useProfile } from './useProfile';
 export { useNotifications } from './useNotifications';
 export { useIsMobile } from './use-mobile';
+
+// 页面动画hook
+export { usePageAnimation, createContainerVariants, createItemVariants } from './usePageAnimation';
+export type { PageAnimationOptions, ContainerVariantsOptions, ItemVariantsOptions } from './usePageAnimation';

@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
@@ -34,6 +35,29 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 export function ApplicationDetail() {
   const { id } = useParams<{ id: string }>()
@@ -263,9 +287,14 @@ export function ApplicationDetail() {
   const priority = priorityConfig[application.priority]
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-5xl mx-auto"
+    >
       {/* 返回按钮 */}
-      <div className="flex items-center gap-4 mb-6">
+      <motion.div variants={itemVariants} className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"
           size="icon"
@@ -278,10 +307,10 @@ export function ApplicationDetail() {
           <h1 className="text-2xl font-bold text-gray-900">申请详情</h1>
           <p className="text-sm text-gray-500 mt-0.5">查看和管理申请信息</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* 申请信息卡片 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         {/* 头部 */}
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-center gap-4">
@@ -495,11 +524,11 @@ export function ApplicationDetail() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </motion.div>
 
       {/* 审批操作按钮 */}
       {canApprove && (
-        <div className="flex gap-3">
+        <motion.div variants={itemVariants} className="flex gap-3">
           <Button
             variant="outline"
             className="flex-1 h-12 rounded-xl border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
@@ -519,7 +548,7 @@ export function ApplicationDetail() {
           >
             <CheckCircle className="h-5 w-5 mr-2" /> 通过
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* 通过对话框 */}
@@ -648,6 +677,6 @@ export function ApplicationDetail() {
           loading={actionLoading}
         />
       )}
-    </div>
+    </motion.div>
   )
 }

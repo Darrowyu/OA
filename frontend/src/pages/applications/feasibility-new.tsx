@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { FeasibilityForm, FeasibilityData } from '@/components/FeasibilityForm';
@@ -8,6 +9,29 @@ import { usersApi } from '@/services/users';
 import { User } from '@/types';
 import { logger } from '@/lib/logger';
 import { Loader2 } from 'lucide-react';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export function FeasibilityNew() {
   const navigate = useNavigate();
@@ -48,9 +72,14 @@ export function FeasibilityNew() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-4xl mx-auto"
+    >
       {/* 页面标题栏 */}
-      <div className="flex items-center justify-between mb-6">
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -65,10 +94,10 @@ export function FeasibilityNew() {
             <p className="text-sm text-gray-500 mt-0.5">5部门并行审批评估</p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 表单卡片 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
@@ -96,7 +125,7 @@ export function FeasibilityNew() {
             />
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

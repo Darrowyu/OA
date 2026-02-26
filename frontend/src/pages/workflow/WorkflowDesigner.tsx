@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Save,
   Play,
@@ -53,6 +54,29 @@ const parallelTypeOptions = [
   { value: 'all', label: '会签（全部通过）' },
   { value: 'any', label: '或签（一人通过）' },
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export default function WorkflowDesigner() {
   const { id } = useParams<{ id: string }>();
@@ -299,11 +323,16 @@ export default function WorkflowDesigner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="min-h-screen bg-gray-50 flex flex-col"
+    >
       <Header />
 
       {/* 工具栏 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+      <motion.div variants={itemVariants} className="bg-white border-b border-gray-200 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -374,10 +403,10 @@ export default function WorkflowDesigner() {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 画布区域 */}
-      <div className="flex-1 p-4">
+      <motion.div variants={itemVariants} className="flex-1 p-4">
         <WorkflowCanvas
           initialNodes={nodes}
           initialEdges={edges}
@@ -385,7 +414,7 @@ export default function WorkflowDesigner() {
           onNodeSelect={handleNodeSelect}
           readOnly={workflow?.status === 'PUBLISHED' && !isCopy}
         />
-      </div>
+      </motion.div>
 
       {/* 节点配置面板 */}
       <Sheet open={nodeConfigOpen} onOpenChange={setNodeConfigOpen}>
@@ -593,6 +622,6 @@ export default function WorkflowDesigner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

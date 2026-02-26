@@ -1,8 +1,21 @@
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Monitor, Cpu, Database, Clock, Server, HardDrive, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSystemInfo } from '../hooks/useSystemInfo';
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export function SystemTab() {
   const { info, loading, error, loadInfo } = useSystemInfo();
@@ -20,17 +33,30 @@ export function SystemTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive" className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 核心指标 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -86,10 +112,10 @@ export function SystemTab() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* 详细信息 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -145,34 +171,36 @@ export function SystemTab() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* 数据库信息 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-amber-600" />
-            <CardTitle>数据库信息</CardTitle>
-          </div>
-          <CardDescription>PostgreSQL 数据库连接信息</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-600">数据库类型</span>
-              <span className="font-medium">{info.database?.type || 'PostgreSQL'}</span>
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-amber-600" />
+              <CardTitle>数据库信息</CardTitle>
             </div>
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-600">版本</span>
-              <span className="font-medium">{info.database?.version || '-'}</span>
+            <CardDescription>PostgreSQL 数据库连接信息</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">数据库类型</span>
+                <span className="font-medium">{info.database?.type || 'PostgreSQL'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">版本</span>
+                <span className="font-medium">{info.database?.version || '-'}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex justify-between py-2">
-            <span className="text-gray-600">数据库大小</span>
-            <span className="font-medium">{info.database?.size || '-'}</span>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex justify-between py-2">
+              <span className="text-gray-600">数据库大小</span>
+              <span className="font-medium">{info.database?.size || '-'}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { motion } from "framer-motion"
 import { ApplicationCard } from "@/components/ApplicationCard"
 import { ApplicationForm } from "@/components/ApplicationForm"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,29 @@ import {
   RotateCw,
   Calendar,
 } from "lucide-react"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 const statusOptions: SelectOption[] = [
   { value: "", label: "全部状态" },
@@ -243,9 +267,14 @@ export function ApplicationList() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* 页面标题栏 */}
-      <div className="flex items-center justify-between">
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">申请管理</h1>
           <p className="text-sm text-gray-500 mt-1">管理和追踪所有费用申请</p>
@@ -279,10 +308,10 @@ export function ApplicationList() {
             新建申请
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <InlineStatCard
           title="总申请金额"
           value={`¥${stats.totalAmount.toLocaleString()}`}
@@ -323,10 +352,10 @@ export function ApplicationList() {
           trend={{ value: 8.1, isPositive: true, label: "vs 上月" }}
           variant="coral"
         />
-      </div>
+      </motion.div>
 
       {/* 内容区域 - 两栏布局 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 左侧主要内容 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 筛选栏 */}
@@ -495,7 +524,7 @@ export function ApplicationList() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 新建申请对话框 */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -520,6 +549,6 @@ export function ApplicationList() {
           </DialogBody>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }

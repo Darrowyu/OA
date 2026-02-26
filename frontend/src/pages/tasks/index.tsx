@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import type { DropResult } from '@hello-pangea/dnd'
+import { motion } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/Header'
@@ -14,6 +15,29 @@ import { TaskDetailDialog } from './TaskDetailDialog'
 import { TaskCreateDialog } from './TaskCreateDialog'
 import { tasksApi, type KanbanColumn, type GanttTask, TaskStatus, type Task } from '@/services/tasks'
 import { Plus, Layout, List, BarChart3, Calendar } from 'lucide-react'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 export function TasksPage() {
   const [activeTab, setActiveTab] = useState('kanban')
@@ -157,9 +181,17 @@ export function TasksPage() {
     <div className="min-h-screen bg-[#F3F4F6]">
       <Header />
 
-      <main className="p-4 md:p-6">
+      <motion.main
+        className="p-4 md:p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* 页面标题 */}
-        <div className="flex items-center justify-between mb-6">
+        <motion.div
+          className="flex items-center justify-between mb-6"
+          variants={itemVariants}
+        >
           <div>
             <h1 className="text-2xl font-bold text-gray-900">任务管理</h1>
             <p className="text-gray-500 mt-1">管理个人和团队任务，追踪工作进度</p>
@@ -168,10 +200,13 @@ export function TasksPage() {
             <Plus className="w-4 h-4 mr-2" />
             新建任务
           </Button>
-        </div>
+        </motion.div>
 
         {/* 统计卡片 */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6"
+          variants={itemVariants}
+        >
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="text-sm text-gray-500">总任务</div>
             <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
@@ -196,65 +231,67 @@ export function TasksPage() {
             <div className="text-sm text-gray-500">已逾期</div>
             <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 视图切换 */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="kanban" className="gap-2">
-              <Layout className="w-4 h-4" />
-              看板视图
-            </TabsTrigger>
-            <TabsTrigger value="list" className="gap-2">
-              <List className="w-4 h-4" />
-              列表视图
-            </TabsTrigger>
-            <TabsTrigger value="gantt" className="gap-2">
-              <BarChart3 className="w-4 h-4" />
-              甘特图
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              日历
-            </TabsTrigger>
-          </TabsList>
+        <motion.div variants={itemVariants}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="bg-white border border-gray-200">
+              <TabsTrigger value="kanban" className="gap-2">
+                <Layout className="w-4 h-4" />
+                看板视图
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-2">
+                <List className="w-4 h-4" />
+                列表视图
+              </TabsTrigger>
+              <TabsTrigger value="gantt" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                甘特图
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="gap-2">
+                <Calendar className="w-4 h-4" />
+                日历
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="kanban" className="mt-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-4 h-[calc(100vh-380px)]">
-              <KanbanBoard
-                columns={kanbanColumns}
-                onDragEnd={handleDragEnd}
-                onTaskClick={handleKanbanTaskClick}
-                onAddTask={handleAddTask}
+            <TabsContent value="kanban" className="mt-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 h-[calc(100vh-380px)]">
+                <KanbanBoard
+                  columns={kanbanColumns}
+                  onDragEnd={handleDragEnd}
+                  onTaskClick={handleKanbanTaskClick}
+                  onAddTask={handleAddTask}
+                  isLoading={isLoading}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="list" className="mt-4">
+              <TaskListView
+                onTaskClick={handleTaskClick}
+                onAddTask={() => handleAddTask(TaskStatus.TODO)}
+                refreshTrigger={isLoading ? 1 : 0}
+              />
+            </TabsContent>
+
+            <TabsContent value="gantt" className="mt-4">
+              <GanttChart
+                tasks={ganttTasks}
+                onTaskClick={handleGanttTaskClick}
                 isLoading={isLoading}
               />
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="list" className="mt-4">
-            <TaskListView
-              onTaskClick={handleTaskClick}
-              onAddTask={() => handleAddTask(TaskStatus.TODO)}
-              refreshTrigger={isLoading ? 1 : 0}
-            />
-          </TabsContent>
-
-          <TabsContent value="gantt" className="mt-4">
-            <GanttChart
-              tasks={ganttTasks}
-              onTaskClick={handleGanttTaskClick}
-              isLoading={isLoading}
-            />
-          </TabsContent>
-
-          <TabsContent value="calendar" className="mt-4">
-            <TaskCalendarView
-              onTaskClick={handleTaskClick}
-              refreshTrigger={isLoading ? 1 : 0}
-            />
-          </TabsContent>
-        </Tabs>
-      </main>
+            <TabsContent value="calendar" className="mt-4">
+              <TaskCalendarView
+                onTaskClick={handleTaskClick}
+                refreshTrigger={isLoading ? 1 : 0}
+              />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </motion.main>
 
       {/* 任务详情对话框 */}
       <TaskDetailDialog

@@ -1,5 +1,6 @@
 // frontend/src/pages/tasks/TaskCreateDialog.tsx
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -22,6 +23,29 @@ import {
 import { tasksApi, TaskStatus, TaskPriority, getStatusText, getPriorityText } from '@/services/tasks'
 import { usersApi } from '@/services/users'
 import type { User } from '@/types'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 interface TaskCreateDialogProps {
   open: boolean
@@ -103,11 +127,18 @@ export function TaskCreateDialog({ open, onClose, onSuccess, defaultStatus = Tas
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>新建任务</DialogTitle>
-        </DialogHeader>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <DialogHeader>
+            <motion.div variants={itemVariants}>
+              <DialogTitle>新建任务</DialogTitle>
+            </motion.div>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
+          <motion.div className="space-y-4 py-4" variants={itemVariants}>
           {/* 标题 */}
           <div className="space-y-2">
             <Label htmlFor="title">任务标题 <span className="text-red-500">*</span></Label>
@@ -203,16 +234,19 @@ export function TaskCreateDialog({ open, onClose, onSuccess, defaultStatus = Tas
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
             />
           </div>
-        </div>
+        </motion.div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? '创建中...' : '创建任务'}
-          </Button>
-        </DialogFooter>
+        <motion.div variants={itemVariants}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+              取消
+            </Button>
+            <Button onClick={handleSubmit} disabled={isLoading}>
+              {isLoading ? '创建中...' : '创建任务'}
+            </Button>
+          </DialogFooter>
+        </motion.div>
+      </motion.div>
       </DialogContent>
     </Dialog>
   )

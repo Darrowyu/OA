@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Upload, FolderOpen, Search, List, Grid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,29 @@ import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { documentApi, isPreviewable, type Document, type Folder } from '@/services/documents';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -99,9 +123,14 @@ export default function DocumentsPage() {
   return (
     <>
       <Header />
-      <main className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <motion.main
+        className="p-4 md:p-6 min-h-[calc(100vh-4rem)] bg-gray-50"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* 页面标题 */}
-        <div className="mb-6">
+        <motion.div className="mb-6" variants={itemVariants}>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">文档中心</h1>
@@ -121,15 +150,15 @@ export default function DocumentsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 面包屑导航 */}
-        <div className="mb-4">
+        <motion.div className="mb-4" variants={itemVariants}>
           <BreadcrumbNav folderPath={folderPath} onNavigate={handleBreadcrumbClick} />
-        </div>
+        </motion.div>
 
         {/* 搜索和工具栏 */}
-        <div className="bg-white rounded-lg border p-4 mb-4">
+        <motion.div className="bg-white rounded-lg border p-4 mb-4" variants={itemVariants}>
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -157,13 +186,15 @@ export default function DocumentsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 文件夹列表 */}
-        <FolderList folders={folders} viewMode={viewMode} onFolderClick={handleFolderClick} />
+        <motion.div variants={itemVariants}>
+          <FolderList folders={folders} viewMode={viewMode} onFolderClick={handleFolderClick} />
+        </motion.div>
 
         {/* 文档列表 */}
-        <div className="bg-white rounded-lg border">
+        <motion.div className="bg-white rounded-lg border" variants={itemVariants}>
           <div className="p-4 border-b">
             <h3 className="text-sm font-medium text-gray-700">文件列表 ({total})</h3>
           </div>
@@ -176,11 +207,11 @@ export default function DocumentsPage() {
             onRename={handleRename}
             onDelete={handleDelete}
           />
-        </div>
+        </motion.div>
 
         {/* 分页 */}
         {total > 20 && (
-          <div className="flex items-center justify-between mt-4">
+          <motion.div className="flex items-center justify-between mt-4" variants={itemVariants}>
             <p className="text-sm text-gray-500">
               显示 {(page - 1) * 20 + 1} - {Math.min(page * 20, total)} 共 {total} 个
             </p>
@@ -202,7 +233,7 @@ export default function DocumentsPage() {
                 下一页
               </Button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* 文档预览 */}
@@ -221,7 +252,7 @@ export default function DocumentsPage() {
           onClose={() => setIsFolderManagerOpen(false)}
           onSelect={handleFolderClick}
         />
-      </main>
+      </motion.main>
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -28,6 +29,29 @@ import {
 import { Header } from '@/components/Header';
 import { meetingApi, MeetingRoom, RoomBooking as RoomBookingType, facilityIcons } from '@/services/meetings';
 import { toast } from 'sonner';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 // 时间槽配置
 const TIME_SLOTS = [
@@ -235,10 +259,15 @@ export function RoomBooking() {
   return (
     <>
       <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <motion.main
+        className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="max-w-7xl mx-auto">
           {/* 页面标题 */}
-          <div className="flex items-center gap-4 mb-6">
+          <motion.div className="flex items-center gap-4 mb-6" variants={itemVariants}>
             <Button variant="outline" size="sm" onClick={() => navigate('/meetings')}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               返回
@@ -247,11 +276,11 @@ export function RoomBooking() {
               <h1 className="text-2xl font-bold text-gray-900">会议室预订</h1>
               <p className="text-gray-500 mt-1">选择日期和时间段预订会议室</p>
             </div>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 左侧：会议室选择和日历 */}
-            <div className="lg:col-span-2 space-y-6">
+            <motion.div className="lg:col-span-2 space-y-6" variants={itemVariants}>
               {/* 会议室选择 */}
               <Card>
                 <CardHeader>
@@ -361,10 +390,10 @@ export function RoomBooking() {
                   </CardContent>
                 </Card>
               )}
-            </div>
+            </motion.div>
 
             {/* 右侧：时间段选择 */}
-            <div>
+            <motion.div variants={itemVariants}>
               {selectedRoom && selectedDate ? (
                 <Card>
                   <CardHeader>
@@ -479,10 +508,10 @@ export function RoomBooking() {
                   </CardContent>
                 </Card>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
-      </main>
+      </motion.main>
 
       {/* 预订确认对话框 */}
       <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>

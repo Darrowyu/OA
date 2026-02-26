@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Routes, Route } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { CalendarView } from '@/components/CalendarView';
@@ -41,6 +42,29 @@ import {
   getEventTypeColor,
 } from '@/services/calendar';
 import type { CalendarView as CalendarViewType } from '@/components/CalendarView';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 // 日程表单组件
 interface EventFormProps {
@@ -424,14 +448,19 @@ function SchedulePage() {
   return (
     <div className="min-h-screen bg-[#F3F4F6]">
       <Header />
-      <main className="p-4 md:p-6">
-        <div className="mb-6">
+      <motion.main
+        className="p-4 md:p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div className="mb-6" variants={itemVariants}>
           <h1 className="text-2xl font-bold text-gray-900">日程管理</h1>
           <p className="text-gray-500 mt-1">管理您的个人和团队日程安排</p>
-        </div>
+        </motion.div>
 
         {/* 统计卡片 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={itemVariants}>
           <StatCard title="总日程" value={stats.total} color="#374151" />
           <StatCard
             title="会议"
@@ -448,10 +477,10 @@ function SchedulePage() {
             value={stats.reminders}
             color={getEventTypeColor(CalendarEventType.REMINDER)}
           />
-        </div>
+        </motion.div>
 
         {/* 操作栏 */}
-        <div className="flex justify-between items-center mb-4">
+        <motion.div className="flex justify-between items-center mb-4" variants={itemVariants}>
           <Button onClick={() => {
             setSelectedSlotDate(new Date());
             setIsCreateDialogOpen(true);
@@ -474,10 +503,10 @@ function SchedulePage() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* 日历视图 */}
-        <div className="bg-white rounded-lg shadow-sm border h-[calc(100vh-400px)]">
+        <motion.div className="bg-white rounded-lg shadow-sm border h-[calc(100vh-400px)]" variants={itemVariants}>
           <CalendarView
             events={events}
             view={view}
@@ -487,7 +516,7 @@ function SchedulePage() {
             onEventClick={handleEventClick}
             onSlotClick={handleSlotClick}
           />
-        </div>
+        </motion.div>
 
         {/* 创建日程对话框 */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -526,7 +555,7 @@ function SchedulePage() {
             />
           </DialogContent>
         </Dialog>
-      </main>
+      </motion.main>
     </div>
   );
 };

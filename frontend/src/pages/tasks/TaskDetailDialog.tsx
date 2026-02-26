@@ -1,5 +1,6 @@
 // frontend/src/pages/tasks/TaskDetailDialog.tsx
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -24,6 +25,29 @@ import { Calendar, Flag, User as UserIcon, CheckCircle2 } from 'lucide-react'
 import { tasksApi, type Task, TaskStatus, TaskPriority, getStatusText, getPriorityText, getStatusColor, getPriorityColor } from '@/services/tasks'
 import { usersApi } from '@/services/users'
 import type { User as UserType } from '@/types'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 interface TaskDetailDialogProps {
   taskId: string | null
@@ -155,8 +179,14 @@ export function TaskDetailDialog({ taskId, open, onClose, onSuccess }: TaskDetai
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <DialogHeader>
+            <motion.div variants={itemVariants}>
+              <DialogTitle className="flex items-center gap-2">
             {isEditing ? (
               <Input
                 value={editData.title || ''}
@@ -168,9 +198,10 @@ export function TaskDetailDialog({ taskId, open, onClose, onSuccess }: TaskDetai
               <span className="text-xl">{task.title}</span>
             )}
           </DialogTitle>
-        </DialogHeader>
+            </motion.div>
+          </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <motion.div className="space-y-6 py-4" variants={itemVariants}>
           {/* 状态栏 */}
           <div className="flex items-center gap-3 flex-wrap">
             {isEditing ? (
@@ -312,10 +343,11 @@ export function TaskDetailDialog({ taskId, open, onClose, onSuccess }: TaskDetai
               </p>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <DialogFooter className="gap-2">
-          {isEditing ? (
+        <motion.div variants={itemVariants}>
+          <DialogFooter className="gap-2">
+            {isEditing ? (
             <>
               <Button variant="outline" onClick={() => { setIsEditing(false); setEditData(task) }} disabled={isLoading}>
                 取消
@@ -344,6 +376,8 @@ export function TaskDetailDialog({ taskId, open, onClose, onSuccess }: TaskDetai
             </>
           )}
         </DialogFooter>
+        </motion.div>
+      </motion.div>
       </DialogContent>
     </Dialog>
   )

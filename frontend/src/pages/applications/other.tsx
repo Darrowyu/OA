@@ -1,4 +1,5 @@
 import * as React from "react"
+import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { OtherApplicationForm } from "@/components/OtherApplicationForm"
 import { FlowInfoTooltip } from "@/components/FlowInfoTooltip"
@@ -8,6 +9,29 @@ import { applicationsApi } from "@/services/applications"
 import { ArrowLeft, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 export function OtherApplicationNew() {
   const navigate = useNavigate()
@@ -28,9 +52,14 @@ export function OtherApplicationNew() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-4xl mx-auto"
+    >
       {/* 页面标题栏 */}
-      <div className="flex items-center justify-between mb-6">
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -46,15 +75,15 @@ export function OtherApplicationNew() {
             <FlowInfoTooltip type="other" targetLevel="DIRECTOR" />
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 副标题 */}
-      <p className="text-sm text-gray-500 mb-6">
+      <motion.p variants={itemVariants} className="text-sm text-gray-500 mb-6">
         特殊业务申请，可选择直接提交给总监或CEO审批
-      </p>
+      </motion.p>
 
       {/* 表单卡片 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
@@ -74,7 +103,7 @@ export function OtherApplicationNew() {
             loading={submitting}
           />
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

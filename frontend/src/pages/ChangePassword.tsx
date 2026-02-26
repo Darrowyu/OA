@@ -1,10 +1,34 @@
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Lock } from "lucide-react"
 import { authApi } from "@/services/auth"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 interface PasswordFormData {
   username: string
@@ -64,33 +88,46 @@ export function ChangePassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-sm"
+      >
         {/* Logo */}
-        <div className="text-center mb-8">
+        <motion.div variants={itemVariants} className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white mb-4">
             <Lock className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-semibold text-slate-900">修改密码</h1>
           <p className="text-sm text-slate-500 mt-1">更新您的账户密码</p>
-        </div>
+        </motion.div>
 
         {/* 修改密码卡片 */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2"
+            >
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
-            </div>
+            </motion.div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-100 flex items-start gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 rounded-lg bg-green-50 border border-green-100 flex items-start gap-2"
+            >
               <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-green-700">{success}</p>
-            </div>
+            </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <motion.form variants={itemVariants} onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-sm text-slate-700">用户名</Label>
               <Input
@@ -161,9 +198,9 @@ export function ChangePassword() {
                 </>
               )}
             </Button>
-          </form>
+          </motion.form>
 
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <motion.div variants={itemVariants} className="mt-4 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => navigate("/login")}
@@ -172,13 +209,13 @@ export function ChangePassword() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               返回登录页面
             </button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <motion.p variants={itemVariants} className="text-center text-xs text-slate-400 mt-6">
           © 2024 Makrite OA System
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   )
 }

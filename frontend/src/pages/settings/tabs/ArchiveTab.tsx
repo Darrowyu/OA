@@ -1,10 +1,23 @@
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Archive, Download, Trash2, FileArchive, HardDrive, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useArchive } from '../hooks/useArchive';
 import { formatFileSize } from '@/lib/utils';
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export function ArchiveTab() {
   const { archives, stats, loading, error, loadArchives, createArchive, deleteArchive } = useArchive();
@@ -14,17 +27,30 @@ export function ArchiveTab() {
   }, [loadArchives]);
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive" className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -72,10 +98,11 @@ export function ArchiveTab() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* 归档列表 */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>归档文件列表</CardTitle>
@@ -140,6 +167,7 @@ export function ArchiveTab() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

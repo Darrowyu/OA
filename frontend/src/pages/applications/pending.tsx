@@ -1,4 +1,5 @@
 import * as React from "react"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
@@ -18,6 +19,29 @@ import { usersApi } from "@/services/users"
 import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Loader2, AlertTriangle, User as UserIcon, Calendar as CalendarIcon, DollarSign } from "lucide-react"
 import { User } from "@/types"
 import { toast } from "sonner"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 const getPendingStatusByRole = (role: UserRole): ApplicationStatus | null => {
   switch (role) {
@@ -253,14 +277,19 @@ export function PendingList() {
   const userCanApprove = user && canApprove(user.role)
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">待我审批</h1>
           <p className="text-sm text-gray-500 mt-1">您有 <span className="font-semibold text-coral">{applications.length}</span> 个待审批申请</p>
         </div>
-      </div>
+      </motion.div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-100">
@@ -278,7 +307,7 @@ export function PendingList() {
       ) : (
         <>
           {/* 移动端卡片视图 */}
-          <div className="md:hidden">
+          <motion.div variants={itemVariants} className="md:hidden">
             {applications.map((app) => (
               <MobileCard
                 key={app.id}
@@ -290,10 +319,10 @@ export function PendingList() {
                 onReject={handleReject}
               />
             ))}
-          </div>
+          </motion.div>
 
           {/* PC端表格视图 */}
-          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <motion.div variants={itemVariants} className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
@@ -355,7 +384,7 @@ export function PendingList() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </motion.div>
         </>
       )}
 
@@ -504,6 +533,6 @@ export function PendingList() {
         managers={managers}
         loading={processingId !== null}
       />
-    </div>
+    </motion.div>
   )
 }

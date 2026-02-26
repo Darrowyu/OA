@@ -1,8 +1,32 @@
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FileText, Lightbulb, ClipboardCheck, Plane, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 const applicationTypes = [
   {
@@ -51,8 +75,13 @@ export function ApplicationTypeSelect() {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center gap-4 mb-8">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-4xl mx-auto p-6"
+    >
+      <motion.div variants={itemVariants} className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"
           size="icon"
@@ -65,9 +94,9 @@ export function ApplicationTypeSelect() {
           <h1 className="text-2xl font-bold text-gray-900">选择申请类型</h1>
           <p className="text-sm text-gray-500 mt-1">请选择您要创建的申请类型</p>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {applicationTypes.map((type) => (
           <Card
             key={type.id}
@@ -89,7 +118,7 @@ export function ApplicationTypeSelect() {
             </CardHeader>
           </Card>
         ))}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { FileText, Download, Filter, RefreshCw, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSystemLogs } from '../hooks/useSystemLogs';
 import type { SystemLog } from '../types';
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 const levelIcons = {
   info: Info,
@@ -35,17 +48,31 @@ export function LogsTab() {
   }, [loadLogs]);
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive" className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 筛选栏 */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -102,8 +129,10 @@ export function LogsTab() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* 日志列表 */}
+      <motion.div variants={itemVariants}>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -217,6 +246,7 @@ export function LogsTab() {
           </div>
         </div>
       )}
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

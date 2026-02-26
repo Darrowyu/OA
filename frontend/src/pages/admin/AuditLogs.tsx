@@ -1,7 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Search, ChevronLeft, ChevronRight, FileText, Eye, BarChart3, Calendar, User, Filter } from 'lucide-react';
 import { Header } from '@/components/Header';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect as Select } from '@/components/ui/select';
@@ -257,10 +281,18 @@ export default function AuditLogs() {
   return (
     <>
       <Header />
-      <main className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50">
+      <motion.main
+        className="p-6 min-h-[calc(100vh-4rem)] bg-gray-50"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="max-w-7xl mx-auto space-y-6">
           {/* 页面标题 */}
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={itemVariants}
+          >
             <div>
               <h1 className="text-2xl font-bold text-gray-900">审计日志</h1>
               <p className="text-sm text-gray-500 mt-1">查看系统操作记录和审计信息</p>
@@ -268,11 +300,11 @@ export default function AuditLogs() {
             <Button variant="outline" onClick={() => fetchLogs()} disabled={loading}>
               {loading ? '加载中...' : '刷新'}
             </Button>
-          </div>
+          </motion.div>
 
           {/* 统计卡片 */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-4" variants={itemVariants}>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">总日志数</CardTitle>
@@ -309,7 +341,7 @@ export default function AuditLogs() {
                   <div className="text-2xl font-bold">{stats.entityTypeStats.length}</div>
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
           )}
 
           {/* 筛选器 */}
@@ -483,7 +515,7 @@ export default function AuditLogs() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </motion.main>
 
       {/* 详情对话框 */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>

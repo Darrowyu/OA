@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Search, Download, Upload, RefreshCw, Settings, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,18 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useConfig } from '../hooks/useConfig';
 import { ConfigCategorySection } from '../components/ConfigCategorySection';
 import { SystemConfig } from '@/types/config';
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export function ConfigTab() {
   const {
@@ -175,17 +188,30 @@ export function ConfigTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 工具栏 */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg border">
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg border">
         <div className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-gray-500" />
           <span className="font-medium">配置管理</span>
@@ -256,10 +282,10 @@ export function ConfigTab() {
             </label>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 配置分类区块 */}
-      <div className="space-y-6">
+      <motion.div variants={itemVariants} className="space-y-6">
         {sortedCategories.map((category) => {
           const categoryConfigs = configsByCategory[category.id] || [];
           if (categoryConfigs.length === 0) return null;
@@ -277,17 +303,17 @@ export function ConfigTab() {
             />
           );
         })}
-      </div>
+      </motion.div>
 
       {/* 空状态 */}
       {sortedCategories.length === 0 && !loading && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
+        <motion.div variants={itemVariants} className="text-center py-12 bg-gray-50 rounded-lg">
           <Settings className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             暂无配置分类
           </h3>
           <p className="text-gray-500">请先创建配置分类和配置项</p>
-        </div>
+        </motion.div>
       )}
 
       {/* 搜索结果为空 */}
@@ -295,15 +321,15 @@ export function ConfigTab() {
         sortedCategories.every(
           (cat) => (configsByCategory[cat.id] || []).length === 0
         ) && (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <motion.div variants={itemVariants} className="text-center py-12 bg-gray-50 rounded-lg">
             <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               未找到匹配的配置项
             </h3>
             <p className="text-gray-500">请尝试其他关键词</p>
-          </div>
+          </motion.div>
         )}
-    </div>
+    </motion.div>
   );
 }
 

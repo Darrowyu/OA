@@ -73,6 +73,7 @@ function PopoverContent({ children, className, align = "center" }: PopoverConten
   return (
     <div
       ref={ref}
+      onMouseDown={(e) => e.stopPropagation()}
       className={cn(
         "absolute z-50 w-72 rounded-md border bg-white p-4 shadow-md",
         align === "start" && "left-0",

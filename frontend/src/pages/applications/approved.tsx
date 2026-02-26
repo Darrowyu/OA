@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -41,6 +42,29 @@ import {
   Filter,
 } from "lucide-react"
 import { toast } from "sonner"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 type StatusFilter = "all" | "approved" | "rejected"
 type TimeFilter = "all" | "week" | "month" | "year"
@@ -270,15 +294,20 @@ export function ApprovedList() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* 页面标题 */}
-      <div>
+      <motion.div variants={itemVariants}>
         <h1 className="text-2xl font-bold text-gray-900">已审批记录</h1>
         <p className="text-sm text-gray-500 mt-1">共 <span className="font-semibold text-coral">{total}</span> 条审批记录</p>
-      </div>
+      </motion.div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="审核总金额"
           amount={stats.totalAmount}
@@ -300,10 +329,10 @@ export function ApprovedList() {
           icon={<TrendingDown className="h-6 w-6" />}
           variant="red"
         />
-      </div>
+      </motion.div>
 
       {/* 筛选栏 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
@@ -359,7 +388,7 @@ export function ApprovedList() {
             </Select>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 列表内容 */}
       {loading ? (
@@ -378,12 +407,12 @@ export function ApprovedList() {
       ) : (
         <>
           {/* 移动端卡片视图 */}
-          <div className="md:hidden">
+          <motion.div variants={itemVariants} className="md:hidden">
             {applications.map((app) => <MobileCard key={app.id} app={app} />)}
-          </div>
+          </motion.div>
 
           {/* PC端表格视图 */}
-          <div className="hidden md:block">
+          <motion.div variants={itemVariants} className="hidden md:block">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <Table>
                 <TableHeader>
@@ -425,7 +454,7 @@ export function ApprovedList() {
                 </TableBody>
               </Table>
             </div>
-          </div>
+          </motion.div>
 
           {/* 分页 */}
           {totalPages > 1 && (
@@ -455,6 +484,6 @@ export function ApprovedList() {
           )}
         </>
       )}
-    </div>
+    </motion.div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -25,6 +26,29 @@ import {
   isToday,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+}
 
 interface TaskCalendarViewProps {
   onTaskClick?: (task: Task) => void
@@ -123,9 +147,15 @@ export function TaskCalendarView({ onTaskClick, refreshTrigger }: TaskCalendarVi
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-400px)]">
+    <motion.div
+      className="flex gap-4 h-[calc(100vh-400px)]"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* 日历主体 */}
-      <Card className="flex-1 p-4">
+      <motion.div variants={itemVariants} className="flex-1">
+        <Card className="h-full p-4">
         {/* 日历头部 */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
@@ -231,9 +261,11 @@ export function TaskCalendarView({ onTaskClick, refreshTrigger }: TaskCalendarVi
           </div>
         )}
       </Card>
+      </motion.div>
 
       {/* 侧边栏 - 选中日期任务详情 */}
-      <Card className="w-80 p-4 flex flex-col">
+      <motion.div variants={itemVariants} className="w-80">
+        <Card className="h-full p-4 flex flex-col">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b">
           <CalendarDays className="w-5 h-5 text-gray-500" />
           <h3 className="font-medium">
@@ -317,6 +349,7 @@ export function TaskCalendarView({ onTaskClick, refreshTrigger }: TaskCalendarVi
           </div>
         </div>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

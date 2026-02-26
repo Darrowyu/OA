@@ -1,10 +1,23 @@
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Database, Download, RotateCcw, Plus, Check, X, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBackup } from '../hooks/useBackup';
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
 
 export function BackupTab() {
   const {
@@ -24,17 +37,31 @@ export function BackupTab() {
   }, [loadBackups]);
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.05,
+          },
+        },
+      }}
+      className="space-y-6"
+    >
       {/* 错误提示 */}
       {error && (
-        <Alert variant="destructive" className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div variants={itemVariants}>
+          <Alert variant="destructive" className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* 自动备份开关 */}
-      <Card className="border-amber-200 bg-amber-50/30">
+      <motion.div variants={itemVariants}>
+        <Card className="border-amber-200 bg-amber-50/30">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -50,9 +77,11 @@ export function BackupTab() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* 备份列表 */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -149,6 +178,7 @@ export function BackupTab() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
