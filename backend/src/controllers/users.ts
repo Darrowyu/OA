@@ -111,6 +111,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
           role: true,
           isActive: true,
           employeeId: true,
+          createdAt: true,
           department: {
             select: {
               name: true,
@@ -934,5 +935,266 @@ export async function exportContacts(req: Request, res: Response): Promise<void>
   } catch (error) {
     logger.error('导出通讯录失败', { error: error instanceof Error ? error.message : '未知错误' });
     res.status(500).json(fail('INTERNAL_ERROR', '导出通讯录时发生错误'));
+  }
+}
+
+/**
+ * 获取用户申请记录
+ * GET /api/users/:id/applications
+ */
+export async function getUserApplications(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { page = '1', limit = '10' } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string, 10));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // 并行查询总数和数据
+    const [total, applications] = await Promise.all([
+      prisma.application.count({
+        where: { applicantId: id },
+      }),
+      prisma.application.findMany({
+        where: { applicantId: id },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          applicationNo: true,
+          title: true,
+          amount: true,
+          status: true,
+          priority: true,
+          type: true,
+          createdAt: true,
+          submittedAt: true,
+          completedAt: true,
+          applicant: {
+            select: {
+              id: true,
+              name: true,
+              department: { select: { name: true } },
+            },
+          },
+          _count: {
+            select: {
+              factoryApprovals: true,
+              directorApprovals: true,
+              managerApprovals: true,
+              ceoApprovals: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    res.json(success({
+      items: applications,
+      pagination: {
+        page: pageNum,
+        pageSize: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
+      },
+    }));
+  } catch (error) {
+    logger.error('获取用户申请记录失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户申请记录时发生错误'));
+  }
+}
+
+/**
+ * 获取用户审批记录
+ * GET /api/users/:id/approvals
+ */
+export async function getUserApprovals(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { page = '1', limit = '10' } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string, 10));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // 分别从四个审批模型查询数据
+    const [
+      factoryApprovals,
+      directorApprovals,
+      managerApprovals,
+      ceoApprovals,
+    ] = await Promise.all([
+      prisma.factoryApproval.findMany({
+        where: { approverId: id },
+        include: {
+          application: {
+            select: {
+              id: true,
+              applicationNo: true,
+              title: true,
+              amount: true,
+              status: true,
+              priority: true,
+              type: true,
+              applicant: { select: { id: true, name: true, department: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+      prisma.directorApproval.findMany({
+        where: { approverId: id },
+        include: {
+          application: {
+            select: {
+              id: true,
+              applicationNo: true,
+              title: true,
+              amount: true,
+              status: true,
+              priority: true,
+              type: true,
+              applicant: { select: { id: true, name: true, department: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+      prisma.managerApproval.findMany({
+        where: { approverId: id },
+        include: {
+          application: {
+            select: {
+              id: true,
+              applicationNo: true,
+              title: true,
+              amount: true,
+              status: true,
+              priority: true,
+              type: true,
+              applicant: { select: { id: true, name: true, department: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+      prisma.ceoApproval.findMany({
+        where: { approverId: id },
+        include: {
+          application: {
+            select: {
+              id: true,
+              applicationNo: true,
+              title: true,
+              amount: true,
+              status: true,
+              priority: true,
+              type: true,
+              applicant: { select: { id: true, name: true, department: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    // 合并所有审批记录并添加级别标识
+    const allApprovals = [
+      ...factoryApprovals.map(a => ({ ...a, level: 'FACTORY' as const })),
+      ...directorApprovals.map(a => ({ ...a, level: 'DIRECTOR' as const })),
+      ...managerApprovals.map(a => ({ ...a, level: 'MANAGER' as const })),
+      ...ceoApprovals.map(a => ({ ...a, level: 'CEO' as const })),
+    ];
+
+    // 按创建时间排序
+    allApprovals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = allApprovals.length;
+    const totalPages = Math.ceil(total / limitNum);
+
+    // 分页
+    const paginatedApprovals = allApprovals.slice(skip, skip + limitNum);
+
+    res.json(success({
+      items: paginatedApprovals,
+      pagination: {
+        page: pageNum,
+        pageSize: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
+      },
+    }));
+  } catch (error) {
+    logger.error('获取用户审批记录失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户审批记录时发生错误'));
+  }
+}
+
+/**
+ * 获取用户统计数据
+ * GET /api/users/:id/stats
+ */
+export async function getUserStats(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    // 并行查询各类统计数据
+    const [
+      applicationCount,
+      approvedCount,
+      rejectedCount,
+      pendingCount,
+      approvalCount,
+    ] = await Promise.all([
+      // 总申请数
+      prisma.application.count({
+        where: { applicantId: id },
+      }),
+      // 已批准申请数
+      prisma.application.count({
+        where: {
+          applicantId: id,
+          status: 'APPROVED',
+        },
+      }),
+      // 已拒绝申请数
+      prisma.application.count({
+        where: {
+          applicantId: id,
+          status: 'REJECTED',
+        },
+      }),
+      // 审批中申请数
+      prisma.application.count({
+        where: {
+          applicantId: id,
+          status: {
+            in: ['PENDING_FACTORY', 'PENDING_DIRECTOR', 'PENDING_MANAGER', 'PENDING_CEO'],
+          },
+        },
+      }),
+      // 审批次数（该用户作为审批人审批的次数）- 分别统计各类审批
+      Promise.all([
+        prisma.factoryApproval.count({ where: { approverId: id, action: { not: 'PENDING' } } }),
+        prisma.directorApproval.count({ where: { approverId: id, action: { not: 'PENDING' } } }),
+        prisma.managerApproval.count({ where: { approverId: id, action: { not: 'PENDING' } } }),
+        prisma.ceoApproval.count({ where: { approverId: id, action: { not: 'PENDING' } } }),
+      ]).then(counts => counts.reduce((a, b) => a + b, 0)),
+    ]);
+
+    res.json(success({
+      applicationCount,
+      approvedCount,
+      rejectedCount,
+      pendingCount,
+      approvalCount,
+    }));
+  } catch (error) {
+    logger.error('获取用户统计数据失败', { error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json(fail('INTERNAL_ERROR', '获取用户统计数据时发生错误'));
   }
 }

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +5,1154 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Department {
+  id          String       @id @default(cuid())
+  name        String
+  code        String       @unique
+  parentId    String?
+  level       Int          @default(1)
+  sortOrder   Int          @default(0)
+  managerId   String?
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  users       User[]
+  manager     User?        @relation("DepartmentManager", fields: [managerId], references: [id])
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+
+  @@index([parentId])
+  @@index([code])
+  @@index([isActive])
+  @@index([managerId])
+  @@map("departments")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  username           String              @unique
+  password           String
+  name               String              @db.VarChar(100)
+  email              String              @unique @db.VarChar(255)
+  role               UserRole
+  employeeId         String              @unique
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  signature          String?
+  avatar             String?
+  departmentId       String?
+  phone              String?
+  position           String?
+  deletedAt          DateTime?
+  applications       Application[]
+  proposedProjects   Application[]       @relation("ProjectProposer")
+  reviewedProjects   Application[]       @relation("ProjectReviewer")
+  attachments        Attachment[]
+  ceoApprovals       CeoApproval[]
+  directorApprovals  DirectorApproval[]
+  factoryApprovals   FactoryApproval[]
+  managerApprovals   ManagerApproval[]
+  reminderLogs       ReminderLog[]
+  department         Department?         @relation(fields: [departmentId], references: [id])
+  devices            UserDevice[]
+  preference         UserPreference?
+  announcementReads  AnnouncementRead[]
+  announcements      Announcement[]      @relation("UserAnnouncements")
+  approvals          Approval[]
+  attendanceRecords  AttendanceRecord[]
+  auditLogs          AuditLog[]          @relation("UserAuditLogs")
+  calendarEvents     CalendarEvent[]
+  configHistories    ConfigHistory[]
+  managedDepartments Department[]        @relation("DepartmentManager")
+  documentFolders    DocumentFolder[]
+  documents          Document[]
+  knowledgeArticles  KnowledgeArticle[]
+  knowledgeFeedbacks KnowledgeFeedback[]
+  approvedLeaves     LeaveRequest[]      @relation("LeaveApprover")
+  leaveRequests      LeaveRequest[]
+  meetingAttendees   MeetingAttendee[]
+  meetings           Meeting[]           @relation("UserMeetings")
+  notifications      Notification[]
+  schedules          Schedule[]
+  ownedProjects      TaskProject[]
+  assignedTasks      Task[]              @relation("AssignedTasks")
+  createdTasks       Task[]              @relation("CreatedTasks")
+  createdWorkflows   Workflow[]          @relation("WorkflowCreator")
+
+  @@index([departmentId])
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@index([email, isActive])
+}
+
+model Application {
+  id                   String             @id @default(cuid())
+  applicationNo        String             @unique
+  title                String
+  content              String
+  amount               Decimal?           @db.Decimal(15, 2)
+  priority             Priority           @default(NORMAL)
+  status               ApplicationStatus  @default(DRAFT)
+  applicantId          String
+  applicantName        String
+  applicantDept        String
+  factoryManagerIds    String[]
+  managerIds           String[]
+  rejectedBy           String?
+  rejectedAt           DateTime?
+  rejectReason         String?
+  submittedAt          DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
+  customFields         Json?
+  customerName         String?
+  evaluationItems      Json?
+  evaluationResult     String?
+  formType             String?
+  highAmountNotified   Boolean            @default(false)
+  projectContent       Json?
+  projectName          String?
+  projectNo            String?            @unique
+  projectProposerId    String?
+  projectReviewerId    String?
+  projectSources       String[]
+  selectedSupervisorId String?
+  tripDestination      String?
+  tripEndDate          DateTime?
+  tripPurpose          String?
+  tripStartDate        DateTime?
+  type                 ApplicationType    @default(STANDARD)
+  flowConfig           Json?
+  applicant            User               @relation(fields: [applicantId], references: [id])
+  projectProposer      User?              @relation("ProjectProposer", fields: [projectProposerId], references: [id])
+  projectReviewer      User?              @relation("ProjectReviewer", fields: [projectReviewerId], references: [id])
+  archiveRecord        ArchiveRecord?
+  attachments          Attachment[]
+  ceoApprovals         CeoApproval[]
+  directorApprovals    DirectorApproval[]
+  factoryApprovals     FactoryApproval[]
+  managerApprovals     ManagerApproval[]
+  reminderLogs         ReminderLog[]
+  approvals            Approval[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([submittedAt])
+  @@index([applicantId])
+  @@index([deletedAt])
+  @@index([status, applicantId, submittedAt])
+  @@index([status, priority])
+  @@index([type])
+  @@index([projectNo])
+}
+
+model Approval {
+  id            String         @id @default(cuid())
+  applicationId String
+  approverId    String
+  level         Int
+  action        ApprovalAction @default(PENDING)
+  comment       String?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User           @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId, level])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([level])
+  @@map("approvals")
+}
+
+model FactoryApproval {
+  id            String         @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User           @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model DirectorApproval {
+  id                 String         @id @default(cuid())
+  applicationId      String
+  approverId         String
+  action             ApprovalAction @default(PENDING)
+  comment            String?
+  selectedManagerIds String[]
+  skipManager        Boolean        @default(false)
+  approvedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  flowType           String?
+  application        Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver           User           @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model ManagerApproval {
+  id            String         @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User           @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model CeoApproval {
+  id            String         @id @default(cuid())
+  applicationId String
+  approverId    String
+  action        ApprovalAction @default(PENDING)
+  comment       String?
+  approvedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approver      User           @relation(fields: [approverId], references: [id])
+
+  @@unique([applicationId, approverId])
+  @@index([applicationId])
+  @@index([approverId])
+  @@index([action])
+}
+
+model Attachment {
+  id                   String      @id @default(cuid())
+  filename             String
+  storedName           String      @unique
+  path                 String
+  size                 Int
+  mimeType             String
+  applicationId        String
+  uploaderId           String
+  isApprovalAttachment Boolean     @default(false)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  application          Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploader             User        @relation(fields: [uploaderId], references: [id])
+
+  @@index([applicationId])
+  @@index([uploaderId])
+  @@index([isApprovalAttachment])
+}
+
+model ReminderLog {
+  id            String       @id @default(cuid())
+  applicationId String
+  recipientId   String
+  reminderType  ReminderType
+  reminderCount Int          @default(1)
+  sentAt        DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  recipient     User         @relation(fields: [recipientId], references: [id])
+
+  @@index([applicationId])
+  @@index([recipientId])
+  @@index([sentAt])
+}
+
+model ArchiveRecord {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  applicationNo String
+  archivedAt    DateTime    @default(now())
+  archivePath   String
+  dataSnapshot  Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([archivedAt])
+  @@index([applicationNo])
+}
+
+model Equipment {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  model              String
+  category           String
+  manufacturer       String?
+  location           String
+  status             EquipmentStatus     @default(RUNNING)
+  healthScore        Int?                @db.SmallInt
+  purchaseDate       DateTime?
+  warrantyDate       DateTime?
+  purchasePrice      Decimal?            @db.Decimal(15, 2)
+  serialNumber       String?
+  description        String?
+  lastMaintenanceAt  DateTime?
+  nextMaintenanceAt  DateTime?
+  totalWorkHours     Int?                @default(0)
+  createdBy          String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  healthMetrics      Json?
+  deletedAt          DateTime?
+  maintenancePlans   MaintenancePlan[]
+  maintenanceRecords MaintenanceRecord[]
+  partUsages         PartUsage[]
+
+  @@index([status])
+  @@index([code])
+  @@index([category])
+  @@index([location])
+  @@index([deletedAt])
+  @@index([nextMaintenanceAt])
+}
+
+model MaintenanceRecord {
+  id                String                  @id @default(cuid())
+  code              String                  @unique
+  equipmentId       String
+  type              MaintenanceType
+  content           String
+  operator          String
+  startTime         DateTime
+  endTime           DateTime?
+  duration          Int?
+  estimatedDuration Int?
+  cost              Decimal?                @db.Decimal(15, 2)
+  status            MaintenanceRecordStatus @default(PENDING)
+  templateId        String?
+  partsUsed         Json?
+  result            String?
+  beforeImages      String[]
+  afterImages       String[]
+  createdBy         String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  equipment         Equipment               @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  template          MaintenanceTemplate?    @relation(fields: [templateId], references: [id])
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([type])
+  @@index([startTime])
+}
+
+model MaintenancePlan {
+  id           String                   @id @default(cuid())
+  code         String                   @unique
+  equipmentId  String
+  planName     String
+  frequency    MaintenancePlanFrequency
+  intervalDays Int
+  nextDate     DateTime
+  responsible  String
+  reminderDays Int?                     @default(7)
+  status       MaintenancePlanStatus    @default(ACTIVE)
+  templateId   String?
+  description  String?
+  createdBy    String
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  equipment    Equipment                @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  template     MaintenanceTemplate?     @relation(fields: [templateId], references: [id])
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([nextDate])
+  @@index([status, nextDate])
+}
+
+model MaintenanceTemplate {
+  id                 String                    @id @default(cuid())
+  code               String                    @unique
+  name               String
+  category           String
+  items              Json
+  estimatedTime      Int
+  status             MaintenanceTemplateStatus @default(DRAFT)
+  usageCount         Int                       @default(0)
+  createdBy          String
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  maintenancePlans   MaintenancePlan[]
+  maintenanceRecords MaintenanceRecord[]
+
+  @@index([status])
+  @@index([category])
+}
+
+model Part {
+  id             String         @id @default(cuid())
+  code           String         @unique
+  name           String
+  model          String
+  category       String
+  unit           String
+  stock          Int            @default(0)
+  minStock       Int            @default(0)
+  maxStock       Int            @default(0)
+  location       String?
+  supplier       String?
+  status         PartStatus     @default(NORMAL)
+  unitPrice      Decimal?       @db.Decimal(15, 2)
+  description    String?
+  createdBy      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  version        Int            @default(0)
+  partLifecycles PartLifecycle?
+  partScraps     PartScrap[]
+  stockRecords   PartStock[]
+  partUsages     PartUsage[]
+
+  @@index([status])
+  @@index([code])
+  @@index([category])
+  @@index([status, stock])
+}
+
+model PartUsage {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  partId      String
+  quantity    Int
+  applicant   String
+  department  String
+  purpose     String
+  equipmentId String?
+  applyDate   DateTime
+  status      PartUsageStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  remark      String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  equipment   Equipment?      @relation(fields: [equipmentId], references: [id])
+  part        Part            @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([status])
+  @@index([applicant])
+  @@index([applyDate])
+}
+
+model PartScrap {
+  id            String          @id @default(cuid())
+  code          String          @unique
+  partId        String
+  quantity      Int
+  reason        String
+  originalValue Decimal         @db.Decimal(15, 2)
+  residualValue Decimal         @db.Decimal(15, 2)
+  applicant     String
+  applyDate     DateTime
+  status        PartScrapStatus @default(PENDING)
+  approvedBy    String?
+  approvedAt    DateTime?
+  remark        String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  part          Part            @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([status])
+  @@index([applicant])
+}
+
+model PartStock {
+  id          String      @id @default(cuid())
+  partId      String
+  type        StockType
+  quantity    Int
+  beforeStock Int
+  afterStock  Int
+  operator    String
+  documentNo  String?
+  source      StockSource
+  date        DateTime    @default(now())
+  remark      String?
+  relatedId   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  part        Part        @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([type])
+  @@index([date])
+  @@index([source])
+  @@index([partId, date(sort: Desc)])
+}
+
+model PartLifecycle {
+  id              String              @id @default(cuid())
+  partId          String              @unique
+  totalCycles     Int
+  installedCycles Int                 @default(0)
+  remainingCycles Int
+  avgUsage        Int
+  status          PartLifecycleStatus @default(ACTIVE)
+  installedAt     DateTime?
+  expectedEndDate DateTime?
+  equipmentId     String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  part            Part                @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([status])
+  @@index([expectedEndDate])
+  @@index([status, expectedEndDate])
+}
+
+model UserPreference {
+  id                    String                @id @default(cuid())
+  userId                String                @unique
+  theme                 Theme                 @default(SYSTEM)
+  interfaceDensity      InterfaceDensity      @default(DEFAULT)
+  sidebarCollapsed      Boolean               @default(false)
+  emailNotifications    Boolean               @default(true)
+  approvalNotifications NotificationFrequency @default(INSTANT)
+  systemAnnouncements   Boolean               @default(true)
+  weeklyReport          Boolean               @default(false)
+  monthlyReport         Boolean               @default(false)
+  profileVisibility     ProfileVisibility     @default(COLLEAGUES)
+  onlineStatus          OnlineStatus          @default(VISIBLE)
+  twoFactorEnabled      Boolean               @default(false)
+  twoFactorSecret       String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  deviceId     String   @unique
+  deviceName   String
+  deviceType   String?
+  browser      String?
+  os           String?
+  ipAddress    String?
+  location     String?
+  lastActiveAt DateTime @default(now())
+  isCurrent    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([lastActiveAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String
+  entityType  String
+  entityId    String?
+  oldValues   Json?
+  newValues   Json?
+  ipAddress   String?
+  userAgent   String?
+  description String?
+  createdAt   DateTime @default(now())
+  user        User     @relation("UserAuditLogs", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  type        CalendarEventType @default(MEETING)
+  isAllDay    Boolean           @default(false)
+  recurrence  String?
+  attendees   Json?
+  isPrivate   Boolean           @default(false)
+  color       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([type])
+  @@index([userId, startTime, endTime])
+  @@map("calendar_events")
+}
+
+model DocumentFolder {
+  id          String           @id @default(cuid())
+  name        String
+  parentId    String?
+  ownerId     String
+  permissions Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  owner       User             @relation(fields: [ownerId], references: [id])
+  parent      DocumentFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    DocumentFolder[] @relation("FolderHierarchy")
+  documents   Document[]
+
+  @@index([parentId])
+  @@index([ownerId])
+  @@map("document_folders")
+}
+
+model Document {
+  id        String            @id @default(cuid())
+  folderId  String
+  name      String
+  type      String
+  size      Int
+  path      String
+  version   Int               @default(1)
+  ownerId   String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  deletedAt DateTime?
+  versions  DocumentVersion[]
+  folder    DocumentFolder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  owner     User              @relation(fields: [ownerId], references: [id])
+
+  @@index([folderId])
+  @@index([ownerId])
+  @@index([type])
+  @@index([deletedAt])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  version    Int
+  path       String
+  size       Int
+  createdBy  String
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([version])
+  @@map("document_versions")
+}
+
+model AttendanceRecord {
+  id               String           @id @default(cuid())
+  userId           String
+  date             DateTime         @db.Date
+  clockIn          DateTime?
+  clockOut         DateTime?
+  clockInLocation  Json?
+  clockOutLocation Json?
+  clockInType      ClockInType?
+  clockOutType     ClockInType?
+  status           AttendanceStatus @default(NORMAL)
+  workHours        Float?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  shiftId   String
+  isRestDay Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("schedules")
+}
+
+model Shift {
+  id        String     @id @default(cuid())
+  name      String
+  startTime String
+  endTime   String
+  breakTime Int        @default(60)
+  color     String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  schedules Schedule[]
+
+  @@map("shifts")
+}
+
+model LeaveRequest {
+  id           String             @id @default(cuid())
+  userId       String
+  type         LeaveType
+  startDate    DateTime
+  endDate      DateTime
+  days         Float
+  reason       String
+  status       LeaveRequestStatus @default(PENDING)
+  approverId   String?
+  approvedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  approver     User?              @relation("LeaveApprover", fields: [approverId], references: [id])
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([startDate])
+  @@map("leave_requests")
+}
+
+model MeetingRoom {
+  id          String    @id @default(cuid())
+  name        String
+  capacity    Int
+  location    String?
+  facilities  Json?
+  image       String?
+  isActive    Boolean   @default(true)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  meetings    Meeting[]
+
+  @@index([isActive])
+  @@index([capacity])
+  @@map("meeting_rooms")
+}
+
+model Meeting {
+  id              String            @id @default(cuid())
+  title           String
+  description     String?
+  roomId          String?
+  startTime       DateTime
+  endTime         DateTime
+  organizerId     String
+  attendees       Json?
+  status          MeetingStatus     @default(SCHEDULED)
+  minutes         String?
+  attachments     Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+  attendeeRecords MeetingAttendee[]
+  organizer       User              @relation("UserMeetings", fields: [organizerId], references: [id])
+  room            MeetingRoom?      @relation(fields: [roomId], references: [id])
+
+  @@index([roomId])
+  @@index([startTime])
+  @@index([organizerId])
+  @@index([status])
+  @@index([roomId, startTime, endTime])
+  @@index([deletedAt])
+  @@map("meetings")
+}
+
+model MeetingAttendee {
+  id        String         @id @default(cuid())
+  meetingId String
+  userId    String
+  status    AttendeeStatus @default(PENDING)
+  joinedAt  DateTime?
+  leftAt    DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  meeting   Meeting        @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([userId])
+  @@index([meetingId, status])
+  @@index([userId, status])
+  @@map("meeting_attendees")
+}
+
+model Announcement {
+  id          String             @id @default(cuid())
+  title       String
+  content     String
+  type        AnnouncementType
+  targetDepts Json?
+  isTop       Boolean            @default(false)
+  validFrom   DateTime
+  validUntil  DateTime?
+  attachments Json?
+  viewCount   Int                @default(0)
+  authorId    String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
+  reads       AnnouncementRead[]
+  author      User               @relation("UserAnnouncements", fields: [authorId], references: [id])
+
+  @@index([type])
+  @@index([isTop])
+  @@index([validFrom])
+  @@index([authorId])
+  @@index([deletedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  userId         String
+  readAt         DateTime     @default(now())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
+  @@map("announcement_reads")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  assigneeId  String?
+  creatorId   String
+  projectId   String?
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+  tags        Json?
+  parentId    String?
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  assignee    User?        @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creator     User         @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: Cascade)
+  parent      Task?        @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks    Task[]       @relation("SubTasks")
+  project     TaskProject? @relation(fields: [projectId], references: [id])
+
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([creatorId])
+  @@index([parentId])
+  @@index([projectId])
+  @@index([assigneeId, status])
+  @@index([status, dueDate])
+  @@index([assigneeId, status, dueDate])
+  @@index([creatorId, createdAt(sort: Desc)])
+  @@index([deletedAt])
+  @@map("tasks")
+}
+
+model TaskProject {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  ownerId     String
+  members     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([ownerId])
+  @@map("task_projects")
+}
+
+model Workflow {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  entityType  String
+  nodes       Json
+  edges       Json
+  version     Int                @default(1)
+  status      WorkflowStatus     @default(DRAFT)
+  isDefault   Boolean            @default(false)
+  createdBy   String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  instances   WorkflowInstance[]
+  creator     User               @relation("WorkflowCreator", fields: [createdBy], references: [id])
+
+  @@index([entityType])
+  @@index([status])
+  @@index([isDefault])
+  @@index([createdBy])
+  @@map("workflows")
+}
+
+model WorkflowInstance {
+  id            String         @id @default(cuid())
+  workflowId    String
+  entityId      String
+  entityType    String
+  currentNodeId String
+  status        InstanceStatus @default(RUNNING)
+  nodeHistory   Json?
+  variables     Json?
+  contextData   Json?
+  startedAt     DateTime       @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  workflow      Workflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([entityId])
+  @@index([entityType])
+  @@index([status])
+  @@index([currentNodeId])
+  @@map("workflow_instances")
+}
+
+model KnowledgeCategory {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  sortOrder   Int                 @default(0)
+  parentId    String?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  articles    KnowledgeArticle[]
+  parent      KnowledgeCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    KnowledgeCategory[] @relation("CategoryHierarchy")
+
+  @@index([parentId])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("knowledge_categories")
+}
+
+model KnowledgeArticle {
+  id           String              @id @default(cuid())
+  title        String
+  content      String
+  summary      String?
+  categoryId   String
+  tags         Json?
+  attachments  Json?
+  viewCount    Int                 @default(0)
+  helpfulCount Int                 @default(0)
+  authorId     String
+  isPublished  Boolean             @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  author       User                @relation(fields: [authorId], references: [id])
+  category     KnowledgeCategory   @relation(fields: [categoryId], references: [id])
+  feedbacks    KnowledgeFeedback[]
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("knowledge_articles")
+}
+
+model KnowledgeFeedback {
+  id        String           @id @default(cuid())
+  articleId String
+  userId    String
+  isHelpful Boolean
+  comment   String?
+  createdAt DateTime         @default(now())
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@unique([articleId, userId])
+  @@index([articleId])
+  @@index([userId])
+  @@map("knowledge_feedback")
+}
+
+model ConfigCategory {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  name        String
+  description String?
+  icon        String?
+  sortOrder   Int            @default(0)
+  isEnabled   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  configs     SystemConfig[]
+
+  @@index([isEnabled])
+  @@index([sortOrder])
+  @@map("config_categories")
+}
+
+model SystemConfig {
+  id           String          @id @default(cuid())
+  categoryId   String
+  key          String
+  value        String
+  defaultValue String?
+  valueType    ConfigValueType
+  label        String
+  description  String?
+  placeholder  String?
+  options      Json?
+  validation   Json?
+  isSystem     Boolean         @default(false)
+  isSecret     Boolean         @default(false)
+  sortOrder    Int             @default(0)
+  isEnabled    Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  histories    ConfigHistory[]
+  category     ConfigCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, key])
+  @@index([isEnabled])
+  @@index([isSystem])
+  @@index([sortOrder])
+  @@map("system_configs")
+}
+
+model ConfigHistory {
+  id           String       @id @default(cuid())
+  configId     String
+  oldValue     String?
+  newValue     String
+  changedBy    String
+  changeReason String?
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [changedBy], references: [id])
+  config       SystemConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("config_histories")
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  level     String
+  message   String
+  source    String
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([timestamp])
+  @@map("system_logs")
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  size      String
+  type      String
+  status    String
+
+  @@index([createdAt])
+  @@map("backups")
+}
+
+model EmailSettings {
+  id               String   @id @default("default")
+  enabled          Boolean  @default(true)
+  smtpHost         String   @default("")
+  smtpPort         Int      @default(587)
+  smtpUser         String   @default("")
+  smtpPassword     String   @default("")
+  taskReminder     Boolean  @default(true)
+  meetingReminder  Boolean  @default(true)
+  approvalReminder Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+
+  @@map("email_settings")
+}
+
+model SystemSettings {
+  id                String   @id @default("default")
+  autoBackupEnabled Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
 enum UserRole {
@@ -27,10 +1172,10 @@ enum ApplicationStatus {
   PENDING_DIRECTOR
   PENDING_MANAGER
   PENDING_CEO
-  PENDING_REVIEWER
   APPROVED
   REJECTED
   ARCHIVED
+  PENDING_REVIEWER
 }
 
 enum Priority {
@@ -53,701 +1198,96 @@ enum ApprovalAction {
 }
 
 enum ApplicationType {
-  STANDARD              // 标准申请：厂长→总监→经理→CEO
-  PRODUCT_DEVELOPMENT   // 新产品开发企划
-  FEASIBILITY_STUDY     // 可行性评估
-  BUSINESS_TRIP         // 出差申请
-  OTHER                 // 其他申请：可选厂长→总监 或 厂长→CEO
+  STANDARD
+  PRODUCT_DEVELOPMENT
+  FEASIBILITY_STUDY
+  BUSINESS_TRIP
+  OTHER
 }
-
-model Department {
-  id          String   @id @default(cuid())
-  name        String // 部门名称
-  code        String   @unique // 部门编码
-  parentId    String? // 父部门ID
-  level       Int      @default(1) // 层级（根部门=1）
-  sortOrder   Int      @default(0) // 排序序号
-  managerId   String? // 部门负责人ID
-  description String? // 部门描述
-  isActive    Boolean  @default(true) // 是否启用
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联字段
-  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  children Department[] @relation("DepartmentHierarchy")
-  users    User[]
-  manager  User?        @relation(fields: [managerId], references: [id], name: "DepartmentManager")
-
-  @@index([parentId])
-  @@index([code])
-  @@index([isActive])
-  @@index([managerId])
-  @@map("departments")
-}
-
-model User {
-  id           String    @id @default(cuid())
-  username     String    @unique
-  password     String    // 已哈希存储，请勿明文存储
-  name         String    @db.VarChar(100)
-  email        String    @unique @db.VarChar(255)
-  role         UserRole
-  departmentId String? // 关联部门ID
-  employeeId   String    @unique
-  isActive     Boolean   @default(true)
-  avatar       String? // 头像图片 URL
-  phone        String? // 手机号
-  position     String? // 职位
-  signature    String? // 签名图片 Base64
-  deletedAt    DateTime? // 软删除字段
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  // 关联字段
-  applications       Application[]
-  approvals          Approval[]           // 新的统一审批表
-  factoryApprovals   FactoryApproval[]    // @deprecated 使用 approvals 替代
-  directorApprovals  DirectorApproval[]   // @deprecated 使用 approvals 替代
-  managerApprovals   ManagerApproval[]    // @deprecated 使用 approvals 替代
-  ceoApprovals       CeoApproval[]        // @deprecated 使用 approvals 替代
-  attachments        Attachment[]
-  reminderLogs       ReminderLog[]
-  preference         UserPreference? // 用户偏好设置（一对一）
-  devices            UserDevice[] // 登录设备列表
-  notifications      Notification[] // 通知列表
-  auditLogs          AuditLog[]         @relation("UserAuditLogs") // 审计日志
-  department         Department?        @relation(fields: [departmentId], references: [id])
-  managedDepartments Department[]       @relation(name: "DepartmentManager")
-  calendarEvents     CalendarEvent[] // 日程事件
-  attendanceRecords  AttendanceRecord[] // 考勤记录
-  schedules          Schedule[] // 排班
-  leaveRequests      LeaveRequest[] // 请假申请
-  approvedLeaves     LeaveRequest[]     @relation("LeaveApprover") // 审批的请假
-  documentFolders    DocumentFolder[] // 创建的文件夹
-  documents          Document[] // 上传的文档
-  announcements      Announcement[]     @relation("UserAnnouncements") // 发布的公告
-  announcementReads  AnnouncementRead[] // 已读公告记录
-  meetings           Meeting[]          @relation("UserMeetings") // 组织的会议
-  meetingAttendees   MeetingAttendee[]  // 参与的会议
-  assignedTasks      Task[]             @relation("AssignedTasks") // 被分配的任务
-  createdTasks       Task[]             @relation("CreatedTasks") // 创建的任务
-  ownedProjects      TaskProject[]      // 拥有的项目
-  createdWorkflows   Workflow[]         @relation(name: "WorkflowCreator") // 创建的工作流
-  knowledgeArticles  KnowledgeArticle[] // 创建的知识库文章
-  knowledgeFeedbacks KnowledgeFeedback[] // 知识库反馈
-  reviewedProjects   Application[]      @relation(name: "ProjectReviewer") // 审核的新产品开发项目
-  proposedProjects   Application[]      @relation(name: "ProjectProposer") // 提议的新产品开发项目
-  configHistories    ConfigHistory[]    // 配置修改历史
-
-  @@index([departmentId])
-  @@index([role])
-  @@index([isActive])
-  @@index([deletedAt])
-  @@index([email, isActive])  // 按邮箱和活跃状态查询优化
-}
-
-model Application {
-  id                String            @id @default(cuid())
-  applicationNo     String            @unique
-  title             String
-  content           String
-  amount            Decimal?          @db.Decimal(15, 2)
-  priority          Priority          @default(NORMAL)
-  status            ApplicationStatus @default(DRAFT)
-  applicantId       String
-  applicantName     String
-  applicantDept     String
-  factoryManagerIds String[]
-  managerIds        String[]
-  rejectedBy        String?
-  rejectedAt        DateTime?
-  rejectReason      String?
-  submittedAt       DateTime?
-  completedAt       DateTime?
-  deletedAt         DateTime? // 软删除字段
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  // 新增字段 - 申请类型支持
-  type              ApplicationType   @default(STANDARD)
-  formType          String?
-  customFields      Json?
-
-  // 其他申请特有字段 - 流程配置
-  flowConfig        Json?             // { skipFactory: boolean, targetLevel: 'DIRECTOR' | 'CEO' }
-
-  // 新产品开发企划表字段
-  projectNo         String?           @unique
-  projectName       String?
-  customerName      String?
-  projectSources    String[]
-  projectContent    Json?
-  projectReviewerId String?
-  projectProposerId String?
-
-  // 可行性评估表字段
-  evaluationItems   Json?
-  evaluationResult  String?
-
-  // 出差申请字段
-  tripStartDate     DateTime?
-  tripEndDate       DateTime?
-  tripDestination   String?
-  tripPurpose       String?
-  selectedSupervisorId String?
-
-  // 通知标记
-  highAmountNotified Boolean          @default(false)
-
-  // 关联字段
-  applicant         User               @relation(fields: [applicantId], references: [id])
-  approvals         Approval[]         // 新的统一审批表
-  factoryApprovals  FactoryApproval[]  // @deprecated 使用 approvals 替代
-  directorApprovals DirectorApproval[] // @deprecated 使用 approvals 替代
-  managerApprovals  ManagerApproval[]  // @deprecated 使用 approvals 替代
-  ceoApprovals      CeoApproval[]      // @deprecated 使用 approvals 替代
-  attachments       Attachment[]
-  reminderLogs      ReminderLog[]
-  archiveRecord     ArchiveRecord?
-  projectReviewer   User?              @relation(fields: [projectReviewerId], references: [id], name: "ProjectReviewer")
-  projectProposer   User?              @relation(fields: [projectProposerId], references: [id], name: "ProjectProposer")
-
-  @@index([status])
-  @@index([priority])
-  @@index([submittedAt])
-  @@index([applicantId])
-  @@index([deletedAt])
-  @@index([status, applicantId, submittedAt])
-  @@index([status, priority])  // 按状态和优先级查询优化
-  @@index([type])              // 按申请类型查询优化
-  @@index([projectNo])         // 项目编号查询优化
-}
-
-// ============================================
-// 统一审批表 (新的设计)
-// ============================================
-model Approval {
-  id            String         @id @default(cuid())
-  applicationId String
-  approverId    String
-  level         Int            // 1=Factory, 2=Director, 3=Manager, 4=CEO
-  action        ApprovalAction @default(PENDING)
-  comment       String?
-  metadata      Json?          // 存储特殊字段如skipManager, selectedManagerIds
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  approver    User        @relation(fields: [approverId], references: [id])
-
-  @@unique([applicationId, approverId, level])
-  @@index([applicationId])
-  @@index([approverId])
-  @@index([level])
-  @@map("approvals")
-}
-
-// ============================================
-// 旧审批表 (已废弃，保留用于数据迁移)
-// ============================================
-
-// @deprecated 使用 Approval 模型替代 (level=1)
-model FactoryApproval {
-  id            String         @id @default(cuid())
-  applicationId String
-  approverId    String
-  action        ApprovalAction @default(PENDING)
-  comment       String?
-  approvedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  approver    User        @relation(fields: [approverId], references: [id])
-
-  @@unique([applicationId, approverId])
-  @@index([applicationId])
-  @@index([approverId])
-  @@index([action])
-}
-
-// @deprecated 使用 Approval 模型替代 (level=2)
-model DirectorApproval {
-  id                 String         @id @default(cuid())
-  applicationId      String
-  approverId         String
-  action             ApprovalAction @default(PENDING)
-  comment            String?
-  selectedManagerIds String[]
-  skipManager        Boolean        @default(false)
-  flowType           String?        // TO_MANAGER | TO_CEO | COMPLETE
-  approvedAt         DateTime?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  approver    User        @relation(fields: [approverId], references: [id])
-
-  @@unique([applicationId, approverId])
-  @@index([applicationId])
-  @@index([approverId])
-  @@index([action])
-}
-
-// @deprecated 使用 Approval 模型替代 (level=3)
-model ManagerApproval {
-  id            String         @id @default(cuid())
-  applicationId String
-  approverId    String
-  action        ApprovalAction @default(PENDING)
-  comment       String?
-  approvedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  approver    User        @relation(fields: [approverId], references: [id])
-
-  @@unique([applicationId, approverId])
-  @@index([applicationId])
-  @@index([approverId])
-  @@index([action])
-}
-
-// @deprecated 使用 Approval 模型替代 (level=4)
-model CeoApproval {
-  id            String         @id @default(cuid())
-  applicationId String
-  approverId    String
-  action        ApprovalAction @default(PENDING)
-  comment       String?
-  approvedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  approver    User        @relation(fields: [approverId], references: [id])
-
-  @@unique([applicationId, approverId])
-  @@index([applicationId])
-  @@index([approverId])
-  @@index([action])
-}
-
-model Attachment {
-  id                   String   @id @default(cuid())
-  filename             String
-  storedName           String   @unique
-  path                 String
-  size                 Int
-  mimeType             String
-  applicationId        String
-  uploaderId           String
-  isApprovalAttachment Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  uploader    User        @relation(fields: [uploaderId], references: [id])
-
-  @@index([applicationId])
-  @@index([uploaderId])
-  @@index([isApprovalAttachment])
-}
-
-model ReminderLog {
-  id            String       @id @default(cuid())
-  applicationId String
-  recipientId   String
-  reminderType  ReminderType
-  reminderCount Int          @default(1)
-  sentAt        DateTime     @default(now())
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  recipient   User        @relation(fields: [recipientId], references: [id])
-
-  @@index([applicationId])
-  @@index([recipientId])
-  @@index([sentAt])
-}
-
-model ArchiveRecord {
-  id            String   @id @default(cuid())
-  applicationId String   @unique
-  applicationNo String
-  archivedAt    DateTime @default(now())
-  archivePath   String
-  dataSnapshot  Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // 关联字段
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  @@index([archivedAt])
-  @@index([applicationNo])
-}
-
-// ============================================
-// 设备管理模块模型
-// ============================================
 
 enum EquipmentStatus {
-  RUNNING // 运行中
-  WARNING // 预警
-  STOPPED // 停机
-  MAINTENANCE // 保养中
-  SCRAPPED // 已报废
+  RUNNING
+  WARNING
+  STOPPED
+  MAINTENANCE
+  SCRAPPED
 }
 
 enum MaintenanceType {
-  MAINTENANCE // 保养
-  REPAIR // 维修
+  MAINTENANCE
+  REPAIR
 }
 
 enum MaintenanceRecordStatus {
-  PENDING // 待处理
-  IN_PROGRESS // 进行中
-  COMPLETED // 已完成
-  CANCELLED // 已取消
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum MaintenancePlanStatus {
-  ACTIVE // 正常
-  WARNING // 即将到期
-  OVERDUE // 已逾期
-  PAUSED // 已暂停
+  ACTIVE
+  WARNING
+  OVERDUE
+  PAUSED
 }
 
 enum MaintenancePlanFrequency {
-  DAILY // 每日
-  WEEKLY // 每周
-  MONTHLY // 每月
-  QUARTERLY // 每季度
-  HALF_YEARLY // 每半年
-  YEARLY // 每年
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
 }
 
 enum MaintenanceTemplateStatus {
-  ACTIVE // 已启用
-  DRAFT // 草稿
-  DISABLED // 已禁用
+  ACTIVE
+  DRAFT
+  DISABLED
 }
 
 enum PartStatus {
-  NORMAL // 正常
-  LOW // 库存不足
-  HIGH // 库存过多
-  DISCONTINUED // 已停用
+  NORMAL
+  LOW
+  HIGH
+  DISCONTINUED
 }
 
 enum PartUsageStatus {
-  PENDING // 审批中
-  APPROVED // 已批准
-  REJECTED // 已驳回
-  COMPLETED // 已完成
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
 }
 
 enum PartScrapStatus {
-  PENDING // 审批中
-  APPROVED // 已批准
-  REJECTED // 已驳回
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum StockType {
-  IN // 入库
-  OUT // 出库
+  IN
+  OUT
 }
 
 enum StockSource {
-  PURCHASE // 采购入库
-  RETURN // 退货入库
-  PRODUCE // 生产出库
-  USAGE // 领用出库
-  SCRAP // 报废出库
-  ADJUST // 盘点调整
-  OTHER // 其他
+  PURCHASE
+  RETURN
+  PRODUCE
+  USAGE
+  SCRAP
+  ADJUST
+  OTHER
 }
 
 enum PartLifecycleStatus {
-  ACTIVE // 正常
-  WARNING // 即将到期
-  CRITICAL // 急需更换
-  EXPIRED // 已到期
+  ACTIVE
+  WARNING
+  CRITICAL
+  EXPIRED
 }
-
-// 设备信息
-model Equipment {
-  id                String          @id @default(cuid())
-  code              String          @unique // 设备编号
-  name              String // 设备名称
-  model             String // 型号
-  category          String // 分类
-  manufacturer      String? // 制造商
-  location          String // 存放位置
-  status            EquipmentStatus @default(RUNNING)
-  healthScore       Int?            @db.SmallInt // 健康度 0-100（应用层验证范围）
-  healthMetrics     Json?           // 健康度详细指标 {vibration, temperature, power, runtime}
-  purchaseDate      DateTime? // 购买日期
-  warrantyDate      DateTime? // 保修到期日
-  purchasePrice     Decimal?        @db.Decimal(15, 2) // 购买价格
-  serialNumber      String? // 序列号
-  description       String? // 备注
-  lastMaintenanceAt DateTime? // 上次保养时间
-  nextMaintenanceAt DateTime? // 下次保养时间
-  totalWorkHours    Int?            @default(0) // 累计工作时长
-  deletedAt         DateTime? // 软删除字段
-  createdBy         String // 创建人ID
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  // 关联字段
-  maintenanceRecords MaintenanceRecord[]
-  maintenancePlans   MaintenancePlan[]
-  partUsages         PartUsage[]
-
-  @@index([status])
-  @@index([code])
-  @@index([category])
-  @@index([location])
-  @@index([deletedAt])
-  @@index([nextMaintenanceAt]) // 添加下次保养时间索引
-}
-
-// 维修/保养记录
-model MaintenanceRecord {
-  id                String                  @id @default(cuid())
-  code              String                  @unique // 记录编号
-  equipmentId       String
-  type              MaintenanceType // 类型：保养/维修
-  content           String // 内容描述
-  operator          String // 操作人员
-  startTime         DateTime // 开始时间
-  endTime           DateTime? // 完成时间
-  duration          Int? // 实际耗时(分钟)
-  estimatedDuration Int? // 预计耗时(分钟)
-  cost              Decimal?                @db.Decimal(15, 2) // 费用
-  status            MaintenanceRecordStatus @default(PENDING)
-  templateId        String? // 使用的模板ID
-  partsUsed         Json? // 使用的配件列表
-  result            String? // 结果/结论
-  beforeImages      String[] // 维修前图片
-  afterImages       String[] // 维修后图片
-  createdBy         String
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-
-  // 关联字段
-  equipment Equipment            @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  template  MaintenanceTemplate? @relation(fields: [templateId], references: [id])
-
-  @@index([equipmentId])
-  @@index([status])
-  @@index([type])
-  @@index([startTime])
-}
-
-// 保养计划
-model MaintenancePlan {
-  id           String                   @id @default(cuid())
-  code         String                   @unique // 计划编号
-  equipmentId  String
-  planName     String // 计划名称
-  frequency    MaintenancePlanFrequency // 保养频率
-  intervalDays Int // 间隔天数
-  nextDate     DateTime // 下次保养日期
-  responsible  String // 负责人
-  reminderDays Int?                     @default(7) // 提前提醒天数
-  status       MaintenancePlanStatus    @default(ACTIVE)
-  templateId   String? // 使用的模板ID
-  description  String? // 说明
-  createdBy    String
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-
-  // 关联字段
-  equipment Equipment            @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  template  MaintenanceTemplate? @relation(fields: [templateId], references: [id])
-
-  @@index([equipmentId])
-  @@index([status])
-  @@index([nextDate])
-  @@index([status, nextDate]) // 即将到期计划查询优化
-}
-
-// 保养模板
-model MaintenanceTemplate {
-  id            String                    @id @default(cuid())
-  code          String                    @unique // 模板编号
-  name          String // 模板名称
-  category      String // 适用分类
-  items         Json // 检查项列表
-  estimatedTime Int // 预计耗时(分钟)
-  status        MaintenanceTemplateStatus @default(DRAFT)
-  usageCount    Int                       @default(0) // 使用次数
-  createdBy     String
-  createdAt     DateTime                  @default(now())
-  updatedAt     DateTime                  @updatedAt
-
-  // 关联字段
-  maintenanceRecords MaintenanceRecord[]
-  maintenancePlans   MaintenancePlan[]
-
-  @@index([status])
-  @@index([category])
-}
-
-// 配件
-model Part {
-  id          String     @id @default(cuid())
-  code        String     @unique // 配件编号
-  name        String // 配件名称
-  model       String // 型号
-  category    String // 分类
-  unit        String // 单位
-  stock       Int        @default(0) // 当前库存
-  minStock    Int        @default(0) // 最低库存
-  maxStock    Int        @default(0) // 最高库存
-  location    String? // 存放位置
-  supplier    String? // 供应商
-  status      PartStatus @default(NORMAL)
-  unitPrice   Decimal?   @db.Decimal(15, 2) // 单价
-  description String? // 备注
-  version     Int        @default(0) // 乐观锁版本号
-  createdBy   String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // 关联字段
-  stockRecords   PartStock[]
-  partUsages     PartUsage[]
-  partScraps     PartScrap[]
-  partLifecycles PartLifecycle[]
-
-  @@index([status])
-  @@index([code])
-  @@index([category])
-  @@index([status, stock]) // 库存预警查询优化
-}
-
-// 配件领用
-model PartUsage {
-  id          String          @id @default(cuid())
-  code        String          @unique // 申请单号
-  partId      String
-  quantity    Int // 领用数量
-  applicant   String // 申请人
-  department  String // 部门
-  purpose     String // 用途
-  equipmentId String? // 关联设备
-  applyDate   DateTime // 申请日期
-  status      PartUsageStatus @default(PENDING)
-  approvedBy  String? // 审批人
-  approvedAt  DateTime? // 审批时间
-  remark      String? // 备注
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // 关联字段
-  part      Part       @relation(fields: [partId], references: [id], onDelete: Cascade)
-  equipment Equipment? @relation(fields: [equipmentId], references: [id])
-
-  @@index([partId])
-  @@index([status])
-  @@index([applicant])
-  @@index([applyDate])
-}
-
-// 配件报废
-model PartScrap {
-  id            String          @id @default(cuid())
-  code          String          @unique // 申请单号
-  partId        String
-  quantity      Int // 数量
-  reason        String // 报废原因
-  originalValue Decimal         @db.Decimal(15, 2) // 原值
-  residualValue Decimal         @db.Decimal(15, 2) // 残值
-  applicant     String // 申请人
-  applyDate     DateTime // 申请日期
-  status        PartScrapStatus @default(PENDING)
-  approvedBy    String? // 审批人
-  approvedAt    DateTime? // 审批时间
-  remark        String? // 备注
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  // 关联字段
-  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
-
-  @@index([partId])
-  @@index([status])
-  @@index([applicant])
-}
-
-// 出入库流水
-model PartStock {
-  id          String      @id @default(cuid())
-  partId      String
-  type        StockType // 入库/出库
-  quantity    Int // 数量
-  beforeStock Int // 变动前库存
-  afterStock  Int // 变动后库存
-  operator    String // 操作人员
-  documentNo  String? // 关联单据号
-  source      StockSource // 来源
-  date        DateTime    @default(now()) // 操作时间
-  remark      String? // 备注
-  relatedId   String? // 关联记录ID
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // 关联字段
-  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
-
-  @@index([partId])
-  @@index([type])
-  @@index([date])
-  @@index([source])
-  @@index([partId, date(sort: Desc)]) // 配件库存流水查询优化
-}
-
-// 配件生命周期
-model PartLifecycle {
-  id              String              @id @default(cuid())
-  partId          String              @unique
-  totalCycles     Int // 总周期
-  installedCycles Int                 @default(0) // 已使用周期
-  remainingCycles Int // 剩余周期
-  avgUsage        Int // 平均使用频率
-  status          PartLifecycleStatus @default(ACTIVE)
-  installedAt     DateTime? // 安装日期
-  expectedEndDate DateTime? // 预计到期日
-  equipmentId     String? // 安装在哪个设备
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  // 关联字段
-  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
-
-  @@index([partId])
-  @@index([status])
-  @@index([expectedEndDate])
-  @@index([status, expectedEndDate]) // 即将到期配件查询优化
-}
-
-// ============================================
-// 用户偏好设置模块模型
-// ============================================
 
 enum Theme {
   LIGHT
@@ -778,242 +1318,28 @@ enum NotificationFrequency {
   OFF
 }
 
-// 用户偏好设置
-model UserPreference {
-  id     String @id @default(cuid())
-  userId String @unique
-
-  // 个性化设置
-  theme            Theme            @default(SYSTEM)
-  interfaceDensity InterfaceDensity @default(DEFAULT)
-  sidebarCollapsed Boolean          @default(false)
-
-  // 通知偏好
-  emailNotifications    Boolean               @default(true)
-  approvalNotifications NotificationFrequency @default(INSTANT)
-  systemAnnouncements   Boolean               @default(true)
-  weeklyReport          Boolean               @default(false)
-  monthlyReport         Boolean               @default(false)
-
-  // 隐私设置
-  profileVisibility ProfileVisibility @default(COLLEAGUES)
-  onlineStatus      OnlineStatus      @default(VISIBLE)
-
-  // 2FA 设置
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String? // 2FA 密钥（需应用层加密存储）
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 关联字段
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-// 用户登录设备
-model UserDevice {
-  id           String   @id @default(cuid())
-  userId       String
-  deviceId     String   @unique // 设备唯一标识
-  deviceName   String // 设备名称（如：Chrome on Windows）
-  deviceType   String? // 设备类型（desktop/mobile/tablet）
-  browser      String? // 浏览器
-  os           String? // 操作系统
-  ipAddress    String? // IP 地址
-  location     String? // 登录位置
-  lastActiveAt DateTime @default(now())
-  isCurrent    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // 关联字段
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([deviceId])
-  @@index([lastActiveAt])
-}
-
-// ============================================
-// 通知中心模块模型
-// ============================================
-
 enum NotificationType {
-  APPROVAL // 审批通知
-  SYSTEM // 系统通知
-  MESSAGE // 消息通知
-  TASK // 任务通知
+  APPROVAL
+  SYSTEM
+  MESSAGE
+  TASK
 }
-
-// 通知记录
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType // 通知类型
-  title     String // 通知标题
-  content   String // 通知内容
-  data      Json? // 关联数据
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  // 关联字段
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@index([type])
-  @@index([userId, isRead, createdAt])
-  @@map("notifications")
-}
-
-// ============================================
-// 日志审计模块模型
-// ============================================
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String
-  action      String
-  entityType  String
-  entityId    String?
-  oldValues   Json?
-  newValues   Json?
-  ipAddress   String?
-  userAgent   String?
-  description String?
-  createdAt   DateTime @default(now())
-  user        User     @relation("UserAuditLogs", fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([action])
-  @@index([entityType])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-// ============================================
-// 日程管理模块模型
-// ============================================
 
 enum CalendarEventType {
-  MEETING // 会议
-  TASK // 任务
-  REMINDER // 提醒
-  LEAVE // 请假
-  BUSINESS // 出差
-  OTHER // 其他
+  MEETING
+  TASK
+  REMINDER
+  LEAVE
+  BUSINESS
+  OTHER
 }
 
 enum AttendeeStatus {
-  PENDING // 待确认
-  ACCEPTED // 已接受
-  DECLINED // 已拒绝
-  TENTATIVE // 暂定
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
 }
-
-// 日程事件
-model CalendarEvent {
-  id          String            @id @default(cuid())
-  userId      String // 创建者ID
-  title       String // 标题
-  description String? // 描述
-  startTime   DateTime // 开始时间
-  endTime     DateTime // 结束时间
-  location    String? // 地点
-  type        CalendarEventType @default(MEETING) // 类型
-  isAllDay    Boolean           @default(false) // 是否全天
-  recurrence  String? // 重复规则 (RRULE格式)
-  attendees   Json? // 参与者 [{ userId, status, email, name }]
-  isPrivate   Boolean           @default(false) // 是否私有
-  color       String? // 自定义颜色
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  // 关联字段
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([startTime])
-  @@index([endTime])
-  @@index([type])
-  @@index([userId, startTime, endTime])
-  @@map("calendar_events")
-}
-
-// ============================================
-// 文档中心模块模型
-// ============================================
-
-model DocumentFolder {
-  id          String   @id @default(cuid())
-  name        String // 文件夹名称
-  parentId    String? // 父文件夹ID
-  ownerId     String // 拥有者ID
-  permissions Json? // 权限设置 { read: ['role1'], write: ['role2'] }
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联字段
-  parent    DocumentFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
-  children  DocumentFolder[] @relation("FolderHierarchy")
-  documents Document[]
-  owner     User             @relation(fields: [ownerId], references: [id])
-
-  @@index([parentId])
-  @@index([ownerId])
-  @@map("document_folders")
-}
-
-model Document {
-  id        String    @id @default(cuid())
-  folderId  String // 所属文件夹ID
-  name      String // 文档名称
-  type      String // 文件类型：PDF, DOC, XLS, etc.
-  size      Int // 文件大小（字节）
-  path      String // 存储路径
-  version   Int       @default(1) // 当前版本号
-  ownerId   String // 上传者ID
-  deletedAt DateTime? // 软删除字段（统一使用deletedAt）
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // 关联字段
-  folder   DocumentFolder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  owner    User              @relation(fields: [ownerId], references: [id])
-  versions DocumentVersion[]
-
-  @@index([folderId])
-  @@index([ownerId])
-  @@index([type])
-  @@index([deletedAt])      // 软删除查询优化
-  @@map("documents")
-}
-
-model DocumentVersion {
-  id         String   @id @default(cuid())
-  documentId String // 关联文档ID
-  version    Int // 版本号
-  path       String // 版本文件路径
-  size       Int // 版本文件大小
-  createdBy  String // 创建者ID
-  createdAt  DateTime @default(now())
-
-  // 关联字段
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@index([documentId])
-  @@index([version])
-  @@map("document_versions")
-}
-
-// ============================================
-// 考勤管理模块模型
-// ============================================
 
 enum AttendanceStatus {
   NORMAL
@@ -1046,226 +1372,18 @@ enum LeaveRequestStatus {
   REJECTED
 }
 
-model AttendanceRecord {
-  id               String           @id @default(cuid())
-  userId           String
-  date             DateTime         @db.Date
-  clockIn          DateTime?
-  clockOut         DateTime?
-  clockInLocation  Json? // { lat, lng, address }
-  clockOutLocation Json?
-  clockInType      ClockInType? // GPS, WIFI, MANUAL
-  clockOutType     ClockInType?
-  status           AttendanceStatus @default(NORMAL)
-  workHours        Float?
-  notes            String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date])
-  @@index([userId])
-  @@index([date])
-  @@index([status])
-  @@map("attendance_records")
-}
-
-model Schedule {
-  id        String   @id @default(cuid())
-  userId    String
-  date      DateTime @db.Date
-  shiftId   String
-  isRestDay Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shift Shift @relation(fields: [shiftId], references: [id])
-
-  @@unique([userId, date])
-  @@index([userId])
-  @@index([date])
-  @@map("schedules")
-}
-
-model Shift {
-  id        String   @id @default(cuid())
-  name      String
-  startTime String // "09:00"
-  endTime   String // "18:00"
-  breakTime Int      @default(60) // 休息时长（分钟）
-  color     String? // 排班日历颜色
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  schedules Schedule[]
-
-  @@map("shifts")
-}
-
-model LeaveRequest {
-  id           String             @id @default(cuid())
-  userId       String
-  type         LeaveType
-  startDate    DateTime
-  endDate      DateTime
-  days         Float
-  reason       String
-  status       LeaveRequestStatus @default(PENDING)
-  approverId   String?
-  approvedAt   DateTime?
-  rejectReason String?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approver User? @relation(fields: [approverId], references: [id], name: "LeaveApprover")
-
-  @@index([userId])
-  @@index([status])
-  @@index([startDate])
-  @@map("leave_requests")
-}
-
-// ============================================
-// 会议管理模块模型
-// ============================================
-
 enum MeetingStatus {
-  SCHEDULED   // 已预定
-  ONGOING     // 进行中
-  COMPLETED   // 已完成
-  CANCELLED   // 已取消
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
 }
-
-model MeetingRoom {
-  id          String    @id @default(cuid())
-  name        String    // 会议室名称
-  capacity    Int       // 容纳人数
-  location    String?   // 具体位置
-  facilities  Json?     // 设施列表 ["projector", "whiteboard", "video"]
-  image       String?   // 会议室图片URL
-  isActive    Boolean   @default(true)  // 是否启用
-  description String?   // 描述
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  meetings    Meeting[] // 关联会议
-
-  @@index([isActive])
-  @@index([capacity])
-  @@map("meeting_rooms")
-}
-
-model Meeting {
-  id          String        @id @default(cuid())
-  title       String        // 会议标题
-  description String?       // 会议描述
-  roomId      String?       // 会议室ID（可选，线上会议无会议室）
-  startTime   DateTime      // 开始时间
-  endTime     DateTime      // 结束时间
-  organizerId String        // 组织者ID
-  attendees   Json?         // 参与者列表 [{ userId, name, email, status }]
-  status      MeetingStatus @default(SCHEDULED)
-  minutes     String?       // 会议纪要
-  attachments Json?         // 附件列表 [{ name, url, size }]
-  deletedAt   DateTime?     // 软删除字段
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // 关联字段
-  room      MeetingRoom? @relation(fields: [roomId], references: [id])
-  organizer User         @relation("UserMeetings", fields: [organizerId], references: [id])
-  attendeeRecords MeetingAttendee[] // 参会者关联记录
-
-  @@index([roomId])
-  @@index([startTime])
-  @@index([organizerId])
-  @@index([status])
-  @@index([roomId, startTime, endTime])
-  @@index([deletedAt])      // 软删除查询优化
-  @@map("meetings")
-}
-
-// 会议参会者关联表（替代JSON存储）
-model MeetingAttendee {
-  id        String         @id @default(cuid())
-  meetingId String
-  userId    String
-  status    AttendeeStatus @default(PENDING)
-  joinedAt  DateTime?      // 实际加入时间
-  leftAt    DateTime?      // 离开时间
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  meeting   Meeting        @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([meetingId, userId])  // 同一用户在同一会议只能有一条记录
-  @@index([userId])              // 查询"我的会议"
-  @@index([meetingId, status])   // 按状态筛选参会者
-  @@index([userId, status])      // 查询"我的会议"按状态筛选
-  @@map("meeting_attendees")
-}
-
-// ============================================
-// 公告通知模块模型
-// ============================================
 
 enum AnnouncementType {
-  COMPANY      // 公司公告
-  DEPARTMENT   // 部门公告
-  SYSTEM       // 系统通知
+  COMPANY
+  DEPARTMENT
+  SYSTEM
 }
-
-model Announcement {
-  id          String             @id @default(cuid())
-  title       String             // 公告标题
-  content     String             // 富文本HTML内容
-  type        AnnouncementType   // 公告类型
-  targetDepts Json?              // 目标部门ID数组
-  isTop       Boolean            @default(false) // 是否置顶
-  validFrom   DateTime           // 生效时间
-  validUntil  DateTime?          // 过期时间
-  attachments Json?              // 附件 [{ name, url, size }]
-  viewCount   Int                @default(0) // 浏览次数
-  authorId    String             // 发布人ID
-  deletedAt   DateTime?          // 软删除字段
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-
-  // 关联字段
-  author User               @relation("UserAnnouncements", fields: [authorId], references: [id])
-  reads  AnnouncementRead[]
-
-  @@index([type])
-  @@index([isTop])
-  @@index([validFrom])
-  @@index([authorId])
-  @@index([deletedAt])      // 软删除查询优化
-  @@map("announcements")
-}
-
-model AnnouncementRead {
-  id             String       @id @default(cuid())
-  announcementId String
-  userId         String
-  readAt         DateTime     @default(now())
-
-  // 关联字段
-  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([announcementId, userId])
-  @@index([announcementId])
-  @@index([userId])
-  @@map("announcement_reads")
-}
-
-// ============================================
-// 任务管理模块模型
-// ============================================
 
 enum TaskStatus {
   TODO
@@ -1281,337 +1399,24 @@ enum TaskPriority {
   URGENT
 }
 
-model Task {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  status      TaskStatus   @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  assigneeId  String?
-  creatorId   String
-  projectId   String?
-  startDate   DateTime?
-  dueDate     DateTime?
-  completedAt DateTime?
-  tags        Json?        // ["前端", "紧急"]
-  parentId    String?      // 子任务支持
-  order       Int          @default(0) // 看板排序
-  deletedAt   DateTime?    // 软删除字段
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  // 关联字段
-  assignee User?        @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creator  User         @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: Cascade)
-  parent   Task?        @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subTasks Task[]       @relation("SubTasks")
-  project  TaskProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-
-  @@index([assigneeId])
-  @@index([status])
-  @@index([dueDate])
-  @@index([creatorId])
-  @@index([parentId])
-  @@index([projectId])                              // 项目任务列表查询
-  @@index([assigneeId, status])                     // 我的待办任务查询
-  @@index([status, dueDate])                        // 看板按截止日期排序
-  @@index([assigneeId, status, dueDate])            // 我的待办按截止日期排序
-  @@index([creatorId, createdAt(sort: Desc)])       // 我创建的任务（最近优先）
-  @@index([deletedAt])                              // 软删除查询优化
-  @@map("tasks")
-}
-
-model TaskProject {
-  id          String   @id @default(cuid())
-  name        String   @unique  // 项目名称唯一
-  description String?
-  color       String?
-  ownerId     String
-  members     Json?    // 项目成员ID列表
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联字段
-  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  tasks Task[] // 项目下的任务
-
-  @@index([ownerId])
-  @@map("task_projects")
-}
-
-// ============================================
-// 工作流引擎模块模型
-// ============================================
-
 enum WorkflowStatus {
-  DRAFT     // 草稿
-  PUBLISHED // 已发布
-  ARCHIVED  // 已归档
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum InstanceStatus {
-  RUNNING   // 运行中
-  COMPLETED // 已完成
-  REJECTED  // 已驳回
-  SUSPENDED // 已暂停
+  RUNNING
+  COMPLETED
+  REJECTED
+  SUSPENDED
 }
 
-// 工作流定义
-model Workflow {
-  id          String   @id @default(cuid())
-  name        String   // 流程名称
-  description String?  // 流程描述
-  entityType  String   // 关联的业务类型: Application, LeaveRequest, etc.
-  nodes       Json     // 流程节点配置 (FlowNode[])
-  edges       Json     // 流程连线配置 (FlowEdge[])
-  version     Int      @default(1)  // 版本号
-  status      WorkflowStatus @default(DRAFT) // 流程状态
-  isDefault   Boolean  @default(false) // 是否默认流程
-  createdBy   String   // 创建人ID
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 关联字段
-  creator   User               @relation(fields: [createdBy], references: [id], name: "WorkflowCreator")
-  instances WorkflowInstance[]
-
-  @@index([entityType])
-  @@index([status])
-  @@index([isDefault])
-  @@index([createdBy])
-  @@map("workflows")
-}
-
-// 工作流实例
-model WorkflowInstance {
-  id            String         @id @default(cuid())
-  workflowId    String         // 关联的工作流ID
-  entityId      String         // 关联的业务记录ID
-  entityType    String         // 业务类型
-  currentNodeId String         // 当前节点ID
-  status        InstanceStatus @default(RUNNING) // 实例状态
-  nodeHistory   Json?          // 节点执行历史
-  variables     Json?          // 流程变量
-  contextData   Json?          // 上下文数据
-  startedAt     DateTime       @default(now())
-  completedAt   DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  // 关联字段
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@index([workflowId])
-  @@index([entityId])
-  @@index([entityType])
-  @@index([status])
-  @@index([currentNodeId])
-  @@map("workflow_instances")
-}
-
-// ============================================
-// 知识库/帮助中心模块模型
-// ============================================
-
-model KnowledgeCategory {
-  id          String            @id @default(cuid())
-  name        String            // 分类名称
-  description String?           // 分类描述
-  icon        String?           // 图标
-  sortOrder   Int               @default(0) // 排序
-  parentId    String?           // 父分类ID
-  isActive    Boolean           @default(true) // 是否启用
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  // 关联字段
-  parent   KnowledgeCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children KnowledgeCategory[] @relation("CategoryHierarchy")
-  articles KnowledgeArticle[]
-
-  @@index([parentId])
-  @@index([isActive])
-  @@index([sortOrder])
-  @@map("knowledge_categories")
-}
-
-model KnowledgeArticle {
-  id           String            @id @default(cuid())
-  title        String            // 文章标题
-  content      String            // 文章内容 (Markdown)
-  summary      String?           // 摘要
-  categoryId   String            // 所属分类ID
-  tags         Json?             // 标签 ["tag1", "tag2"]
-  attachments  Json?             // 附件 [{name, url, size}]
-  viewCount    Int               @default(0) // 浏览次数
-  helpfulCount Int               @default(0) // 有帮助次数
-  authorId     String            // 作者ID
-  isPublished  Boolean           @default(false) // 是否发布
-  publishedAt  DateTime?         // 发布时间
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  // 关联字段
-  category  KnowledgeCategory   @relation(fields: [categoryId], references: [id])
-  author    User                @relation(fields: [authorId], references: [id])
-  feedbacks KnowledgeFeedback[]
-
-  @@index([categoryId])
-  @@index([isPublished])
-  @@index([authorId])
-  @@index([createdAt])
-  @@map("knowledge_articles")
-}
-
-model KnowledgeFeedback {
-  id        String   @id @default(cuid())
-  articleId String   // 文章ID
-  userId    String   // 用户ID
-  isHelpful Boolean  // 是否有帮助
-  comment   String?  // 评论/反馈
-  createdAt DateTime @default(now())
-
-  // 关联字段
-  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  user    User             @relation(fields: [userId], references: [id])
-
-  @@unique([articleId, userId]) // 每个用户对每篇文章只能反馈一次
-  @@index([articleId])
-  @@index([userId])
-  @@map("knowledge_feedback")
-}
-
-// ============================================
-// 系统设置模块模型 (新配置中心架构)
-// ============================================
-
-// 配置值类型枚举
 enum ConfigValueType {
-  STRING    // 字符串
-  NUMBER    // 数字
-  BOOLEAN   // 布尔值
-  JSON      // JSON对象
-  ARRAY     // 数组
-  PASSWORD  // 密码(加密存储)
-}
-
-// 配置分类
-model ConfigCategory {
-  id          String    @id @default(cuid())
-  code        String    @unique  // 分类代码: system, security, approval, task, attendance, equipment, notification
-  name        String              // 分类名称
-  description String?             // 分类描述
-  icon        String?             // 图标
-  sortOrder   Int       @default(0)
-  isEnabled   Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  configs     SystemConfig[]
-
-  @@index([isEnabled])
-  @@index([sortOrder])
-  @@map("config_categories")
-}
-
-// 系统配置项
-model SystemConfig {
-  id           String          @id @default(cuid())
-  categoryId   String
-  key          String          // 配置键名
-  value        String          // 配置值(JSON字符串)
-  defaultValue String?         // 默认值
-  valueType    ConfigValueType // 值类型
-  label        String          // 显示名称
-  description  String?         // 配置说明
-  placeholder  String?         // 输入提示
-  options      Json?           // 选项(用于select/radio等) [{label, value}]
-  validation   Json?           // 验证规则 {required, min, max, pattern}
-  isSystem     Boolean         @default(false) // 是否系统级(不可删除)
-  isSecret     Boolean         @default(false) // 是否敏感(如密码)
-  sortOrder    Int             @default(0)
-  isEnabled    Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-
-  // 关联字段
-  category ConfigCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  histories ConfigHistory[]
-
-  @@unique([categoryId, key])
-  @@index([isEnabled])
-  @@index([isSystem])
-  @@index([sortOrder])
-  @@map("system_configs")
-}
-
-// 配置修改历史
-model ConfigHistory {
-  id          String   @id @default(cuid())
-  configId    String
-  oldValue    String?  // 旧值
-  newValue    String   // 新值
-  changedBy   String   // 修改人ID
-  changeReason String? // 修改原因
-  createdAt   DateTime @default(now())
-
-  // 关联字段
-  config SystemConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-  user   User         @relation(fields: [changedBy], references: [id])
-
-  @@index([configId])
-  @@index([changedBy])
-  @@index([createdAt])
-  @@map("config_histories")
-}
-
-// ============================================
-// 系统设置模块模型 (旧版 - 保留用于数据迁移)
-// ============================================
-
-model SystemLog {
-  id        String   @id @default(cuid())
-  timestamp DateTime @default(now())
-  level     String   // 'info' | 'warn' | 'error'
-  message   String
-  source    String
-  createdAt DateTime @default(now())
-
-  @@index([level])
-  @@index([timestamp])
-  @@map("system_logs")
-}
-
-model Backup {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  size      String
-  type      String   // 'auto' | 'manual'
-  status    String   // 'completed' | 'failed' | 'in_progress'
-
-  @@index([createdAt])
-  @@map("backups")
-}
-
-model EmailSettings {
-  id               String   @id @default("default")
-  enabled          Boolean  @default(true)
-  smtpHost         String   @default("")
-  smtpPort         Int      @default(587)
-  smtpUser         String   @default("")
-  smtpPassword     String   @default("")
-  taskReminder     Boolean  @default(true)
-  meetingReminder  Boolean  @default(true)
-  approvalReminder Boolean  @default(true)
-  updatedAt        DateTime @updatedAt
-
-  @@map("email_settings")
-}
-
-model SystemSettings {
-  id               String   @id @default("default")
-  autoBackupEnabled Boolean @default(false)
-  updatedAt        DateTime @updatedAt
-
-  @@map("system_settings")
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  ARRAY
+  PASSWORD
 }

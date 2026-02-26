@@ -12,6 +12,9 @@ import {
   getContacts,
   getContactDetail,
   exportContacts,
+  getUserApplications,
+  getUserApprovals,
+  getUserStats,
 } from '../controllers/users';
 import { authMiddleware, requireRole, requireMinRole } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
@@ -125,5 +128,26 @@ router.post('/:id/reset-password', requireRole(UserRole.ADMIN), auditMiddleware(
  * @access  Private
  */
 router.get('/:id/contact', getContactDetail);
+
+/**
+ * @route   GET /api/users/:id/applications
+ * @desc    获取用户的申请记录
+ * @access  Private (Manager+)
+ */
+router.get('/:id/applications', requireMinRole(UserRole.MANAGER), getUserApplications);
+
+/**
+ * @route   GET /api/users/:id/approvals
+ * @desc    获取用户的审批记录
+ * @access  Private (Manager+)
+ */
+router.get('/:id/approvals', requireMinRole(UserRole.MANAGER), getUserApprovals);
+
+/**
+ * @route   GET /api/users/:id/stats
+ * @desc    获取用户统计数据
+ * @access  Private (Manager+)
+ */
+router.get('/:id/stats', requireMinRole(UserRole.MANAGER), getUserStats);
 
 export default router;
