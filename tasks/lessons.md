@@ -897,6 +897,178 @@ updateDepartmentSort: (data: UpdateDepartmentSortRequest) =>
 
 ---
 
+### 2026-02-26 用户列表闪烁优化经验
+
+**场景：** 用户列表分页/排序/搜索时，数据变化导致页面闪烁（Skeleton突兀切换）
+
+**根本原因：**
+1. `UserTable` 在 `loading` 为 true 时直接返回 Skeleton 组件
+2. 切换分页时，旧数据消失 → Skeleton出现 → 新数据显示，造成闪烁
+3. 没有数据缓存机制，每次请求都显示 loading 状态
+
+**优化方案：**
+```typescript
+// ❌ 原实现 - 直接返回 Skeleton 导致闪烁
+if (loading) {
+  return <Skeleton />;  // 列表突然消失
+}
+
+// ✅ 优化后 - 保持旧数据，添加遮罩
+const [displayUsers, setDisplayUsers] = useState(users);
+const [isInitialized, setIsInitialized] = useState(false);
+
+// 首次加载显示 Skeleton
+if (loading && !isInitialized) {
+  return <Skeleton />;
+}
+
+// 后续加载保持旧数据 + 半透明遮罩
+return (
+  <div className={cn("relative", loading && "opacity-70")}>
+    <Table data={displayUsers} />
+    {loading && (
+      <div className="absolute inset-0 bg-white/30 flex justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    )}
+  </div>
+);
+```
+
+**关键设计：**
+
+| 场景 | 原实现 | 优化后 |
+|------|--------|--------|
+| 首次加载 | Skeleton | Skeleton |
+| 分页切换 | Skeleton → 闪烁 | 旧数据 + 遮罩 |
+| 排序切换 | Skeleton → 闪烁 | 旧数据 + 遮罩 |
+| 搜索筛选 | Skeleton → 闪烁 | 旧数据 + 遮罩 |
+
+**核心技巧：**
+
+1. **数据缓存**
+   ```typescript
+   useEffect(() => {
+     if (users.length > 0 || !loading) {
+       setDisplayUsers(users);
+       if (!isInitialized) setIsInitialized(true);
+     }
+   }, [users, loading]);
+   ```
+
+2. **区分首次/后续加载**
+   ```typescript
+   const showLoadingOverlay = loading && isInitialized;
+   ```
+
+3. **禁用交互防止重复操作**
+   ```typescript
+   <Checkbox disabled={showLoadingOverlay} />
+   <Pagination disabled={showLoadingOverlay} />
+   ```
+
+**最佳实践：**
+- 列表数据使用 `displayData` 状态保持，不直接依赖 props
+- 首次加载用 Skeleton，后续加载用遮罩
+- 加载时禁用相关交互元素
+- 动画时长控制在 200-300ms
+
+---
+
+### 2026-02-26 用户详情模态框闪烁优化经验
+
+**场景：** 用户详情模态框切换 Tab 时，内容区域闪烁
+
+**根本原因：**
+1. 每次切换 Tab 都重新请求 API
+2. 直接显示 Skeleton，没有过渡动画
+3. 没有数据缓存，已加载的数据切换后再次加载
+
+**优化方案：**
+
+```typescript
+// 使用 ref 缓存数据
+const dataCacheRef = useRef<DataCache | null>(null);
+
+// 预加载所有数据（模态框打开时）
+useEffect(() => {
+  if (user?.id && open) {
+    loadStats();
+    loadApplications();
+    loadApprovals();
+  }
+}, [user?.id, open]);
+
+// 首次加载显示 Skeleton，后续显示旧数据 + 加载指示器
+{!initialized && loading ? (
+  <Skeleton />
+) : (
+  <div className={cn(loading && "opacity-70")}>
+    <Table data={cachedData} />
+    {loading && <LoadingOverlay />}
+  </div>
+)}
+```
+
+**关键优化点：**
+
+| 优化项 | 说明 |
+|--------|------|
+| 数据缓存 | `useRef` 缓存每个用户的数据 |
+| 预加载 | 模态框打开时并行加载所有 Tab 数据 |
+| 平滑过渡 | 首次加载 Skeleton，后续加载显示遮罩 |
+| 加载指示 | 统计数据卡片显示小旋转图标 |
+
+---
+
+### 2026-02-26 Prisma 关系查询错误修复经验
+
+**场景：** `getUserStats` API 报错，无法获取用户统计数据
+
+**根本原因：**
+```typescript
+// ❌ 错误 - 使用了不存在的关系字段
+prisma.approval.count({
+  where: {
+    OR: [
+      { factoryApproval: { approverId: id } },  // 不存在！
+      { directorApproval: { approverId: id } }, // 不存在！
+    ]
+  }
+})
+```
+
+**Prisma Schema 实际结构：**
+```prisma
+model Approval {           // 只有一个 approver 关系
+  approver   User @relation(fields: [approverId], references: [id])
+}
+
+model FactoryApproval {    // 独立的模型
+  approverId String
+  application Application @relation(...)
+}
+```
+
+**正确查询方式：**
+```typescript
+// ✅ 正确 - 分别查询四个审批模型
+const [factory, director, manager, ceo] = await Promise.all([
+  prisma.factoryApproval.count({ where: { approverId: id } }),
+  prisma.directorApproval.count({ where: { approverId: id } }),
+  prisma.managerApproval.count({ where: { approverId: id } }),
+  prisma.ceoApproval.count({ where: { approverId: id } }),
+]);
+const approvalCount = factory + director + manager + ceo;
+```
+
+**经验教训：**
+- 查询前务必确认 Prisma Schema 中的模型关系
+- 不要假设关系字段名，查看 schema 确认
+- 多模型数据合并时，在应用层进行而非数据库层
+
+---
+
 ### 经验总结：技术债清理流程
 
 **技术债清理最佳实践：**
