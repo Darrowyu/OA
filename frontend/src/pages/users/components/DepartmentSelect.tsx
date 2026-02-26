@@ -52,7 +52,10 @@ function DepartmentTreeNode({
           isMatch && !isSelected && 'bg-yellow-50'
         )}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => onSelect(department)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(department);
+        }}
       >
         {hasChildren ? (
           <button
@@ -176,6 +179,7 @@ export function DepartmentSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -207,7 +211,10 @@ export function DepartmentSelect({
                 'flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100',
                 !value && 'bg-blue-50'
               )}
-              onClick={handleSelectAll}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelectAll();
+              }}
             >
               <Building2 className={cn('h-4 w-4', !value ? 'text-blue-600' : 'text-gray-400')} />
               <span className={cn('flex-1 text-sm', !value ? 'text-blue-700 font-medium' : 'text-gray-700')}>

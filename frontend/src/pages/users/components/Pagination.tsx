@@ -7,6 +7,7 @@ interface PaginationProps {
   totalPages: number;
   total: number;
   onPageChange: (page: number) => void;
+  disabled?: boolean;
 }
 
 function PaginationComponent({
@@ -14,6 +15,7 @@ function PaginationComponent({
   totalPages,
   total,
   onPageChange,
+  disabled,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -55,7 +57,7 @@ function PaginationComponent({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(page - 1)}
-          disabled={page === 1}
+          disabled={page === 1 || disabled}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -68,6 +70,7 @@ function PaginationComponent({
               variant={p === page ? 'default' : 'outline'}
               size="sm"
               onClick={() => onPageChange(p as number)}
+              disabled={disabled}
             >
               {p}
             </Button>
@@ -77,7 +80,7 @@ function PaginationComponent({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(page + 1)}
-          disabled={page === totalPages}
+          disabled={page === totalPages || disabled}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

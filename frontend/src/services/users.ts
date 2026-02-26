@@ -1,6 +1,41 @@
 import apiClient from '@/lib/api';
-import { UserRole } from '@/types';
+import { UserRole, Application } from '@/types';
 import { User } from '@/types';
+
+// 审批记录类型
+export interface UserApproval {
+  id: string;
+  action: 'APPROVE' | 'REJECT';
+  comment: string | null;
+  createdAt: string;
+  level: 'FACTORY' | 'DIRECTOR' | 'MANAGER' | 'CEO';
+  application: Application;
+}
+
+// 用户统计数据类型
+export interface UserStats {
+  applicationCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  pendingCount: number;
+  approvalCount: number;
+}
+
+// 分页响应类型
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: {
+    items: T[];
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+}
 
 export interface CreateUserRequest {
   username: string;
@@ -224,4 +259,16 @@ export const usersApi = {
       }
       return res;
     }),
+
+  // 获取用户申请记录
+  getUserApplications: (userId: string, page?: number, limit?: number): Promise<PaginatedResponse<Application>> =>
+    apiClient.get(`/users/${userId}/applications`, { params: { page, limit } }),
+
+  // 获取用户审批记录
+  getUserApprovals: (userId: string, page?: number, limit?: number): Promise<PaginatedResponse<UserApproval>> =>
+    apiClient.get(`/users/${userId}/approvals`, { params: { page, limit } }),
+
+  // 获取用户统计数据
+  getUserStats: (userId: string): Promise<{ success: boolean; data: UserStats }> =>
+    apiClient.get(`/users/${userId}/stats`),
 };

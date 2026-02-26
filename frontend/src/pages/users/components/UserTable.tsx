@@ -1,5 +1,6 @@
-import { useState, memo } from 'react';
-import { ChevronUp, ChevronDown, MoreHorizontal, Pencil, Lock, Trash2, Eye, User } from 'lucide-react';
+import { useState, memo, useRef, useEffect } from 'react';
+import { ChevronUp, ChevronDown, MoreHorizontal, Pencil, Lock, Trash2, Eye, User, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -70,14 +71,31 @@ function UserTableComponent({
 }: UserTableProps) {
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
 
+  // 保持旧数据，避免闪烁
+  const [displayUsers, setDisplayUsers] = useState<UserType[]>(users);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const prevUsersRef = useRef<UserType[]>(users);
+
+  // 数据变化时更新显示数据
+  useEffect(() => {
+    if (users.length > 0 || !loading) {
+      setDisplayUsers(users);
+      prevUsersRef.current = users;
+      if (!isInitialized) setIsInitialized(true);
+    }
+  }, [users, loading, isInitialized]);
+
   const handleToggleStatus = async (user: UserType) => {
     setStatusLoading(user.id);
     await onToggleStatus(user);
     setStatusLoading(null);
   };
 
-  const allSelected = users.length > 0 && users.every((u) => selectedIds.includes(u.id));
+  const allSelected = displayUsers.length > 0 && displayUsers.every((u) => selectedIds.includes(u.id));
   const someSelected = selectedIds.length > 0 && !allSelected;
+
+  // 是否显示加载中遮罩（非首次加载时）
+  const showLoadingOverlay = loading && isInitialized;
 
   // 排序图标
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -102,7 +120,8 @@ function UserTableComponent({
     </TableHead>
   );
 
-  if (loading) {
+  // 首次加载显示 Skeleton
+  if (loading && !isInitialized) {
     return (
       <div className="space-y-4 p-4">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -112,7 +131,8 @@ function UserTableComponent({
     );
   }
 
-  if (users.length === 0) {
+  // 数据为空显示空状态
+  if (displayUsers.length === 0) {
     return (
       <Empty className="py-12">
         <EmptyHeader>
@@ -127,7 +147,7 @@ function UserTableComponent({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4 relative", showLoadingOverlay && "opacity-70")}>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -137,6 +157,7 @@ function UserTableComponent({
                   checked={allSelected}
                   data-state={someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'}
                   onCheckedChange={onSelectAll}
+                  disabled={showLoadingOverlay}
                 />
               </TableHead>
               <SortableHeader field="username">用户名</SortableHeader>
@@ -150,7 +171,7 @@ function UserTableComponent({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {displayUsers.map((user) => (
               <TableRow key={user.id} className={selectedIds.includes(user.id) ? 'bg-blue-50/50' : undefined}>
                 <TableCell>
                   <Checkbox
@@ -236,7 +257,18 @@ function UserTableComponent({
         totalPages={pagination.totalPages}
         total={pagination.total}
         onPageChange={onPageChange}
+        disabled={showLoadingOverlay}
       />
+
+      {/* 加载遮罩 - 非首次加载时显示 */}
+      {showLoadingOverlay && (
+        <div className="absolute inset-0 bg-white/30 flex items-start justify-center pt-20 z-10">
+          <div className="bg-white/80 px-4 py-2 rounded-lg shadow-sm border flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+            <span className="text-sm text-gray-600">加载中...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
