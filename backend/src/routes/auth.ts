@@ -10,24 +10,27 @@ import {
   logout,
 } from '../controllers/auth';
 import { authMiddleware } from '../middleware/auth';
+import { config } from '../config';
 
 const router = Router();
 
-// 严格速率限制配置 - 用于敏感操作
-const strictLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1小时
-  max: 5, // 每IP每小时5次
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: '尝试次数过多，请1小时后再试',
-    },
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true, // 成功请求不计入限制
-});
+// 严格速率限制配置 - 用于敏感操作（生产环境启用）
+const strictLimiter = config.nodeEnv === 'production'
+  ? rateLimit({
+      windowMs: 60 * 60 * 1000, // 1小时
+      max: 5, // 每IP每小时5次
+      message: {
+        success: false,
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: '尝试次数过多，请1小时后再试',
+        },
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      skipSuccessfulRequests: true, // 成功请求不计入限制
+    })
+  : (_req: any, _res: any, next: any) => next(); // 开发环境跳过限流
 
 /**
  * @route   POST /api/auth/login
