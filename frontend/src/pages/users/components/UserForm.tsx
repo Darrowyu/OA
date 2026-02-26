@@ -53,13 +53,13 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading }: UserFo
   useEffect(() => {
     if (user) {
       setFormData({
-        username: user.username,
+        username: user.username || '',
         password: '',
-        name: user.name,
-        employeeId: user.employeeId,
-        email: user.email,
+        name: user.name || '',
+        employeeId: user.employeeId || '',
+        email: user.email || '',
         departmentId: user.departmentId || '',
-        role: user.role,
+        role: user.role || UserRole.USER,
       });
     } else {
       setFormData(initialFormData);

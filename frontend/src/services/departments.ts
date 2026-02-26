@@ -28,6 +28,7 @@ export interface DepartmentTreeNode {
 // 创建部门请求
 export interface CreateDepartmentRequest {
   name: string;
+  code: string;
   parentId?: string | null;
   managerId?: string | null;
   description?: string;
@@ -36,9 +37,34 @@ export interface CreateDepartmentRequest {
 // 更新部门请求
 export interface UpdateDepartmentRequest {
   name?: string;
+  code?: string;
   parentId?: string | null;
   managerId?: string | null;
   description?: string;
+  sortOrder?: number;
+}
+
+// 更新部门排序请求
+export interface UpdateDepartmentSortRequest {
+  items: {
+    id: string;
+    parentId: string | null;
+    sortOrder: number;
+  }[];
+}
+
+// 部门成员
+export interface DepartmentMember {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  employeeId: string;
+  position: string | null;
+  phone: string | null;
+  isActive: boolean;
+  createdAt: string;
 }
 
 // API响应类型
@@ -62,6 +88,10 @@ export const departmentApi = {
   getDepartment: (id: string): Promise<ApiResponse<Department>> =>
     apiClient.get<ApiResponse<Department>>(`/departments/${id}`),
 
+  // 获取部门成员
+  getDepartmentUsers: (id: string): Promise<ApiResponse<DepartmentMember[]>> =>
+    apiClient.get<ApiResponse<DepartmentMember[]>>(`/departments/${id}/users`),
+
   // 创建部门
   createDepartment: (data: CreateDepartmentRequest): Promise<ApiResponse<Department>> =>
     apiClient.post<ApiResponse<Department>>('/departments', data),
@@ -73,4 +103,8 @@ export const departmentApi = {
   // 删除部门
   deleteDepartment: (id: string): Promise<ApiResponse<void>> =>
     apiClient.delete<ApiResponse<void>>(`/departments/${id}`),
+
+  // 批量更新部门排序
+  updateDepartmentSort: (data: UpdateDepartmentSortRequest): Promise<ApiResponse<void>> =>
+    apiClient.put<ApiResponse<void>>('/departments/sort', data),
 };

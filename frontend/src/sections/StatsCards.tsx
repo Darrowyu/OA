@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { dashboardApi } from "@/services/dashboard"
+import { DashboardStats } from "@/types/dashboard"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -25,14 +28,53 @@ const itemVariants = {
   },
 }
 
-const stats = [
-  { key: "totalProjects", title: "进行中项目", value: 24, label: "较上月 +12%" },
-  { key: "totalTasks", title: "待办任务", value: 156, label: "较上月 +5%" },
-  { key: "inProgress", title: "审批中", value: 18, label: "较上月 +8%" },
-  { key: "completed", title: "本月已完成", value: 89, label: "较上月 +23%" },
-]
-
 export function StatsCards() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await dashboardApi.getStats()
+        if (response.success) {
+          setStats(response.data)
+        }
+      } catch {
+        // 静默处理错误，UI已显示空状态
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  const statItems = stats
+    ? [
+        { key: "totalProjects", title: "进行中项目", value: stats.totalProjects, label: `较上月 ${stats.trends.projects}` },
+        { key: "totalTasks", title: "待办任务", value: stats.pendingTasks, label: `较上月 ${stats.trends.tasks}` },
+        { key: "inProgress", title: "审批中", value: stats.inProgressApprovals, label: `较上月 ${stats.trends.approvals}` },
+        { key: "completed", title: "本月已完成", value: stats.completedThisMonth, label: `较上月 ${stats.trends.completed}` },
+      ]
+    : [
+        { key: "totalProjects", title: "进行中项目", value: 0, label: "较上月 --" },
+        { key: "totalTasks", title: "待办任务", value: 0, label: "较上月 --" },
+        { key: "inProgress", title: "审批中", value: 0, label: "较上月 --" },
+        { key: "completed", title: "本月已完成", value: 0, label: "较上月 --" },
+      ]
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white rounded-xl p-5 shadow-sm flex items-center justify-center h-28">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -40,7 +82,7 @@ export function StatsCards() {
       animate="visible"
       className="grid grid-cols-2 md:grid-cols-4 gap-4"
     >
-      {stats.map((stat) => (
+      {statItems.map((stat) => (
         <motion.div
           key={stat.key}
           variants={itemVariants}

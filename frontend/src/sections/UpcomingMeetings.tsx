@@ -1,14 +1,32 @@
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { MoreHorizontal, MessageSquare, Link2 } from "lucide-react"
+import { MoreHorizontal, MessageSquare, Link2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-
-const upcomingMeetings = [
-  { id: "1", title: "产品需求评审会", date: "今天", time: "14:00", attendees: ["张经理", "李总监", "王设计师"], comments: 8, links: 2 },
-  { id: "2", title: "月度总结会议", date: "明天", time: "09:30", attendees: ["陈经理", "刘工程师"], comments: 3, links: 1 },
-]
+import { dashboardApi } from "@/services/dashboard"
+import { Meeting } from "@/types/dashboard"
 
 export function UpcomingMeetings() {
+  const [meetings, setMeetings] = useState<Meeting[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchMeetings = async () => {
+      try {
+        const response = await dashboardApi.getUpcomingMeetings()
+        if (response.success) {
+          setMeetings(response.data.meetings)
+        }
+      } catch {
+        // 静默处理错误，UI已显示空状态
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMeetings()
+  }, [])
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -23,39 +41,49 @@ export function UpcomingMeetings() {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {upcomingMeetings.map((meeting, index) => (
-          <motion.div
-            key={meeting.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.2, delay: 0.35 + index * 0.05 }}
-            className="p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-gray-100"
-          >
-            <h4 className="text-sm font-medium text-gray-900 mb-1">{meeting.title}</h4>
-            <p className="text-xs text-gray-500 mb-3">{meeting.date} {meeting.time}</p>
+      {loading ? (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      ) : meetings.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+          暂无即将开始的会议
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {meetings.map((meeting, index) => (
+            <motion.div
+              key={meeting.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, delay: 0.35 + index * 0.05 }}
+              className="p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-gray-100"
+            >
+              <h4 className="text-sm font-medium text-gray-900 mb-1">{meeting.title}</h4>
+              <p className="text-xs text-gray-500 mb-3">{meeting.date} {meeting.time}</p>
 
-            <div className="flex items-center justify-between">
-              <div className="flex -space-x-2">
-                {meeting.attendees.map((name, idx) => (
-                  <Avatar key={idx} className="w-6 h-6 border border-white">
-                    <AvatarFallback className="text-[10px] bg-gray-200">{name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex -space-x-2">
+                  {meeting.attendees.map((name, idx) => (
+                    <Avatar key={idx} className="w-6 h-6 border border-white">
+                      <AvatarFallback className="text-[10px] bg-gray-200">{name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
 
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />{meeting.comments}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Link2 className="h-3 w-3" />{meeting.links}
-                </span>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" />{meeting.comments}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Link2 className="h-3 w-3" />{meeting.links}
+                  </span>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </motion.div>
   )
 }

@@ -6,36 +6,42 @@ interface UseDepartmentsReturn {
   data?: Department[];
   isLoading: boolean;
   error?: Error;
+  refetch: () => void;
 }
 
 export function useDepartments(): UseDepartmentsReturn {
   const [data, setData] = useState<Department[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchDepartments = async () => {
+    try {
+      setIsLoading(true);
+      const response = await departmentApi.getDepartments();
+      setData(response.data);
+      setError(undefined);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch departments'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        setIsLoading(true);
-        const response = await departmentApi.getDepartments();
-        setData(response.data);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch departments'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchDepartments();
-  }, []);
+  }, [refreshKey]);
 
-  return { data, isLoading, error };
+  const refetch = () => setRefreshKey((prev) => prev + 1);
+
+  return { data, isLoading, error, refetch };
 }
 
 export function useDepartmentTree(): UseDepartmentsReturn {
   const [data, setData] = useState<Department[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchDepartmentTree = async () => {
@@ -55,7 +61,7 @@ export function useDepartmentTree(): UseDepartmentsReturn {
           return result;
         };
         setData(flattenTree(response.data as Department[]));
-      } catch (err) {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err : new Error('Failed to fetch department tree'));
       } finally {
         setIsLoading(false);
@@ -63,7 +69,9 @@ export function useDepartmentTree(): UseDepartmentsReturn {
     };
 
     fetchDepartmentTree();
-  }, []);
+  }, [refreshKey]);
 
-  return { data, isLoading, error };
+  const refetch = () => setRefreshKey((prev) => prev + 1);
+
+  return { data, isLoading, error, refetch };
 }

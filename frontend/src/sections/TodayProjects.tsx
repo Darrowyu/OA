@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { MoreHorizontal, MessageSquare, Link2, Plus, ExternalLink } from "lucide-react"
+import { MoreHorizontal, MessageSquare, Link2, Plus, ExternalLink, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { dashboardApi } from "@/services/dashboard"
+import { TodayTask } from "@/types/dashboard"
 
 interface TodayProjectsProps { onOpenTask: () => void }
 
@@ -10,12 +13,26 @@ const priorityStyles: Record<string, string> = { low: "bg-gray-100 text-gray-600
 const priorityLabels: Record<string, string> = { low: "低", medium: "中", high: "高", urgent: "紧急" }
 const progressColors: Record<string, string> = { low: "bg-gray-500", medium: "bg-amber-500", high: "bg-orange-500", urgent: "bg-emerald-500" }
 
-const todayProjects = [
-  { id: "1", name: "OA系统功能优化", description: "优化审批流程，提升用户体验", priority: "high" as const, progress: 70, assignees: ["张经理", "李总监"], comments: 12, links: 3 },
-  { id: "2", name: "移动端适配开发", description: "完成后台管理系统的移动端响应式适配", priority: "urgent" as const, progress: 55, assignees: ["王工程师", "刘开发"], comments: 8, links: 2 },
-]
-
 export function TodayProjects({ onOpenTask }: TodayProjectsProps) {
+  const [tasks, setTasks] = useState<TodayTask[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await dashboardApi.getTodayTasks()
+        if (response.success) {
+          setTasks(response.data.tasks)
+        }
+      } catch {
+        // 静默处理错误，UI已显示空状态
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTasks()
+  }, [])
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -41,8 +58,17 @@ export function TodayProjects({ onOpenTask }: TodayProjectsProps) {
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {todayProjects.map((project, index) => (
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+          暂无今日任务
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tasks.map((project, index) => (
           <motion.div
             key={project.id}
             initial={{ opacity: 0, y: 10 }}
@@ -109,7 +135,8 @@ export function TodayProjects({ onOpenTask }: TodayProjectsProps) {
             </div>
           </motion.div>
         ))}
-      </div>
+        </div>
+      )}
     </motion.div>
   )
 }

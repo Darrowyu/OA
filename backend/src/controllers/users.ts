@@ -107,8 +107,10 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
           id: true,
           username: true,
           name: true,
+          email: true,
           role: true,
           isActive: true,
+          employeeId: true,
           department: {
             select: {
               name: true,

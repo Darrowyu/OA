@@ -1,18 +1,32 @@
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
-const activities = [
-  { id: "1", user: "郑主管", action: "审批通过了", target: "李总监的出差申请", timestamp: "10分钟前" },
-  { id: "2", user: "吴助理", action: "发布了公告", target: "关于春节放假安排的通知", timestamp: "30分钟前" },
-  { id: "3", user: "刘工程师", action: "完成了任务", target: "用户登录模块开发", timestamp: "1小时前" },
-  { id: "4", user: "张经理", action: "提交了申请", target: "Q1季度预算审批", timestamp: "2小时前" },
-  { id: "5", user: "王设计师", action: "上传了文件", target: "新版UI设计稿", timestamp: "3小时前" },
-]
+import { dashboardApi } from "@/services/dashboard"
+import { Activity } from "@/types/dashboard"
 
 export function ActivityFeed() {
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await dashboardApi.getActivities()
+        if (response.success) {
+          setActivities(response.data.activities)
+        }
+      } catch {
+        // 静默处理错误，UI已显示空状态
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchActivities()
+  }, [])
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,6 +43,15 @@ export function ActivityFeed() {
       </div>
 
       {/* Activity List */}
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      ) : activities.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+          暂无最新动态
+        </div>
+      ) : (
       <ScrollArea className="h-48">
         <div className="space-y-4 pr-4">
           {activities.map((activity, index) => (
@@ -54,6 +77,7 @@ export function ActivityFeed() {
           ))}
         </div>
       </ScrollArea>
+      )}
     </motion.div>
   )
 }

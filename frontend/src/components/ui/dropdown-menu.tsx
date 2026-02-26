@@ -5,15 +5,20 @@ interface DropdownMenuProps {
   children: React.ReactNode
 }
 
-const DropdownMenuContext = React.createContext<{
+interface DropdownMenuContextValue {
   open: boolean
   setOpen: (open: boolean) => void
-} | null>(null)
+  triggerRef: React.RefObject<HTMLDivElement>
+}
+
+const DropdownMenuContext = React.createContext<DropdownMenuContextValue | null>(null)
 
 function DropdownMenu({ children }: DropdownMenuProps) {
   const [open, setOpen] = React.useState(false)
+  const triggerRef = React.useRef<HTMLDivElement>(null)
+
   return (
-    <DropdownMenuContext.Provider value={{ open, setOpen }}>
+    <DropdownMenuContext.Provider value={{ open, setOpen, triggerRef }}>
       {children}
     </DropdownMenuContext.Provider>
   )
@@ -34,19 +39,27 @@ interface DropdownMenuTriggerProps {
 }
 
 function DropdownMenuTrigger({ children, asChild, onClick }: DropdownMenuTriggerProps) {
-  const { setOpen } = useDropdownMenu()
+  const { setOpen, triggerRef } = useDropdownMenu()
   const handleClick = (e: React.MouseEvent) => {
     onClick?.(e)
     setOpen(true)
   }
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement, {
-      onClick: handleClick,
-    })
+    return (
+      <div ref={triggerRef} className="inline-block">
+        {React.cloneElement(children as React.ReactElement, {
+          onClick: handleClick,
+        })}
+      </div>
+    )
   }
 
-  return <button onClick={handleClick}>{children}</button>
+  return (
+    <div ref={triggerRef} className="inline-block">
+      <button onClick={handleClick}>{children}</button>
+    </div>
+  )
 }
 
 interface DropdownMenuContentProps {
@@ -56,12 +69,29 @@ interface DropdownMenuContentProps {
 }
 
 function DropdownMenuContent({ children, align = "center", className }: DropdownMenuContentProps) {
-  const { open, setOpen } = useDropdownMenu()
-  const ref = React.useRef<HTMLDivElement>(null)
+  const { open, setOpen, triggerRef } = useDropdownMenu()
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
+
+  React.useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      })
+    }
+  }, [open])
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
         setOpen(false)
       }
     }
@@ -73,13 +103,22 @@ function DropdownMenuContent({ children, align = "center", className }: Dropdown
 
   if (!open) return null
 
+  const alignStyles = {
+    start: { left: position.left },
+    center: { left: position.left + position.width / 2, transform: "translateX(-50%)" },
+    end: { left: position.left + position.width, transform: "translateX(-100%)" },
+  }
+
   return (
     <div
-      ref={ref}
+      ref={contentRef}
+      style={{
+        position: "fixed",
+        top: position.top + 4,
+        ...alignStyles[align],
+      }}
       className={cn(
-        "absolute z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-md",
-        align === "end" && "right-0",
-        align === "start" && "left-0",
+        "z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-md",
         className
       )}
     >
@@ -92,11 +131,13 @@ interface DropdownMenuItemProps {
   children: React.ReactNode
   className?: string
   onClick?: (e: React.MouseEvent) => void
+  disabled?: boolean
 }
 
-function DropdownMenuItem({ children, className, onClick }: DropdownMenuItemProps) {
+function DropdownMenuItem({ children, className, onClick, disabled }: DropdownMenuItemProps) {
   const { setOpen } = useDropdownMenu()
   const handleClick = (e: React.MouseEvent) => {
+    if (disabled) return
     onClick?.(e)
     setOpen(false)
   }
@@ -104,8 +145,12 @@ function DropdownMenuItem({ children, className, onClick }: DropdownMenuItemProp
   return (
     <button
       onClick={handleClick}
+      disabled={disabled}
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100",
+        "relative flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer hover:bg-gray-100",
         className
       )}
     >

@@ -1,18 +1,16 @@
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { dashboardApi } from "@/services/dashboard"
+import { ActivityTimeRange } from "@/types/dashboard"
 
-const timeRanges = ["1个月", "3个月", "6个月", "1年"]
-
-const milestoneData = [
-  { month: "1月", target: 35, actual: 32 },
-  { month: "2月", target: 42, actual: 38 },
-  { month: "3月", target: 48, actual: 45 },
-  { month: "4月", target: 55, actual: 52 },
-  { month: "5月", target: 62, actual: 58 },
-  { month: "6月", target: 70, actual: 65 },
+const timeRanges: { label: string; value: ActivityTimeRange }[] = [
+  { label: "1个月", value: "1month" },
+  { label: "3个月", value: "3months" },
+  { label: "6个月", value: "6months" },
+  { label: "1年", value: "1year" },
 ]
 
 interface TooltipProps {
@@ -42,10 +40,36 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   return null
 }
 
+interface ChartData {
+  month: string;
+  target: number;
+  actual: number;
+}
+
 export function MilestoneTracker() {
-  const [activeRange, setActiveRange] = useState("6个月")
+  const [activeRange, setActiveRange] = useState<ActivityTimeRange>("6months")
+  const [chartData, setChartData] = useState<ChartData[]>([])
+  const [loading, setLoading] = useState(true)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      setLoading(true)
+      try {
+        const response = await dashboardApi.getTaskStatistics(activeRange)
+        if (response.success) {
+          setChartData(response.data.data)
+        }
+      } catch {
+        // 静默处理错误，UI已显示空状态
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStatistics()
+  }, [activeRange])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -78,15 +102,15 @@ export function MilestoneTracker() {
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             {timeRanges.map((range) => (
               <button
-                key={range}
-                onClick={() => setActiveRange(range)}
+                key={range.value}
+                onClick={() => setActiveRange(range.value)}
                 className={`px-2 py-1 text-[10px] font-medium rounded-md transition-colors ${
-                  activeRange === range
+                  activeRange === range.value
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {range}
+                {range.label}
               </button>
             ))}
           </div>
@@ -97,11 +121,20 @@ export function MilestoneTracker() {
       </div>
 
       {/* Chart */}
-      <div ref={containerRef} className="h-48 min-h-[192px]">
-        {containerSize.width > 0 && containerSize.height > 0 && (
-          <ResponsiveContainer width={containerSize.width} height={containerSize.height}>
-            <BarChart
-              data={milestoneData}
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+          暂无统计数据
+        </div>
+      ) : (
+        <div ref={containerRef} className="h-48 min-h-[192px]">
+          {containerSize.width > 0 && containerSize.height > 0 && (
+            <ResponsiveContainer width={containerSize.width} height={containerSize.height}>
+              <BarChart
+                data={chartData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               barGap={4}
             >
@@ -134,7 +167,8 @@ export function MilestoneTracker() {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </div>
+        </div>
+      )}
     </motion.div>
   )
 }

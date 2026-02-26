@@ -44,12 +44,12 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* 左侧品牌区域 */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
         {/* 装饰性背景元素 */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/30 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-20 w-72 h-72 bg-orange-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-gray-600/15 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl" />
         </div>
 
         {/* 内容区域 */}
@@ -71,7 +71,7 @@ export function Login() {
               <br />
               从这里开始
             </h1>
-            <p className="text-lg text-blue-100/90 leading-relaxed">
+            <p className="text-lg text-gray-300/90 leading-relaxed">
               审批流程 · 设备管理 · 考勤统计 · 会议安排
               <br />
               一站式企业办公自动化平台
@@ -79,7 +79,7 @@ export function Login() {
           </div>
 
           {/* 底部信息 */}
-          <div className="flex items-center justify-between text-sm text-blue-200/70">
+          <div className="flex items-center justify-between text-sm text-gray-400/70">
             <span>© 2026 Makrite OA System</span>
             <div className="flex items-center gap-6">
               <span>流程审批</span>
@@ -95,7 +95,7 @@ export function Login() {
         <div className="w-full max-w-md">
           {/* 移动端 Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -129,7 +129,7 @@ export function Login() {
                 placeholder="请输入用户名"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="h-12 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-blue-500/20 transition-all"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-slate-400 focus:ring-slate-400/20 transition-all"
                 required
               />
             </div>
@@ -145,7 +145,7 @@ export function Login() {
                   placeholder="请输入密码"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="h-12 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-blue-500/20 transition-all pr-10"
+                  className="h-12 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-slate-400 focus:ring-slate-400/20 transition-all pr-10"
                   required
                 />
                 <button
@@ -160,13 +160,13 @@ export function Login() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-gray-700 focus:ring-gray-600" />
                 <span className="text-sm text-slate-600">记住我</span>
               </label>
               <button
                 type="button"
                 onClick={() => navigate("/change-password")}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="text-sm text-orange-500 hover:text-orange-600 font-medium"
               >
                 忘记密码？
               </button>
@@ -174,7 +174,7 @@ export function Login() {
 
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-base font-medium shadow-lg shadow-blue-600/20 transition-all"
+              className="w-full h-12 rounded-xl bg-gray-900 hover:bg-gray-800 text-base font-medium shadow-lg shadow-gray-900/20 transition-all"
               disabled={isLoading}
             >
               {isLoading ? (

@@ -618,3 +618,311 @@ const textAnimation = {
 - `SubMenu.tsx` - 双图标方案
 - `CreateButton.tsx` - 双图标方案
 - `Sidebar.tsx` - Logo区域双图标方案
+
+---
+
+### 开发经验：组织管理页面部门管理功能开发
+
+**场景：** 为用户管理页面添加部门管理Tab，实现部门增删改查功能
+
+**关键决策：**
+1. 组件拆分策略：将585行的DepartmentManagement拆分为6个独立组件
+2. 状态管理：使用自定义hook `useDepartmentTree` 管理部门树状态
+3. 表单设计：复用用户表单的模态框设计风格
+
+**踩坑记录：**
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| Tabs组件空白 | 使用了`defaultValue`而非受控模式 | 改用`value` + `onValueChange` |
+| 闭包问题 | `expandMatchingParents`依赖`expandedIds` | 使用函数式更新`setState(prev => ...)` |
+| 组件过大 | 单文件585行超出200行限制 | 拆分为6个组件 |
+
+**最佳实践：**
+
+```typescript
+// ✅ Tabs组件必须使用受控模式
+const [activeTab, setActiveTab] = useState('users');
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+
+// ✅ 避免闭包陷阱
+setExpandedIds((prev) => {
+  const newExpanded = new Set(prev);
+  // ...
+  return newExpanded;
+});
+
+// ✅ 组件拆分原则
+-  DepartmentManagement.tsx (主组件)
+-  DepartmentTree.tsx (树形展示)
+-  DepartmentFormDialog.tsx (表单)
+-  DepartmentMembersDialog.tsx (成员列表)
+-  DeleteDepartmentDialog.tsx (删除确认)
+-  useDepartmentTree.ts (状态hook)
+```
+
+**模态框设计统一规范：**
+
+复用 UserForm 的设计风格，确保一致性：
+
+```tsx
+// DialogContent 无边距，内部自定义布局
+<DialogContent className="sm:max-w-[540px] p-0 overflow-hidden">
+  {/* 头部 - 灰色背景 + 图标 */}
+  <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">
+    <DialogHeader>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center">
+          <Icon className="h-5 w-5 text-gray-700" />
+        </div>
+        <div>
+          <DialogTitle className="text-xl text-gray-900 font-semibold">
+            {isEdit ? '编辑' : '新建'}
+          </DialogTitle>
+          <DialogDescription className="text-gray-500 mt-0.5">
+            描述文字
+          </DialogDescription>
+        </div>
+      </div>
+    </DialogHeader>
+  </div>
+
+  {/* 表单内容 - 统一内边距 */}
+  <form className="px-6 py-5">
+    <div className="space-y-5">
+      {/* 输入框统一高度 h-10 */}
+      <Input className="h-10" />
+    </div>
+  </form>
+
+  {/* 底部按钮 - 顶部边框分隔 */}
+  <DialogFooter className="pt-6 mt-6 border-t border-gray-200">
+    <Button variant="outline" className="min-w-[80px]">取消</Button>
+    <Button className="min-w-[80px]">保存</Button>
+  </DialogFooter>
+</DialogContent>
+```
+
+**统一设计元素：**
+| 元素 | 样式 |
+|------|------|
+| 头部背景 | `bg-gray-50 border-b border-gray-200` |
+| 图标容器 | `w-10 h-10 bg-gray-200 rounded-xl` |
+| 表单内边距 | `px-6 py-5` |
+| 字段间距 | `space-y-5` |
+| 输入框高度 | `h-10` |
+| 按钮最小宽度 | `min-w-[80px]` |
+| 底部分隔 | `border-t border-gray-200` |
+
+**代码审查清单：**
+- [x] 无`any`类型
+- [x] 组件行数<200行
+- [x] 使用`useCallback`缓存回调
+- [x] 错误处理完善
+- [ ] 部分API错误静默处理（待改进）
+
+**技术债（已解决）：**
+1. ✅ DepartmentFormDialog中使用原生select → 已统一为shadcn/ui Select
+2. ✅ 部门搜索仅高亮匹配项 → 已实现过滤+高亮双重功能
+3. ✅ 缺少部门拖拽排序功能 → 已实现拖拽排序（搜索模式下禁用）
+
+---
+
+### 2026-02-26 部门管理功能完善
+
+**已完成的技术债清理：**
+
+#### 1. 统一部门选择组件 - shadcn/ui Select
+
+**问题：** DepartmentFormDialog 中使用原生 `<select>`，样式不统一
+
+**解决方案：**
+```tsx
+// 使用 shadcn/ui Select 组件
+<Select value={field.value || '__root__'} onValueChange={field.onChange}>
+  <SelectTrigger className="h-10">
+    <SelectValue placeholder="选择上级部门" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="__root__">无（作为根部门）</SelectItem>
+    {departments.map((dept) => (
+      <SelectItem key={dept.id} value={dept.id}>
+        {dept.name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+#### 2. 统一错误处理 - useErrorHandler Hook
+
+**创建 useErrorHandler.ts：**
+```typescript
+export function useErrorHandler() {
+  const [error, setError] = useState<ErrorState | null>(null);
+
+  const showError = useCallback((message: string) => {
+    setError({ message, type: 'error' });
+  }, []);
+
+  const handleApiError = useCallback((err: any, defaultMessage = '操作失败') => {
+    const message = err?.response?.data?.message || err?.message || defaultMessage;
+    showError(message);
+    return message;
+  }, [showError]);
+
+  return { error, showError, showSuccess, clearError, handleApiError };
+}
+```
+
+**使用 ErrorAlert 组件显示错误：**
+```tsx
+{error && (
+  <ErrorAlert
+    message={error.message}
+    type={error.type}
+    onClose={clearError}
+  />
+)}
+```
+
+#### 3. 部门搜索优化 - 过滤 + 高亮
+
+**useDepartmentTree hook 增强：**
+```typescript
+// 过滤部门树 - 只保留匹配的部门及其父部门路径
+function filterDepartmentTree(
+  tree: DepartmentTreeNode[],
+  matchedIds: Set<string>,
+  parentIdsToKeep: Set<string>
+): DepartmentTreeNode[] {
+  // 递归过滤，保留匹配项及其路径
+}
+
+// 查找匹配的部门ID及其所有父部门ID
+function findMatchedAndParentIds(
+  departments: Department[],
+  query: string
+): { matchedIds: Set<string>; parentIds: Set<string> }
+```
+
+**搜索时自动展开父部门：**
+```typescript
+const handleSearch = useCallback((query: string) => {
+  setSearchQuery(query);
+  if (query && departments) {
+    const { parentIds } = findMatchedAndParentIds(departments, query);
+    setExpandedIds((prev) => {
+      const newExpanded = new Set(prev);
+      parentIds.forEach((id) => newExpanded.add(id));
+      return newExpanded;
+    });
+  }
+}, [departments]);
+```
+
+#### 4. 部门拖拽排序 - @hello-pangea/dnd
+
+**拖拽排序实现要点：**
+
+```tsx
+// DepartmentTree 组件支持拖拽
+interface DepartmentTreeProps {
+  // ...
+  onReorder?: (deptId: string, newParentId: string | null, newIndex: number) => void;
+  enableDrag?: boolean;
+}
+
+// 使用 @hello-pangea/dnd 实现拖拽
+<DragDropContext onDragEnd={handleDragEnd}>
+  <Droppable droppableId="root">
+    {(provided) => (
+      <div ref={provided.innerRef} {...provided.droppableProps}>
+        {departments.map((dept, index) => (
+          <Draggable key={dept.id} draggableId={dept.id} index={index}>
+            {(dragProvided, snapshot) => (
+              <div ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
+                {/* 拖拽句柄 */}
+                <div {...dragProvided.dragHandleProps}>
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+                {/* 部门内容 */}
+              </div>
+            )}
+          </Draggable>
+        ))}
+      </div>
+    )}
+  </Droppable>
+</DragDropContext>
+```
+
+**搜索模式下禁用拖拽：**
+```tsx
+const canDrag = enableDrag && !searchQuery;
+
+<Button
+  variant={enableDrag ? 'default' : 'outline'}
+  onClick={() => setEnableDrag(!enableDrag)}
+  disabled={!!searchQuery}
+  title={searchQuery ? '搜索模式下无法排序' : '拖拽排序'}
+>
+  {enableDrag ? '完成排序' : '排序'}
+</Button>
+```
+
+**后端 API 更新：**
+```typescript
+// departments.ts
+export interface UpdateDepartmentSortRequest {
+  items: {
+    id: string;
+    parentId: string | null;
+    sortOrder: number;
+  }[];
+}
+
+updateDepartmentSort: (data: UpdateDepartmentSortRequest) =>
+  apiClient.put('/departments/sort', data),
+```
+
+**关键经验：**
+
+| 功能 | 技术方案 | 注意事项 |
+|------|----------|----------|
+| Select 组件 | shadcn/ui Select | 使用 `__root__` 作为无父部门的标记值 |
+| 错误处理 | useErrorHandler hook | 统一处理 API 错误，支持 error/warning/success |
+| 搜索过滤 | filterDepartmentTree | 保留匹配项及其父部门路径 |
+| 拖拽排序 | @hello-pangea/dnd | 搜索模式下禁用，避免冲突 |
+
+---
+
+### 经验总结：技术债清理流程
+
+**技术债清理最佳实践：**
+
+1. **维护 todo.md 清单**
+   - 开发前写待办，完成后标记
+   - 区分技术债和功能需求
+   - 定期回顾，优先处理阻塞性问题
+
+2. **统一组件设计**
+   - 复用已有的设计模式（如 UserForm）
+   - 使用设计系统（shadcn/ui）保持一致性
+   - 记录设计规范，便于后续开发
+
+3. **错误处理标准化**
+   - 创建通用 error handler hook
+   - 统一错误提示样式
+   - 支持多种错误类型（error/warning/success）
+
+4. **搜索功能增强**
+   - 过滤 + 高亮双重反馈
+   - 自动展开匹配项的父部门
+   - 支持清空搜索回到完整视图
+
+5. **拖拽排序 UX**
+   - 提供开关控制排序模式
+   - 搜索模式下禁用拖拽
+   - 拖拽时显示视觉反馈（阴影、背景色变化）
+   - 批量更新减少 API 调用

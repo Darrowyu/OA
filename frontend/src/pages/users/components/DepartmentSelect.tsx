@@ -56,6 +56,7 @@ function DepartmentTreeNode({
       >
         {hasChildren ? (
           <button
+            type="button"
             className="p-0.5 hover:bg-gray-200 rounded"
             onClick={(e) => {
               e.stopPropagation();
