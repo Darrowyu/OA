@@ -117,7 +117,7 @@ export function DepartmentFormDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange} closeOnOverlayClick={false}>
       <DialogContent className="sm:max-w-[540px] p-0 overflow-hidden">
         {/* 头部 - 系统默认配色 */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">

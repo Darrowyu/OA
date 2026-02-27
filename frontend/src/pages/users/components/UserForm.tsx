@@ -92,9 +92,8 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading }: UserFo
       newErrors.employeeId = '请输入工号';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = '请输入邮箱';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // 邮箱可选，但如果填写了则验证格式
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = '邮箱格式不正确';
     }
 
@@ -123,7 +122,7 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading }: UserFo
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} closeOnOverlayClick={false}>
       <DialogContent className="sm:max-w-[540px] p-0 overflow-hidden">
         {/* 头部 - 系统默认配色 */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">
@@ -229,14 +228,14 @@ export function UserForm({ user, open, onOpenChange, onSubmit, loading }: UserFo
             {/* 第三行：邮箱 */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
-                邮箱 <span className="text-red-500">*</span>
+                邮箱
               </Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="请输入邮箱地址"
+                placeholder="请输入邮箱地址（可选）"
                 className={`h-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               />
               {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}

@@ -21,7 +21,7 @@ export function DepartmentMembersDialog({
   members,
 }: DepartmentMembersDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange} closeOnOverlayClick={false}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{department?.name} - 部门成员</DialogTitle>

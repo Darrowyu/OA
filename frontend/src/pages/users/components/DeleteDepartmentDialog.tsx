@@ -23,7 +23,7 @@ export function DeleteDepartmentDialog({
   onConfirm,
 }: DeleteDepartmentDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange} closeOnOverlayClick={false}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>确认删除</DialogTitle>

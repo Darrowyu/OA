@@ -99,7 +99,7 @@ export function ResetPasswordDialog({
   const passwordStrength = getPasswordStrength(password);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose} closeOnOverlayClick={false}>
       <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden">
         {/* 头部 - 系统默认配色 */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-5">
