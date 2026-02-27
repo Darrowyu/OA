@@ -36,7 +36,7 @@ model User {
   username           String              @unique
   password           String
   name               String              @db.VarChar(100)
-  email              String              @unique @db.VarChar(255)
+  email              String?             @unique @db.VarChar(255)
   role               UserRole
   employeeId         String              @unique
   isActive           Boolean             @default(true)

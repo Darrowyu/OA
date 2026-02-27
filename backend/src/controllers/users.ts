@@ -21,7 +21,7 @@ interface CreateUserRequest {
   username: string;
   password: string;
   name: string;
-  email: string;
+  email?: string;
   role: UserRole;
   departmentId?: string;
   employeeId: string;
@@ -43,7 +43,7 @@ interface ImportUserRequest {
     username: string;
     password: string;
     name: string;
-    email: string;
+    email?: string;
     role: UserRole;
     departmentId?: string;
     employeeId: string;
@@ -213,7 +213,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     } = req.body as CreateUserRequest;
 
     // 验证必填字段
-    if (!username || !password || !name || !email || !role || !employeeId) {
+    if (!username || !password || !name || !role || !employeeId) {
       res.status(400).json(fail('MISSING_FIELDS', '请填写所有必填字段'));
       return;
     }
@@ -230,8 +230,8 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // 验证邮箱格式
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // 验证邮箱格式（如果提供了邮箱）
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       res.status(400).json(fail('INVALID_EMAIL', '邮箱格式不正确'));
       return;
     }
@@ -243,11 +243,13 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // 检查邮箱是否已存在
-    const existingEmail = await prisma.user.findUnique({ where: { email } });
-    if (existingEmail) {
-      res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被注册'));
-      return;
+    // 检查邮箱是否已存在（如果提供了邮箱）
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({ where: { email } });
+      if (existingEmail) {
+        res.status(409).json(fail('EMAIL_EXISTS', '邮箱已被注册'));
+        return;
+      }
     }
 
     // 检查工号是否已存在
@@ -266,7 +268,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         username,
         password: hashedPassword,
         name,
-        email,
+        email: email || null,
         role,
         departmentId: departmentId || null,
         employeeId,
@@ -459,7 +461,7 @@ interface ImportUserData {
   username: string;
   password: string;
   name: string;
-  email: string;
+  email?: string;
   role: UserRole;
   departmentId?: string;
   employeeId: string;
@@ -469,9 +471,9 @@ interface ImportUserData {
  * 验证用户数据格式
  */
 function validateUserData(userData: ImportUserData, index: number): { valid: boolean; error?: { index: number; field: string; message: string } } {
-  // 验证必填字段
+  // 验证必填字段（邮箱可选）
   if (!userData.username || !userData.password || !userData.name ||
-      !userData.email || !userData.role || !userData.employeeId) {
+      !userData.role || !userData.employeeId) {
     return { valid: false, error: { index, field: 'multiple', message: '缺少必填字段' } };
   }
 
@@ -485,8 +487,8 @@ function validateUserData(userData: ImportUserData, index: number): { valid: boo
     return { valid: false, error: { index, field: 'password', message: '密码长度不足' } };
   }
 
-  // 验证邮箱格式
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+  // 验证邮箱格式（如果提供了邮箱）
+  if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
     return { valid: false, error: { index, field: 'email', message: '邮箱格式不正确' } };
   }
 
@@ -500,8 +502,11 @@ async function checkUserExists(userData: ImportUserData): Promise<{ exists: bool
   const existingUsername = await prisma.user.findUnique({ where: { username: userData.username } });
   if (existingUsername) return { exists: true, field: 'username' };
 
-  const existingEmail = await prisma.user.findUnique({ where: { email: userData.email } });
-  if (existingEmail) return { exists: true, field: 'email' };
+  // 只在提供了邮箱时检查邮箱是否已存在
+  if (userData.email) {
+    const existingEmail = await prisma.user.findUnique({ where: { email: userData.email } });
+    if (existingEmail) return { exists: true, field: 'email' };
+  }
 
   const existingEmployeeId = await prisma.user.findUnique({ where: { employeeId: userData.employeeId } });
   if (existingEmployeeId) return { exists: true, field: 'employeeId' };
@@ -520,7 +525,7 @@ async function createSingleUser(userData: ImportUserData) {
       username: userData.username,
       password: hashedPassword,
       name: userData.name,
-      email: userData.email,
+      email: userData.email || null,
       role: userData.role,
       departmentId: userData.departmentId || null,
       employeeId: userData.employeeId,

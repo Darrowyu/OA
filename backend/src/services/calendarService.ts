@@ -33,7 +33,7 @@ export interface CalendarEventWithUser extends CalendarEvent {
   user: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
     avatar?: string | null;
   };
 }

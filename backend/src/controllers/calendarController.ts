@@ -263,8 +263,8 @@ export async function getAttendingEvents(req: Request, res: Response): Promise<v
       select: { email: true },
     });
 
-    if (!userRecord) {
-      res.status(404).json({ success: false, error: '用户不存在' });
+    if (!userRecord || !userRecord.email) {
+      res.status(404).json({ success: false, error: '用户不存在或未设置邮箱' });
       return;
     }
 
@@ -300,8 +300,8 @@ export async function updateAttendeeStatus(req: Request, res: Response): Promise
       select: { email: true },
     });
 
-    if (!userRecord) {
-      res.status(404).json({ success: false, error: '用户不存在' });
+    if (!userRecord || !userRecord.email) {
+      res.status(404).json({ success: false, error: '用户不存在或未设置邮箱' });
       return;
     }
 

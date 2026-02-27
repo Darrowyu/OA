@@ -5,7 +5,7 @@ import { MeetingStatus, Prisma } from '@prisma/client'
 export interface Attendee {
   userId: string
   name: string
-  email: string
+  email: string | null
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' // 待确认/已接受/已拒绝
 }
 
@@ -539,7 +539,7 @@ export class MeetingService {
     startTime: Date
     endTime: Date
     organizerId: string
-    organizer: { id: string; name: string; email: string }
+    organizer: { id: string; name: string; email: string | null }
     attendees: Attendee[] | null
     status: MeetingStatus
     minutes: string | null

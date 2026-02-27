@@ -29,7 +29,7 @@ export interface DepartmentTreeNode {
   manager?: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
   } | null;
   userCount: number;
 }
@@ -48,7 +48,7 @@ function buildDepartmentTree(
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
-    manager: { id: string; name: string; email: string } | null;
+    manager: { id: string; name: string; email: string | null } | null;
     _count: { users: number };
   }>
 ): DepartmentTreeNode[] {

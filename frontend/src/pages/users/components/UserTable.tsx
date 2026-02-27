@@ -21,9 +21,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { User as UserType } from '@/types';
 import { ROLE_CONFIG } from '../config/roleConfig';
 import { Pagination } from './Pagination';
+
+type ConfirmAction = 'enable' | 'disable' | 'delete' | null;
 
 // 排序类型
 type SortField = 'username' | 'name' | 'employeeId' | 'department' | 'role' | 'isActive' | 'createdAt';
@@ -70,6 +82,7 @@ function UserTableComponent({
   onViewDetail,
 }: UserTableProps) {
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: ConfirmAction; user: UserType | null }>({ type: null, user: null });
 
   // 保持旧数据，避免闪烁
   const [displayUsers, setDisplayUsers] = useState<UserType[]>(users);
@@ -85,10 +98,26 @@ function UserTableComponent({
     }
   }, [users, loading, isInitialized]);
 
-  const handleToggleStatus = async (user: UserType) => {
-    setStatusLoading(user.id);
-    await onToggleStatus(user);
-    setStatusLoading(null);
+  const handleToggleStatusClick = (user: UserType) => {
+    const action = user.isActive !== false ? 'disable' : 'enable';
+    setConfirmAction({ type: action, user });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction.user || !confirmAction.type) return;
+
+    if (confirmAction.type === 'delete') {
+      await onDelete(confirmAction.user);
+    } else {
+      setStatusLoading(confirmAction.user.id);
+      await onToggleStatus(confirmAction.user);
+      setStatusLoading(null);
+    }
+    setConfirmAction({ type: null, user: null });
+  };
+
+  const handleDeleteClick = (user: UserType) => {
+    setConfirmAction({ type: 'delete', user });
   };
 
   const allSelected = displayUsers.length > 0 && displayUsers.every((u) => selectedIds.includes(u.id));
@@ -202,16 +231,11 @@ function UserTableComponent({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={user.isActive !== false}
-                      disabled={statusLoading === user.id}
-                      onCheckedChange={() => handleToggleStatus(user)}
-                    />
-                    <span className={user.isActive !== false ? 'text-green-600' : 'text-gray-400'}>
-                      {user.isActive !== false ? '启用' : '禁用'}
-                    </span>
-                  </div>
+                  <Switch
+                    checked={user.isActive !== false}
+                    disabled={statusLoading === user.id}
+                    onCheckedChange={() => handleToggleStatusClick(user)}
+                  />
                 </TableCell>
                 <TableCell className="text-gray-500">
                   {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
@@ -237,7 +261,7 @@ function UserTableComponent({
                         重置密码
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => onDelete(user)}
+                        onClick={() => handleDeleteClick(user)}
                         className="text-red-600 focus:text-red-600"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -269,6 +293,47 @@ function UserTableComponent({
           </div>
         </div>
       )}
+
+      {/* 确认对话框 */}
+      <AlertDialog
+        open={!!confirmAction.type}
+        onOpenChange={() => setConfirmAction({ type: null, user: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction.type === 'enable' && '启用用户'}
+              {confirmAction.type === 'disable' && '禁用用户'}
+              {confirmAction.type === 'delete' && '删除用户'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction.type === 'enable' &&
+                `确定要启用用户 "${confirmAction.user?.name || confirmAction.user?.username}" 吗？`}
+              {confirmAction.type === 'disable' &&
+                `确定要禁用用户 "${confirmAction.user?.name || confirmAction.user?.username}" 吗？禁用后用户将无法登录系统。`}
+              {confirmAction.type === 'delete' &&
+                `确定要删除用户 "${confirmAction.user?.name || confirmAction.user?.username}" 吗？此操作不可撤销。`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!statusLoading}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAction}
+              disabled={!!statusLoading}
+              className={cn(
+                confirmAction.type === 'enable'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              )}
+            >
+              {statusLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {confirmAction.type === 'enable' && '启用'}
+              {confirmAction.type === 'disable' && '禁用'}
+              {confirmAction.type === 'delete' && '删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

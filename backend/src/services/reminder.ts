@@ -219,28 +219,28 @@ export async function checkAndSendReminders(): Promise<void> {
           recipients = app.factoryApprovals
             .filter(a => a.action === 'PENDING')
             .map(a => a.approver.email)
-            .filter(Boolean);
+            .filter((email): email is string => email !== null && email !== undefined);
           actionText = '厂长审批';
           break;
         case ApplicationStatus.PENDING_DIRECTOR:
           recipients = app.directorApprovals
             .filter(a => a.action === 'PENDING')
             .map(a => a.approver.email)
-            .filter(Boolean);
+            .filter((email): email is string => email !== null && email !== undefined);
           actionText = '总监审批';
           break;
         case ApplicationStatus.PENDING_MANAGER:
           recipients = app.managerApprovals
             .filter(a => a.action === 'PENDING')
             .map(a => a.approver.email)
-            .filter(Boolean);
+            .filter((email): email is string => email !== null && email !== undefined);
           actionText = '经理审批';
           break;
         case ApplicationStatus.PENDING_CEO:
           recipients = app.ceoApprovals
             .filter(a => a.action === 'PENDING')
             .map(a => a.approver.email)
-            .filter(Boolean);
+            .filter((email): email is string => email !== null && email !== undefined);
           actionText = 'CEO审批';
           break;
       }
