@@ -20,9 +20,10 @@ interface DialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   children: React.ReactNode
+  closeOnOverlayClick?: boolean
 }
 
-const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
+const Dialog = ({ open, onOpenChange, children, closeOnOverlayClick = true }: DialogProps) => {
   if (open === false) return null
 
   const handleClose = React.useCallback(() => {
@@ -34,7 +35,7 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div
           className="fixed inset-0 bg-black/50"
-          onClick={handleClose}
+          onClick={closeOnOverlayClick ? handleClose : undefined}
         />
         <div className="relative z-50 w-full max-w-lg mx-4">
           {children}
