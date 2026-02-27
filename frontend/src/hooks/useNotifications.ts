@@ -40,13 +40,24 @@ export function useNotifications(): UseNotificationsReturn {
   const socketRef = useRef<Socket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getToken = () => localStorage.getItem('accessToken');
 
-  const connectSocket = useCallback(() => {
+  // 清除重连定时器
+  const clearReconnectTimeout = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
 
+  const connectSocket = useCallback(() => {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      setWsStatus('disconnected'); // 无token时设为断开状态
+      return;
+    }
 
     if (socketRef.current?.connected) return;
 
@@ -69,10 +80,40 @@ export function useNotifications(): UseNotificationsReturn {
     socket.on('connect_error', (error: unknown) => {
       logger.error('WebSocket 连接错误', { error });
       setWsStatus('error');
+
+      // 自动重连机制
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        reconnectAttemptsRef.current++;
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // 指数退避，最大30秒
+
+        logger.info(`WebSocket 将在 ${delay}ms 后尝试第 ${reconnectAttemptsRef.current} 次重连...`);
+
+        clearReconnectTimeout();
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (!socketRef.current?.connected) {
+            setWsStatus('connecting');
+            socket.connect();
+          }
+        }, delay);
+      } else {
+        logger.error(`WebSocket 重连失败次数超过上限 (${maxReconnectAttempts})，停止自动重连`);
+      }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason: string) => {
       setWsStatus('disconnected');
+      logger.info(`WebSocket 断开: ${reason}`);
+
+      // 非主动断开时尝试重连
+      if (reason !== 'io client disconnect' && reconnectAttemptsRef.current < maxReconnectAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        clearReconnectTimeout();
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (!socketRef.current?.connected) {
+            reconnect();
+          }
+        }, delay);
+      }
     });
 
     socket.on('notification:new', (notification: unknown) => {
@@ -110,6 +151,7 @@ export function useNotifications(): UseNotificationsReturn {
   }, []);
 
   const disconnectSocket = useCallback((isUnmount = false) => {
+    clearReconnectTimeout();
     if (socketRef.current) {
       // 组件卸载时使用静默断开，避免控制台输出错误
       if (isUnmount) {
@@ -120,13 +162,14 @@ export function useNotifications(): UseNotificationsReturn {
       socketRef.current.disconnect();
       socketRef.current = null;
     }
-  }, []);
+  }, [clearReconnectTimeout]);
 
   const reconnect = useCallback(() => {
+    clearReconnectTimeout();
     disconnectSocket(false);
     reconnectAttemptsRef.current = 0;
     connectSocket();
-  }, [connectSocket, disconnectSocket]);
+  }, [connectSocket, disconnectSocket, clearReconnectTimeout]);
 
   const fetchNotifications = useCallback(async (pageNum: number, isLoadMore = false) => {
     try {
@@ -263,9 +306,10 @@ export function useNotifications(): UseNotificationsReturn {
 
     return () => {
       clearInterval(heartbeatInterval);
+      clearReconnectTimeout();
       disconnectSocket(true); // 组件卸载时静默断开
     };
-  }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount]);
+  }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount, clearReconnectTimeout]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -283,7 +327,7 @@ export function useNotifications(): UseNotificationsReturn {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [reconnect, refresh, disconnectSocket]);
+  }, [reconnect, refresh, disconnectSocket, clearReconnectTimeout]);
 
   return {
     notifications,

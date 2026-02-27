@@ -663,7 +663,7 @@ export async function submitApplication(req: Request, res: Response): Promise<vo
         // 发送邮件通知给审批人
         const recipients = result.targetUsers
           .filter((u) => Boolean(u.email))
-          .map((u) => ({ email: u.email!, name: u.name || u.username }));
+          .map((u) => ({ email: u.email!, name: u.name || u.username, id: u.id }));
 
         if (recipients.length) {
           const flowConfig = existingApp.flowConfig as { skipFactory?: boolean; targetLevel?: 'DIRECTOR' | 'CEO' } | null;

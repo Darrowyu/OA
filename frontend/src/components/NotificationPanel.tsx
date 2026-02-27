@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Check,
   CheckCheck,
@@ -69,19 +70,56 @@ function NotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
+  onNavigate,
 }: {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
+  onNavigate: (url: string) => void;
 }) {
   const Icon = typeIcons[notification.type];
+
+  // 获取通知跳转链接
+  const getNavigateUrl = (): string | null => {
+    const data = notification.data;
+    if (!data || typeof data !== 'object') return null;
+
+    // 审批通知跳转到申请详情
+    if (notification.type === 'APPROVAL' && 'applicationId' in data) {
+      return `/applications/${data.applicationId}`;
+    }
+
+    // 任务通知跳转到任务详情
+    if (notification.type === 'TASK' && 'taskId' in data) {
+      return `/tasks/${data.taskId}`;
+    }
+
+    // 消息通知跳转到消息详情或联系人
+    if (notification.type === 'MESSAGE' && 'contactId' in data) {
+      return `/contacts/${data.contactId}`;
+    }
+
+    return null;
+  };
+
+  const handleClick = () => {
+    const url = getNavigateUrl();
+    if (url) {
+      onNavigate(url);
+    }
+  };
+
+  const url = getNavigateUrl();
+  const isClickable = !!url;
 
   return (
     <div
       className={cn(
         'group relative flex gap-3 p-4 transition-colors hover:bg-gray-50',
-        !notification.isRead && 'bg-blue-50/50'
+        !notification.isRead && 'bg-blue-50/50',
+        isClickable && 'cursor-pointer'
       )}
+      onClick={handleClick}
     >
       {/* 图标 */}
       <div
@@ -135,7 +173,10 @@ function NotificationItem({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => onMarkAsRead(notification.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkAsRead(notification.id);
+            }}
             title="标记为已读"
           >
             <Check className="h-3.5 w-3.5" />
@@ -145,7 +186,10 @@ function NotificationItem({
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
-          onClick={() => onDelete(notification.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(notification.id);
+          }}
           title="删除"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -176,8 +220,15 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
     reconnect,
   } = useNotifications();
 
+  const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+
+  // 处理通知点击跳转
+  const handleNavigate = (url: string) => {
+    navigate(url);
+    onClose();
+  };
 
   // 过滤通知
   const filteredNotifications = notifications.filter((n) =>
@@ -201,7 +252,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="absolute right-0 top-full mt-2 w-[400px] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[400px] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
     >
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -341,6 +392,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                 notification={notification}
                 onMarkAsRead={markAsRead}
                 onDelete={deleteNotification}
+                onNavigate={handleNavigate}
               />
             ))}
             {isLoading && (

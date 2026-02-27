@@ -27,7 +27,7 @@ import { getCEOApprovalThreshold, requiresCEOApproval } from '../services/approv
 // ============================================
 
 interface CachedApprovers {
-  users: Array<{ email: string; name: string }>;
+  users: Array<{ email: string; name: string; id: string }>;
   timestamp: number;
 }
 
@@ -37,7 +37,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 /** 获取缓存的审批人列表 */
 async function getCachedApproversByRole(
   role: 'DIRECTOR' | 'CEO'
-): Promise<Array<{ email: string; name: string }>> {
+): Promise<Array<{ email: string; name: string; id: string }>> {
   const cached = approverCache.get(role);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -46,12 +46,12 @@ async function getCachedApproversByRole(
 
   const users = await prisma.user.findMany({
     where: { role },
-    select: { email: true, name: true },
+    select: { id: true, email: true, name: true },
   });
 
   const validUsers = users
     .filter((u): u is typeof u & { email: string } => Boolean(u.email))
-    .map((u) => ({ email: u.email!, name: u.name || '' }));
+    .map((u) => ({ id: u.id, email: u.email!, name: u.name || '' }));
 
   approverCache.set(role, { users: validUsers, timestamp: Date.now() });
 
@@ -88,7 +88,7 @@ async function notifyApplicantOfResult(
     });
 
     if (applicant?.email) {
-      await sendApplicationResultEmail(applicant.email, {
+      await sendApplicationResultEmail(applicant.email, applicantId, {
         id: application.id,
         applicationNo: application.applicationNo,
         title: application.title,
@@ -128,12 +128,12 @@ async function notifyApproversByIds(
 ): Promise<void> {
   const users = await prisma.user.findMany({
     where: { employeeId: { in: employeeIds } },
-    select: { email: true, name: true },
+    select: { id: true, email: true, name: true },
   });
 
   const recipients = users
     .filter((u): u is typeof u & { email: string } => Boolean(u.email))
-    .map((u) => ({ email: u.email!, name: u.name || '' }));
+    .map((u) => ({ id: u.id, email: u.email!, name: u.name || '' }));
 
   if (recipients.length > 0) {
     await sendApprovalTaskEmails(recipients, application, taskType);
@@ -434,7 +434,7 @@ async function processApproval(
       });
 
       if (applicant?.email) {
-        await sendApplicationResultEmail(applicant.email, {
+        await sendApplicationResultEmail(applicant.email, application.applicantId, {
           id: applicationId,
           applicationNo: application.applicationNo,
           title: application.title,
@@ -848,7 +848,7 @@ export async function directorApprove(req: Request, res: Response): Promise<void
           select: { email: true },
         });
         if (applicant?.email) {
-          await sendApplicationResultEmail(applicant.email, {
+          await sendApplicationResultEmail(applicant.email, application.applicantId, {
             id: applicationId,
             applicationNo: application.applicationNo,
             title: application.title,

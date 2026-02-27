@@ -30,6 +30,7 @@ import { startReminderScheduler } from './services/reminder';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeSocket } from './services/socketService';
 import { initializeEmailService } from './services/email';
+import { startNotificationCleanupScheduler } from './services/notificationCleanup';
 import notificationRoutes from './routes/notifications';
 import workflowRoutes from './routes/workflows';
 import reportRoutes from './routes/reports';
@@ -170,6 +171,9 @@ server.listen(config.port, () => {
 
   // 启动提醒定时任务
   startReminderScheduler();
+
+  // 启动通知清理定时任务
+  startNotificationCleanupScheduler();
 });
 
 // 优雅关闭处理

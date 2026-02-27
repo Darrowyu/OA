@@ -8,6 +8,40 @@ import {
 } from './socketService';
 import { sendEmailNotification } from './email';
 
+/**
+ * 检查用户是否启用了邮件通知
+ */
+async function shouldSendEmail(userId: string): Promise<boolean> {
+  try {
+    const preference = await prisma.userPreference.findUnique({
+      where: { userId },
+      select: { emailNotifications: true }
+    });
+    // 默认为 true（如果没有设置）
+    return preference?.emailNotifications ?? true;
+  } catch (error) {
+    logger.error('获取用户邮件偏好失败', { userId, error });
+    return true; // 出错时默认发送
+  }
+}
+
+/**
+ * 检查用户是否启用了审批通知
+ */
+async function shouldSendApprovalNotification(userId: string): Promise<boolean> {
+  try {
+    const preference = await prisma.userPreference.findUnique({
+      where: { userId },
+      select: { approvalNotifications: true }
+    });
+    // 只要不是 OFF 就发送
+    return preference?.approvalNotifications !== 'OFF';
+  } catch (error) {
+    logger.error('获取用户审批通知偏好失败', { userId, error });
+    return true;
+  }
+}
+
 // ============================================
 // 公共类型定义
 // ============================================
@@ -365,8 +399,8 @@ export async function notifyHighAmountApproval(
         data: { applicationId, amount }
       });
 
-      // 发送邮件通知
-      if (user.email) {
+      // 检查用户邮件偏好后再发送邮件
+      if (user.email && await shouldSendEmail(user.id)) {
         await sendEmailNotification(
           user.email,
           '高金额申请审批通过通知',
@@ -542,9 +576,21 @@ async function safeSendEmail<T>(
 export async function sendApprovalTaskEmail(
   recipientEmail: string,
   recipientName: string,
+  recipientId: string,
   application: ApplicationEmailInfo,
   taskType: ApprovalTaskType
 ): Promise<void> {
+  // 检查用户是否启用了邮件通知和审批通知
+  const [emailEnabled, approvalEnabled] = await Promise.all([
+    shouldSendEmail(recipientId),
+    shouldSendApprovalNotification(recipientId)
+  ]);
+
+  if (!emailEnabled || !approvalEnabled) {
+    logger.info(`跳过审批任务邮件: ${recipientName} 已禁用邮件通知或审批通知`);
+    return;
+  }
+
   const { priorityColor, priorityText, taskTitles, taskDescriptions } = EMAIL_CONFIG;
   const priority = application.priority || 'NORMAL';
 
@@ -573,18 +619,18 @@ export async function sendApprovalTaskEmail(
       application.applicationNo
     ),
     '审批任务邮件发送',
-    { recipientEmail, applicationId: application.id, taskType }
+    { recipientEmail, recipientId, applicationId: application.id, taskType }
   );
 }
 
 /** 批量发送审批任务邮件 */
 export async function sendApprovalTaskEmails(
-  recipients: Array<{ email: string; name: string }>,
+  recipients: Array<{ email: string; name: string; id: string }>,
   application: ApplicationEmailInfo,
   taskType: ApprovalTaskType
 ): Promise<void> {
   await Promise.all(
-    recipients.map((r) => sendApprovalTaskEmail(r.email, r.name, application, taskType))
+    recipients.map((r) => sendApprovalTaskEmail(r.email, r.name, r.id, application, taskType))
   );
 }
 
@@ -593,6 +639,7 @@ export async function sendApprovalTaskEmails(
  */
 export async function sendApplicationResultEmail(
   recipientEmail: string,
+  recipientId: string,
   application: {
     id: string;
     applicationNo: string;
@@ -603,6 +650,17 @@ export async function sendApplicationResultEmail(
     rejectReason?: string | null;
   }
 ): Promise<void> {
+  // 检查用户邮件偏好
+  const [emailEnabled, approvalEnabled] = await Promise.all([
+    shouldSendEmail(recipientId),
+    shouldSendApprovalNotification(recipientId)
+  ]);
+
+  if (!emailEnabled || !approvalEnabled) {
+    logger.info(`跳过审批结果邮件: ${recipientEmail} 已禁用邮件通知或审批通知`);
+    return;
+  }
+
   const isApproved = application.status === 'APPROVED';
   const subject = isApproved
     ? `【已通过】申请审批通过 - ${application.applicationNo}`
