@@ -3,8 +3,8 @@ import { prisma } from '../lib/prisma';
 import * as logger from '../lib/logger';
 import {
   sendNotificationToUser,
-  broadcastNotification,
   updateUnreadCount,
+  broadcastToAllOnlineUsers,
 } from './socketService';
 import { sendEmailNotification } from './email';
 
@@ -129,12 +129,10 @@ export async function createNotification(
 export async function createNotifications(
   data: CreateNotificationData[]
 ): Promise<Notification[]> {
-  const notifications: Notification[] = [];
-
-  for (const item of data) {
-    const notification = await createNotification(item);
-    notifications.push(notification);
-  }
+  // 使用 Promise.all 并行处理，提高性能
+  const notifications = await Promise.all(
+    data.map(item => createNotification(item))
+  );
 
   return notifications;
 }
@@ -294,25 +292,27 @@ export async function deleteAllRead(userId: string): Promise<number> {
 
 /**
  * 发送系统广播通知
+ * 广播给所有在线用户，不存储在数据库中（或仅存储为系统日志）
  */
 export async function sendSystemBroadcast(
   title: string,
   content: string,
   data?: Record<string, unknown>
 ): Promise<number> {
-  // 创建广播通知记录 (存储在系统中，userId 为系统ID)
-  const notification = await prisma.notification.create({
-    data: {
-      userId: 'system',
-      type: NotificationType.SYSTEM,
-      title,
-      content,
-      data: data as Prisma.InputJsonValue,
-    },
-  });
+  // 构建广播通知对象（不存储在数据库中）
+  const broadcastNotification = {
+    id: `broadcast_${Date.now()}`,
+    type: NotificationType.SYSTEM,
+    title,
+    content,
+    data: data as Prisma.InputJsonValue,
+    isRead: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   // 广播给所有在线用户
-  const onlineCount = await broadcastNotification(notification);
+  const onlineCount = await broadcastToAllOnlineUsers(broadcastNotification as Notification);
 
   logger.info(`系统广播发送成功: ${title}, 在线用户数: ${onlineCount}`);
   return onlineCount;

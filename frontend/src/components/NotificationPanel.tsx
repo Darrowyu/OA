@@ -104,6 +104,10 @@ function NotificationItem({
 
   const handleClick = () => {
     const url = getNavigateUrl();
+    // 未读通知点击后自动标记为已读
+    if (!notification.isRead) {
+      onMarkAsRead(notification.id);
+    }
     if (url) {
       onNavigate(url);
     }

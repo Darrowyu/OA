@@ -38,19 +38,8 @@ export function useNotifications(): UseNotificationsReturn {
   const [page, setPage] = useState(1);
 
   const socketRef = useRef<Socket | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getToken = () => localStorage.getItem('accessToken');
-
-  // 清除重连定时器
-  const clearReconnectTimeout = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-  }, []);
 
   const connectSocket = useCallback(() => {
     const token = getToken();
@@ -67,53 +56,25 @@ export function useNotifications(): UseNotificationsReturn {
       auth: { token },
       transports: ['polling', 'websocket'], // 优先polling，避免某些代理问题
       reconnection: true,
-      reconnectionAttempts: maxReconnectAttempts,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
 
     socket.on('connect', () => {
       setWsStatus('connected');
-      reconnectAttemptsRef.current = 0;
     });
 
     socket.on('connect_error', (error: unknown) => {
       logger.error('WebSocket 连接错误', { error });
       setWsStatus('error');
-
-      // 自动重连机制
-      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-        reconnectAttemptsRef.current++;
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // 指数退避，最大30秒
-
-        logger.info(`WebSocket 将在 ${delay}ms 后尝试第 ${reconnectAttemptsRef.current} 次重连...`);
-
-        clearReconnectTimeout();
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (!socketRef.current?.connected) {
-            setWsStatus('connecting');
-            socket.connect();
-          }
-        }, delay);
-      } else {
-        logger.error(`WebSocket 重连失败次数超过上限 (${maxReconnectAttempts})，停止自动重连`);
-      }
+      // Socket.io 会自动处理重连，这里只更新状态显示
     });
 
     socket.on('disconnect', (reason: string) => {
       setWsStatus('disconnected');
       logger.info(`WebSocket 断开: ${reason}`);
-
-      // 非主动断开时尝试重连
-      if (reason !== 'io client disconnect' && reconnectAttemptsRef.current < maxReconnectAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-        clearReconnectTimeout();
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (!socketRef.current?.connected) {
-            reconnect();
-          }
-        }, delay);
-      }
+      // Socket.io 会自动处理重连，无需手动干预
     });
 
     socket.on('notification:new', (notification: unknown) => {
@@ -150,26 +111,17 @@ export function useNotifications(): UseNotificationsReturn {
     socketRef.current = socket;
   }, []);
 
-  const disconnectSocket = useCallback((isUnmount = false) => {
-    clearReconnectTimeout();
+  const disconnectSocket = useCallback(() => {
     if (socketRef.current) {
-      // 组件卸载时使用静默断开，避免控制台输出错误
-      if (isUnmount) {
-        const socket = socketRef.current;
-        // 移除所有监听器后断开，避免触发错误日志
-        socket.on('disconnect', () => {});
-      }
       socketRef.current.disconnect();
       socketRef.current = null;
     }
-  }, [clearReconnectTimeout]);
+  }, []);
 
   const reconnect = useCallback(() => {
-    clearReconnectTimeout();
-    disconnectSocket(false);
-    reconnectAttemptsRef.current = 0;
+    disconnectSocket();
     connectSocket();
-  }, [connectSocket, disconnectSocket, clearReconnectTimeout]);
+  }, [connectSocket, disconnectSocket]);
 
   const fetchNotifications = useCallback(async (pageNum: number, isLoadMore = false) => {
     try {
@@ -306,10 +258,9 @@ export function useNotifications(): UseNotificationsReturn {
 
     return () => {
       clearInterval(heartbeatInterval);
-      clearReconnectTimeout();
-      disconnectSocket(true); // 组件卸载时静默断开
+      disconnectSocket();
     };
-  }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount, clearReconnectTimeout]);
+  }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -318,7 +269,7 @@ export function useNotifications(): UseNotificationsReturn {
           reconnect();
           refresh();
         } else {
-          disconnectSocket(false);
+          disconnectSocket();
           setNotifications([]);
           setUnreadCount(0);
         }
@@ -327,7 +278,7 @@ export function useNotifications(): UseNotificationsReturn {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [reconnect, refresh, disconnectSocket, clearReconnectTimeout]);
+  }, [reconnect, refresh, disconnectSocket]);
 
   return {
     notifications,

@@ -218,6 +218,27 @@ export async function broadcastNotification(notification: Notification): Promise
 }
 
 /**
+ * 仅向所有在线用户广播通知（不通过数据库）
+ * 用于系统广播等实时通知场景
+ */
+export async function broadcastToAllOnlineUsers(notification: Notification): Promise<number> {
+  try {
+    const ioInstance = getIO();
+    const clientNotification = toClientNotification(notification);
+
+    // 向所有连接的客户端广播
+    ioInstance.emit('notification:broadcast', clientNotification);
+
+    const onlineCount = Array.from(onlineUsers.values()).flat().length;
+    logger.info(`系统广播已发送给所有在线用户`, { onlineCount, title: notification.title });
+    return onlineCount;
+  } catch (error) {
+    logger.error('系统广播失败', { error });
+    return 0;
+  }
+}
+
+/**
  * 通知客户端未读数量更新
  */
 export async function updateUnreadCount(userId: string, count: number): Promise<void> {
