@@ -27,7 +27,12 @@ interface MeetingItemProps {
  * 会议列表项组件
  */
 export function MeetingItem({ meeting, onView, onCancel, onComplete }: MeetingItemProps) {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  let user: Record<string, unknown> = {};
+  try {
+    user = JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    /* corrupted localStorage */
+  }
   const isOrganizer = meeting.organizerId === user.id;
 
   return (

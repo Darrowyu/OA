@@ -304,28 +304,29 @@ export async function setDefaultWorkflow(id: string): Promise<WorkflowWithCreato
     throw new Error('工作流不存在')
   }
 
-  // 取消同类型的其他默认流程
-  await prisma.workflow.updateMany({
-    where: {
-      entityType: workflow.entityType,
-      isDefault: true
-    },
-    data: { isDefault: false }
-  })
+  // 事务保护：取消其他默认 + 设置新默认
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.workflow.updateMany({
+      where: {
+        entityType: workflow.entityType,
+        isDefault: true
+      },
+      data: { isDefault: false }
+    })
 
-  // 设置当前为默认
-  const updated = await prisma.workflow.update({
-    where: { id },
-    data: { isDefault: true },
-    include: {
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          username: true
+    return tx.workflow.update({
+      where: { id },
+      data: { isDefault: true },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            username: true
+          }
         }
       }
-    }
+    })
   })
 
   return updated
@@ -873,9 +874,9 @@ function evaluateCondition(condition: string, variables: WorkflowVariables): boo
       case '<=':
         return Number(leftValue) <= Number(rightValue)
       case '==':
-        return leftValue == rightValue
+        return String(leftValue) === String(rightValue)
       case '!=':
-        return leftValue != rightValue
+        return String(leftValue) !== String(rightValue)
       default:
         return false
     }

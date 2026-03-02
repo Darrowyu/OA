@@ -250,7 +250,7 @@ export default function AnnouncementDetailPage() {
                 <div className="space-y-2">
                   {announcement.attachments.map((attachment, index) => (
                     <a
-                      key={index}
+                      key={`${attachment.name}-${index}`}
                       href={attachment.url}
                       target="_blank"
                       rel="noopener noreferrer"

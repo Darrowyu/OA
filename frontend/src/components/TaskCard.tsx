@@ -64,9 +64,9 @@ function TaskCardComponent({ task, onClick, isDragging }: TaskCardProps) {
           {/* 标签 */}
           {task.tags && task.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {task.tags.slice(0, 3).map((tag, idx) => (
+              {task.tags.slice(0, 3).map((tag) => (
                 <Badge
-                  key={idx}
+                  key={tag}
                   variant="secondary"
                   className="text-xs px-1.5 py-0 bg-gray-100 text-gray-600"
                 >

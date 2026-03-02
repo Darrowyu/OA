@@ -195,8 +195,8 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
                   </h4>
                   <ScrollArea className="h-[200px] border rounded-lg bg-white">
                     <div className="p-3 space-y-2">
-                      {result.errors.map((error, index) => (
-                        <div key={index} className="flex items-start gap-2 text-sm text-red-600">
+                      {result.errors.map((error) => (
+                        <div key={`row-${error.row}`} className="flex items-start gap-2 text-sm text-red-600">
                           <span className="text-red-400">•</span>
                           <span>第 {error.row} 行: {error.message}</span>
                         </div>
@@ -325,8 +325,8 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
                         </tr>
                       </thead>
                       <tbody>
-                        {parsedData.slice(0, 5).map((row, idx) => (
-                          <tr key={idx} className="border-t">
+                        {parsedData.slice(0, 5).map((row) => (
+                          <tr key={row.username} className="border-t">
                             <td className="px-3 py-2">{row.username}</td>
                             <td className="px-3 py-2">{row.name}</td>
                             <td className="px-3 py-2">{row.email}</td>

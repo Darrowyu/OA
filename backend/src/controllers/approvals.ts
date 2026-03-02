@@ -1096,16 +1096,25 @@ export async function withdrawApproval(req: Request, res: Response): Promise<voi
     // 撤回审批
     await prisma.$transaction(async (tx) => {
       // 删除当前级别的审批记录
-      await ((tx as unknown) as Record<string, { deleteMany: (args: unknown) => Promise<unknown> }>)[config.modelName].deleteMany({
-        where: { applicationId, approverId: user.id },
-      });
+      const deleteByModel = async (
+        modelName: string,
+        where: Record<string, unknown>
+      ) => {
+        switch (modelName) {
+          case 'factoryApproval': return tx.factoryApproval.deleteMany({ where });
+          case 'directorApproval': return tx.directorApproval.deleteMany({ where });
+          case 'managerApproval': return tx.managerApproval.deleteMany({ where });
+          case 'ceoApproval': return tx.ceoApproval.deleteMany({ where });
+          default: throw new Error(`未知的审批模型: ${modelName}`);
+        }
+      };
+
+      await deleteByModel(config.modelName, { applicationId, approverId: user.id });
 
       // 清理后续级别的所有审批记录，确保数据一致性
       if (config.subsequentLevels && config.subsequentLevels.length > 0) {
-        for (const level of config.subsequentLevels) {
-          await ((tx as unknown) as Record<string, { deleteMany: (args: unknown) => Promise<unknown> }>)[level].deleteMany({
-            where: { applicationId },
-          });
+        for (const subsequentLevel of config.subsequentLevels) {
+          await deleteByModel(subsequentLevel, { applicationId });
         }
       }
 

@@ -7,6 +7,7 @@ import {
   broadcastToAllOnlineUsers,
 } from './socketService';
 import { sendEmailNotification } from './email';
+import { getCEOApprovalThreshold } from './approvalConfig.service';
 
 /**
  * 检查用户是否启用了邮件通知
@@ -363,9 +364,6 @@ export async function getNotificationById(
   });
 }
 
-// 高金额阈值：10万元
-const HIGH_AMOUNT_THRESHOLD = 100000;
-
 /**
  * 高金额申请审批通过通知
  * CEO审批通过后，通知财务人员
@@ -375,7 +373,8 @@ export async function notifyHighAmountApproval(
   amount: number,
   applicantName: string
 ): Promise<void> {
-  if (amount < HIGH_AMOUNT_THRESHOLD) return;
+  const threshold = await getCEOApprovalThreshold();
+  if (amount < threshold) return;
 
   try {
     // 获取财务人员（role为FINANCE或特定用户ID）

@@ -1,6 +1,7 @@
 /**
  * 安全工具函数
  */
+import logger from '../lib/logger';
 
 /**
  * 脱敏敏感数据
@@ -71,8 +72,7 @@ export function logSecurityEvent(
   action: string,
   details: Record<string, unknown>
 ): void {
-  // eslint-disable-next-line no-console
-  console.log(`[Security] ${action}`, {
+  logger.info(`[Security] ${action}`, {
     ...details,
     timestamp: new Date().toISOString(),
   });

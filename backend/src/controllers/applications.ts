@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ApplicationStatus, Priority, Prisma, UserRole } from '@prisma/client';
+import { ApplicationStatus, ApplicationType, Priority, Prisma, UserRole } from '@prisma/client';
 import {
   parseAmount,
   getStatusText,
@@ -373,7 +373,7 @@ export async function createApplication(req: Request, res: Response): Promise<vo
         applicantDept: user.department || '',
         factoryManagerIds: factoryManagerIds || [],
         managerIds: [], // 初始为空，由总监选择
-        type: type as any,
+        type: type as ApplicationType,
         flowConfig: flowConfig || undefined,
       },
     });

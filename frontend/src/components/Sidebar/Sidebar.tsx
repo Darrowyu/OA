@@ -44,7 +44,12 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
   // 获取用户信息
   const user = useMemo(() => {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      return null;
+    }
   }, []);
 
   const isAdmin = user?.role === 'ADMIN';

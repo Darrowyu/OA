@@ -450,7 +450,7 @@ export default function AnnouncementFormPage() {
                   <div className="mt-2 space-y-2">
                     {attachments.map((attachment, index) => (
                       <div
-                        key={index}
+                        key={`${attachment.name}-${index}`}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
                       >
                         <div className="flex items-center gap-3">

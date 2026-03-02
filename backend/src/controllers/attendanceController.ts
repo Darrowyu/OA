@@ -123,7 +123,7 @@ export async function clockIn(req: AuthRequest, res: Response): Promise<void> {
     })
     successResponse(res, record)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CLOCK_IN_FAILED', (error as Error).message, 400)
   }
 }
@@ -139,7 +139,7 @@ export async function clockOut(req: AuthRequest, res: Response): Promise<void> {
     })
     successResponse(res, record)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CLOCK_OUT_FAILED', (error as Error).message, 400)
   }
 }
@@ -172,7 +172,7 @@ export async function getAttendanceList(req: AuthRequest, res: Response): Promis
 
     successResponse(res, result)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
@@ -190,7 +190,7 @@ export async function createLeaveRequest(req: AuthRequest, res: Response): Promi
     })
     successResponse(res, request)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
   }
 }
@@ -211,7 +211,7 @@ export async function getLeaveRequests(req: AuthRequest, res: Response): Promise
 
     successResponse(res, result)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
@@ -229,7 +229,7 @@ export async function approveLeaveRequest(req: AuthRequest, res: Response): Prom
     )
     successResponse(res, request)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'APPROVE_FAILED', (error as Error).message, 400)
   }
 }
@@ -254,7 +254,7 @@ export async function getStatistics(req: AuthRequest, res: Response): Promise<vo
 
     successResponse(res, stats)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
@@ -272,7 +272,7 @@ export async function correctAttendance(req: AuthRequest, res: Response): Promis
     })
     successResponse(res, record)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CORRECT_FAILED', (error as Error).message, 400)
   }
 }
@@ -286,7 +286,7 @@ export async function createShift(req: AuthRequest, res: Response): Promise<void
     const shift = await scheduleService.createShift(data)
     successResponse(res, shift)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
   }
 }
@@ -310,7 +310,7 @@ export async function updateShift(req: AuthRequest, res: Response): Promise<void
     const shift = await scheduleService.updateShift(id, data)
     successResponse(res, shift)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'UPDATE_FAILED', (error as Error).message, 400)
   }
 }
@@ -338,7 +338,7 @@ export async function createSchedule(req: AuthRequest, res: Response): Promise<v
     })
     successResponse(res, schedule)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'CREATE_FAILED', (error as Error).message, 400)
   }
 }
@@ -357,7 +357,7 @@ export async function getSchedules(req: AuthRequest, res: Response): Promise<voi
 
     successResponse(res, schedules)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'FETCH_FAILED', (error as Error).message)
   }
 }
@@ -385,7 +385,7 @@ export async function setRestDay(req: AuthRequest, res: Response): Promise<void>
     const schedule = await scheduleService.setRestDay(userId, new Date(date), isRestDay)
     successResponse(res, schedule)
   } catch (error) {
-    handleZodError(res, error)
+    if (error instanceof z.ZodError) return handleZodError(res, error)
     errorResponse(res, 'UPDATE_FAILED', (error as Error).message, 400)
   }
 }

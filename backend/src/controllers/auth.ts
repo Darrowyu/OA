@@ -111,10 +111,10 @@ export async function register(req: Request, res: Response): Promise<void> {
       password,
       name,
       email,
-      role = UserRole.USER,
       departmentId,
       employeeId,
     } = req.body as RegisterRequest;
+    const role = UserRole.USER; // 强制默认角色，禁止客户端指定
 
     // 验证必填字段
     if (!username || !password || !name || !email || !employeeId) {

@@ -8,6 +8,10 @@ import type {
   EquipmentStatus,
 } from '../types/equipment'
 
+const HEALTH_THRESHOLD_RUNNING = 80   // 正常运行阈值
+const HEALTH_THRESHOLD_WARNING = 60   // 告警阈值
+const HEALTH_THRESHOLD_CRITICAL = 30  // 严重告警阈值
+
 export class EquipmentService {
   // 创建设备
   async create(data: EquipmentCreateInput, userId: string): Promise<{
@@ -309,11 +313,11 @@ export class EquipmentService {
 
     // 根据健康度确定状态
     let status: EquipmentStatus
-    if (healthScore >= 80) {
+    if (healthScore >= HEALTH_THRESHOLD_RUNNING) {
       status = 'RUNNING' as EquipmentStatus
-    } else if (healthScore >= 60) {
+    } else if (healthScore >= HEALTH_THRESHOLD_WARNING) {
       status = 'WARNING' as EquipmentStatus
-    } else if (healthScore >= 30) {
+    } else if (healthScore >= HEALTH_THRESHOLD_CRITICAL) {
       status = 'STOPPED' as EquipmentStatus
     } else {
       status = 'SCRAPPED' as EquipmentStatus

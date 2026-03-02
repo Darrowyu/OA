@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import { verifySync, generateSecret } from 'otplib';
 import { prisma } from '../lib/prisma';
 import logger from '../lib/logger';
 import { config } from '../config';
@@ -271,8 +271,8 @@ export async function revokeAllDevices(userId: string, currentDeviceId?: string)
  * 生成 2FA 密钥和二维码（简化实现）
  */
 export async function setupTwoFactor(userId: string) {
-  // 生成随机密钥
-  const secret = crypto.randomBytes(20).toString('hex');
+  // 生成 TOTP 密钥
+  const secret = generateSecret();
 
   // 获取用户信息用于二维码
   const user = await prisma.user.findUnique({
@@ -335,12 +335,11 @@ export async function verifyTwoFactor(userId: string, code: string) {
 }
 
 /**
- * 简单的 TOTP 验证（演示用）
+ * TOTP 验证
  */
-function verifyTOTP(_secret: string, code: string): boolean {
-  // 实际项目中应使用 speakeasy 库，使用 secret 验证 TOTP
-  // 这里为了演示，接受6位数字验证码
-  return code.length === 6 && /^\d{6}$/.test(code);
+function verifyTOTP(secret: string, code: string): boolean {
+  const result = verifySync({ token: code, secret });
+  return result.valid;
 }
 
 /**

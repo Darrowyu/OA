@@ -189,8 +189,8 @@ export function TaskDetailModal({ isOpen, onClose }: TaskDetailModalProps) {
                     标签
                   </div>
                   <div className="flex items-center gap-2">
-                    {["OA系统", "功能优化"].map((tag, idx) => (
-                      <Badge key={idx} variant="secondary" className="bg-gray-100 text-gray-700">
+                    {["OA系统", "功能优化"].map((tag) => (
+                      <Badge key={tag} variant="secondary" className="bg-gray-100 text-gray-700">
                         {tag}
                       </Badge>
                     ))}
@@ -324,8 +324,8 @@ export function TaskDetailModal({ isOpen, onClose }: TaskDetailModalProps) {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">协作者</span>
                 <div className="flex -space-x-2">
-                  {["赵小美", "周开发", "孙测试"].map((name, idx) => (
-                    <Avatar key={idx} className="w-7 h-7 border border-white">
+                  {["赵小美", "周开发", "孙测试"].map((name) => (
+                    <Avatar key={name} className="w-7 h-7 border border-white">
                       <AvatarFallback className="bg-gray-200 text-gray-700 text-[10px]">
                         {name.charAt(0)}
                       </AvatarFallback>

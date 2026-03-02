@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma'
 import path from 'path'
 import fs from 'fs'
+import logger from '../lib/logger'
 
 // 文件类型
 export type DocumentType = 'PDF' | 'DOC' | 'DOCX' | 'XLS' | 'XLSX' | 'PPT' | 'PPTX' | 'TXT' | 'JPG' | 'JPEG' | 'PNG' | 'GIF' | 'ZIP' | 'RAR' | 'OTHER'
@@ -457,7 +458,7 @@ export class DocumentService {
           fs.unlinkSync(safePath)
         }
       } catch (error) {
-        console.error(`删除文件失败: ${version.path}`, error)
+        logger.error(`删除文件失败: ${version.path}`, { error: error instanceof Error ? error.message : String(error) })
       }
     }
 
@@ -661,7 +662,7 @@ export class DocumentService {
       const uploadDir = process.env.UPLOAD_DIR || 'uploads'
       sanitizeFilePath(document.path, uploadDir)
     } catch (error) {
-      console.error('文件路径验证失败:', error)
+      logger.error('文件路径验证失败', { error: error instanceof Error ? error.message : String(error) })
       return null
     }
 

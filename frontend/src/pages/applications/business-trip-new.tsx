@@ -51,7 +51,11 @@ export function BusinessTripNew() {
         // 获取当前登录用户
         const userStr = localStorage.getItem('user');
         if (userStr) {
-          setCurrentUser(JSON.parse(userStr));
+          try {
+            setCurrentUser(JSON.parse(userStr));
+          } catch {
+            logger.error('解析用户信息失败');
+          }
         }
       } catch (error) {
         logger.error('加载数据失败', { error });
