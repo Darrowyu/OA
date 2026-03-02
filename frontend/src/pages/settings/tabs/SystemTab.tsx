@@ -24,7 +24,7 @@ export function SystemTab() {
 
   useEffect(() => {
     loadInfo();
-    // 获取前端版本（通过 /health 端点）
+    // 获取后端版本（通过 /health 端点，apiClient baseURL 已包含 /api）
     apiClient.get<{ version: string; codename: string }>('/health')
       .then((data) => {
         setFrontendVersion({
