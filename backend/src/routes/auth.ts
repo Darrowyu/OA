@@ -32,19 +32,35 @@ const strictLimiter = config.nodeEnv === 'production'
     })
   : (_req: any, _res: any, next: any) => next(); // 开发环境跳过限流
 
+// 认证接口速率限制配置 - 用于登录/注册（防止暴力破解）
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: config.nodeEnv === 'production' ? 10 : 100, // 生产环境10次，开发环境100次
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '请求过于频繁，请15分钟后再试',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // 登录失败也计入限流（不设置 skipSuccessfulRequests）
+});
+
 /**
  * @route   POST /api/auth/login
  * @desc    用户登录
  * @access  Public
  */
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
 /**
  * @route   POST /api/auth/register
  * @desc    用户注册
  * @access  Public
  */
-router.post('/register', register);
+router.post('/register', authLimiter, register);
 
 /**
  * @route   POST /api/auth/refresh

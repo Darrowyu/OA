@@ -151,6 +151,8 @@ model Application {
   @@index([status, priority])
   @@index([type])
   @@index([projectNo])
+  @@index([projectProposerId])
+  @@index([projectReviewerId])
 }
 
 model Approval {
@@ -363,6 +365,7 @@ model MaintenanceRecord {
   @@index([status])
   @@index([type])
   @@index([startTime])
+  @@index([templateId])
 }
 
 model MaintenancePlan {
@@ -388,6 +391,7 @@ model MaintenancePlan {
   @@index([status])
   @@index([nextDate])
   @@index([status, nextDate])
+  @@index([templateId])
 }
 
 model MaintenanceTemplate {
@@ -462,6 +466,7 @@ model PartUsage {
   @@index([status])
   @@index([applicant])
   @@index([applyDate])
+  @@index([equipmentId])
 }
 
 model PartScrap {
@@ -737,6 +742,7 @@ model Schedule {
   @@unique([userId, date])
   @@index([userId])
   @@index([date])
+  @@index([shiftId])
   @@map("schedules")
 }
 
@@ -775,6 +781,7 @@ model LeaveRequest {
   @@index([userId])
   @@index([status])
   @@index([startDate])
+  @@index([approverId])
   @@map("leave_requests")
 }
 
@@ -902,7 +909,7 @@ model Task {
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
   assignee    User?        @relation("AssignedTasks", fields: [assigneeId], references: [id])
-  creator     User         @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: Cascade)
+  creator     User         @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: Restrict)
   parent      Task?        @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
   subTasks    Task[]       @relation("SubTasks")
   project     TaskProject? @relation(fields: [projectId], references: [id])
@@ -930,7 +937,7 @@ model TaskProject {
   members     Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   tasks       Task[]
 
   @@index([ownerId])
