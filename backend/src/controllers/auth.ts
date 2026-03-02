@@ -179,6 +179,14 @@ export async function register(req: Request, res: Response): Promise<void> {
       },
     });
 
+    // 创建默认快捷入口
+    await prisma.userQuickLink.createMany({
+      data: [
+        { userId: user.id, name: '报销申请', path: '/approval/new?type=reimbursement', icon: 'Receipt', sortOrder: 0 },
+        { userId: user.id, name: '请假申请', path: '/approval/new?type=leave', icon: 'Calendar', sortOrder: 1 },
+      ],
+    });
+
     // 生成令牌
     const tokens = generateTokenPair(user.id, user.username, user.role);
 
