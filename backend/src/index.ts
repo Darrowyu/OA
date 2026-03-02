@@ -109,15 +109,27 @@ if (config.nodeEnv === 'production') {
   app.use('/api/auth/register', authLimiter);
 }
 
-// 读取版本信息
+// 读取版本信息（尝试多个路径，兼容开发和生产环境）
 const versionInfo = (() => {
-  try {
-    const versionPath = path.join(__dirname, '..', '..', 'version.json');
-    const content = fs.readFileSync(versionPath, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return { version: 'unknown', name: 'OA System', codename: 'unknown' };
+  const possiblePaths = [
+    path.join(__dirname, '..', '..', 'version.json'),     // dist -> backend -> root
+    path.join(__dirname, '..', '..', '..', 'version.json'), // src -> backend -> root
+    path.join(process.cwd(), 'version.json'),              // 当前工作目录
+  ];
+
+  for (const versionPath of possiblePaths) {
+    try {
+      if (fs.existsSync(versionPath)) {
+        const content = fs.readFileSync(versionPath, 'utf-8');
+        return JSON.parse(content);
+      }
+    } catch {
+      // 继续尝试下一个路径
+    }
   }
+
+  logger.warn('无法读取 version.json，使用默认版本');
+  return { version: 'unknown', name: 'OA System', codename: 'unknown' };
 })();
 
 // 健康检查端点（支持 /api/health 和 /health）
