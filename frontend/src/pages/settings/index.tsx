@@ -7,7 +7,6 @@ import {
   FileText,
   Database,
   Settings2,
-  SlidersHorizontal,
   Palette,
   Shield,
   Bell,
@@ -22,7 +21,6 @@ import { ArchiveTab } from './tabs/ArchiveTab';
 import { EmailTab } from './tabs/EmailTab';
 import { LogsTab } from './tabs/LogsTab';
 import { BackupTab } from './tabs/BackupTab';
-import { ConfigTab } from './tabs/ConfigTab';
 import { SecurityTab } from './tabs/SecurityTab';
 import { AppearanceTab } from './tabs/AppearanceTab';
 import { NotificationTab } from './tabs/NotificationTab';
