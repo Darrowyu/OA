@@ -26,21 +26,34 @@ export interface ClientNotification {
  * 初始化 Socket.io 服务
  */
 export function initializeSocket(httpServer: HttpServer): SocketIOServer {
-  // CORS 动态验证：开发环境允许所有 localhost 端口，生产环境读取配置
+  // CORS 动态验证：开发环境允许所有 localhost/内网 IP，生产环境读取配置
   const isDev = process.env.NODE_ENV !== 'production';
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(s => s.trim()) || [];
 
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // 无 origin（如移动端）或开发环境自动通过
-        if (!origin || isDev) {
-          return callback(null, true);
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
+        // 无 origin（如移动端）自动通过
+        if (!origin) {
+          return callback(null, '*');
         }
+
+        // 开发环境：允许 localhost、127.0.0.1 和所有内网 IP (192.168.x.x, 10.x.x.x 等)
+        if (isDev) {
+          const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+          const isPrivateIP = /^(http:\/\/|https:\/\/)?(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|169\.254\.)/.test(origin);
+
+          if (isLocalhost || isPrivateIP) {
+            return callback(null, origin);
+          }
+        }
+
         // 检查配置的允许列表
         if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
+          return callback(null, origin);
         }
+
+        logger.warn(`[Socket.io] CORS 拒绝: ${origin}`);
         callback(new Error('CORS 策略拒绝'));
       },
       methods: ['GET', 'POST'],
@@ -54,6 +67,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
   io.use(async (socket: Socket, next: (err?: Error) => void) => {
     try {
       const token = socket.handshake.auth.token as string;
+
       if (!token) {
         return next(new Error('Authentication error: No token provided'));
       }
@@ -71,7 +85,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId as string;
 
-    logger.info(`用户 ${userId} 已连接`, { socketId: socket.id });
+    logger.info(`[Socket.io] 用户 ${userId} 已连接`, { socketId: socket.id });
 
     // 将用户加入专属房间
     socket.join(`user:${userId}`);

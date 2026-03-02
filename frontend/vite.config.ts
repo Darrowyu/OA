@@ -30,6 +30,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/socket.io': {
+          target: apiTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: true,  // 启用 WebSocket 代理
+        },
       },
     },
     build: {

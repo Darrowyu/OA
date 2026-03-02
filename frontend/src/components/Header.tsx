@@ -32,7 +32,20 @@ export function Header() {
   const { toggleSidebar } = useSidebar()
 
   // 使用通知 Hook
-  const { unreadCount, wsStatus } = useNotifications()
+  const {
+    unreadCount,
+    wsStatus,
+    notifications,
+    isLoading,
+    hasMore,
+    loadMore,
+    refresh,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    deleteAllRead,
+    reconnect,
+  } = useNotifications()
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -110,7 +123,20 @@ export function Header() {
           <Share2 className="h-4 w-4 text-gray-600" />
         </Button>
 
-        <NotificationBell unreadCount={unreadCount} wsStatus={wsStatus} />
+        <NotificationBell
+          unreadCount={unreadCount}
+          wsStatus={wsStatus}
+          notifications={notifications}
+          isLoading={isLoading}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          refresh={refresh}
+          markAsRead={markAsRead}
+          markAllAsRead={markAllAsRead}
+          deleteNotification={deleteNotification}
+          deleteAllRead={deleteAllRead}
+          reconnect={reconnect}
+        />
 
         {/* 更多菜单 */}
         <div className="relative" ref={menuRef}>

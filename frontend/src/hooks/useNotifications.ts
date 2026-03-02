@@ -43,12 +43,17 @@ export function useNotifications(): UseNotificationsReturn {
 
   const connectSocket = useCallback(() => {
     const token = getToken();
+
     if (!token) {
       setWsStatus('disconnected'); // 无token时设为断开状态
       return;
     }
 
-    if (socketRef.current?.connected) return;
+    // 如果有旧的连接，先断开（避免React StrictMode双重挂载）
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
     setWsStatus('connecting');
 
@@ -68,13 +73,11 @@ export function useNotifications(): UseNotificationsReturn {
     socket.on('connect_error', (error: unknown) => {
       logger.error('WebSocket 连接错误', { error });
       setWsStatus('error');
-      // Socket.io 会自动处理重连，这里只更新状态显示
     });
 
     socket.on('disconnect', (reason: string) => {
       setWsStatus('disconnected');
       logger.info(`WebSocket 断开: ${reason}`);
-      // Socket.io 会自动处理重连，无需手动干预
     });
 
     socket.on('notification:new', (notification: unknown) => {
@@ -258,7 +261,9 @@ export function useNotifications(): UseNotificationsReturn {
 
     return () => {
       clearInterval(heartbeatInterval);
-      disconnectSocket();
+      // React StrictMode 双重挂载时，重置标志让第二次挂载能正常工作
+      // 实际的 socket 断开由组件真正卸载时处理
+      isMountedRef.current = false;
     };
   }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount]);
 

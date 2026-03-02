@@ -4,13 +4,37 @@ import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationPanel } from './NotificationPanel';
 import { cn } from '@/lib/utils';
+import { Notification, WebSocketStatus } from '@/types';
 
 interface NotificationBellProps {
   unreadCount: number;
-  wsStatus?: 'connecting' | 'connected' | 'disconnected' | 'error';
+  wsStatus: WebSocketStatus;
+  notifications: Notification[];
+  isLoading: boolean;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  refresh: () => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  deleteAllRead: () => Promise<void>;
+  reconnect: () => void;
 }
 
-export function NotificationBell({ unreadCount, wsStatus = 'connected' }: NotificationBellProps) {
+export function NotificationBell({
+  unreadCount,
+  wsStatus,
+  notifications,
+  isLoading,
+  hasMore,
+  loadMore,
+  refresh,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  deleteAllRead,
+  reconnect,
+}: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +102,18 @@ export function NotificationBell({ unreadCount, wsStatus = 'connected' }: Notifi
         {isOpen && (
           <NotificationPanel
             onClose={() => setIsOpen(false)}
+            notifications={notifications}
+            unreadCount={unreadCount}
+            wsStatus={wsStatus}
+            isLoading={isLoading}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            refresh={refresh}
+            markAsRead={markAsRead}
+            markAllAsRead={markAllAsRead}
+            deleteNotification={deleteNotification}
+            deleteAllRead={deleteAllRead}
+            reconnect={reconnect}
           />
         )}
       </AnimatePresence>

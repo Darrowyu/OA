@@ -17,13 +17,24 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotifications } from '@/hooks/useNotifications';
 import { Notification, NotificationType, WebSocketStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/utils';
 
 interface NotificationPanelProps {
   onClose: () => void;
+  notifications: Notification[];
+  unreadCount: number;
+  wsStatus: WebSocketStatus;
+  isLoading: boolean;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  refresh: () => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  deleteAllRead: () => Promise<void>;
+  reconnect: () => void;
 }
 
 // 通知类型图标
@@ -208,21 +219,21 @@ function NotificationItem({
   );
 }
 
-export function NotificationPanel({ onClose }: NotificationPanelProps) {
-  const {
-    notifications,
-    unreadCount,
-    wsStatus,
-    isLoading,
-    hasMore,
-    loadMore,
-    refresh,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    deleteAllRead,
-    reconnect,
-  } = useNotifications();
+export function NotificationPanel({
+  onClose,
+  notifications,
+  unreadCount,
+  wsStatus,
+  isLoading,
+  hasMore,
+  loadMore,
+  refresh,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  deleteAllRead,
+  reconnect,
+}: NotificationPanelProps) {
 
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -256,7 +267,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[400px] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-[320px] sm:w-[360px] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
     >
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -378,7 +389,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       {/* 通知列表 */}
       <ScrollArea
         ref={scrollRef}
-        className="h-[400px]"
+        className="h-[320px]"
         onScroll={handleScroll}
       >
         {filteredNotifications.length === 0 ? (
