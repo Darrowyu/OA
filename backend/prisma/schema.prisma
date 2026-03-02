@@ -1155,9 +1155,49 @@ model EmailSettings {
 }
 
 model SystemSettings {
-  id                String   @id @default("default")
-  autoBackupEnabled Boolean  @default(false)
-  updatedAt         DateTime @updatedAt
+  id                       String   @id @default("default")
+  autoBackupEnabled        Boolean  @default(false)
+  updatedAt                DateTime @updatedAt
+
+  // 安全设置
+  passwordMinLength        Int      @default(8)
+  passwordRequireUppercase Boolean  @default(true)
+  passwordRequireLowercase Boolean  @default(true)
+  passwordRequireNumbers   Boolean  @default(true)
+  passwordRequireSymbols   Boolean  @default(false)
+  passwordExpiryDays       Int      @default(90)
+  maxLoginAttempts         Int      @default(5)
+  lockoutDurationMinutes   Int      @default(30)
+  sessionTimeoutMinutes    Int      @default(30)
+  enable2FA                Boolean  @default(false)
+
+  // 界面设置
+  theme                    String   @default("system")
+  primaryColor             String   @default("blue")
+  sidebarCollapsed         Boolean  @default(false)
+  denseMode                Boolean  @default(false)
+  language                 String   @default("zh-CN")
+  timezone                 String   @default("Asia/Shanghai")
+  dateFormat               String   @default("YYYY-MM-DD")
+  timeFormat               String   @default("24h")
+
+  // 通知设置
+  enableInApp              Boolean  @default(true)
+  enableSound              Boolean  @default(true)
+  enableDesktop            Boolean  @default(false)
+  taskReminder             Boolean  @default(true)
+  meetingReminder          Boolean  @default(true)
+  approvalNotification     Boolean  @default(true)
+  announcementNotification Boolean  @default(true)
+  mentionNotification      Boolean  @default(true)
+
+  // 存储设置
+  maxFileSize              Int      @default(50)
+  allowedFileTypes         String[] @default(["pdf", "doc", "docx", "jpg", "png"])
+  autoCleanupEnabled       Boolean  @default(true)
+  cleanupDays              Int      @default(30)
+  storageLimit             Int      @default(1024)
+  compressImages           Boolean  @default(true)
 
   @@map("system_settings")
 }

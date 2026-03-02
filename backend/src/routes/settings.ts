@@ -11,6 +11,14 @@ import {
   setAutoBackup,
   getEmailSettings,
   saveEmailSettings,
+  getSecuritySettings,
+  saveSecuritySettings,
+  getAppearanceSettings,
+  saveAppearanceSettings,
+  getNotificationSettings,
+  saveNotificationSettings,
+  getStorageSettings,
+  saveStorageSettings,
 } from '../controllers/settings';
 import { configController } from '../controllers/config.controller';
 import { authMiddleware, requireRole } from '../middleware/auth';
@@ -121,5 +129,63 @@ router.get('/email', getEmailSettings);
  * @access  Private (Admin only)
  */
 router.post('/email', saveEmailSettings);
+
+// ========== 新增设置模块路由 ==========
+
+/**
+ * @route   GET /api/settings/security
+ * @desc    获取安全设置
+ * @access  Private (Admin only)
+ */
+router.get('/security', getSecuritySettings);
+
+/**
+ * @route   POST /api/settings/security
+ * @desc    保存安全设置
+ * @access  Private (Admin only)
+ */
+router.post('/security', saveSecuritySettings);
+
+/**
+ * @route   GET /api/settings/appearance
+ * @desc    获取界面设置
+ * @access  Private (Admin only)
+ */
+router.get('/appearance', getAppearanceSettings);
+
+/**
+ * @route   POST /api/settings/appearance
+ * @desc    保存界面设置
+ * @access  Private (Admin only)
+ */
+router.post('/appearance', saveAppearanceSettings);
+
+/**
+ * @route   GET /api/settings/notifications
+ * @desc    获取通知设置
+ * @access  Private (Admin only)
+ */
+router.get('/notifications', getNotificationSettings);
+
+/**
+ * @route   POST /api/settings/notifications
+ * @desc    保存通知设置
+ * @access  Private (Admin only)
+ */
+router.post('/notifications', saveNotificationSettings);
+
+/**
+ * @route   GET /api/settings/storage
+ * @desc    获取存储设置
+ * @access  Private (Admin only)
+ */
+router.get('/storage', getStorageSettings);
+
+/**
+ * @route   POST /api/settings/storage
+ * @desc    保存存储设置
+ * @access  Private (Admin only)
+ */
+router.post('/storage', saveStorageSettings);
 
 export default router;

@@ -507,6 +507,274 @@ export const saveEmailSettings = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * 获取安全设置
+ */
+export const getSecuritySettings = async (_req: Request, res: Response) => {
+  try {
+    const config = await prisma.systemSettings.findUnique({
+      where: { id: 'default' },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        passwordMinLength: config?.passwordMinLength ?? 8,
+        passwordRequireUppercase: config?.passwordRequireUppercase ?? true,
+        passwordRequireLowercase: config?.passwordRequireLowercase ?? true,
+        passwordRequireNumbers: config?.passwordRequireNumbers ?? true,
+        passwordRequireSymbols: config?.passwordRequireSymbols ?? false,
+        passwordExpiryDays: config?.passwordExpiryDays ?? 90,
+        maxLoginAttempts: config?.maxLoginAttempts ?? 5,
+        lockoutDurationMinutes: config?.lockoutDurationMinutes ?? 30,
+        sessionTimeoutMinutes: config?.sessionTimeoutMinutes ?? 30,
+        enable2FA: config?.enable2FA ?? false,
+      },
+    });
+  } catch (error) {
+    logger.error('获取安全设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '获取安全设置失败' },
+    });
+  }
+};
+
+/**
+ * 保存安全设置
+ */
+export const saveSecuritySettings = async (req: Request, res: Response) => {
+  try {
+    const settings = req.body;
+
+    await prisma.systemSettings.upsert({
+      where: { id: 'default' },
+      update: {
+        passwordMinLength: settings.passwordMinLength,
+        passwordRequireUppercase: settings.passwordRequireUppercase,
+        passwordRequireLowercase: settings.passwordRequireLowercase,
+        passwordRequireNumbers: settings.passwordRequireNumbers,
+        passwordRequireSymbols: settings.passwordRequireSymbols,
+        passwordExpiryDays: settings.passwordExpiryDays,
+        maxLoginAttempts: settings.maxLoginAttempts,
+        lockoutDurationMinutes: settings.lockoutDurationMinutes,
+        sessionTimeoutMinutes: settings.sessionTimeoutMinutes,
+        enable2FA: settings.enable2FA,
+      },
+      create: {
+        id: 'default',
+        ...settings,
+      },
+    });
+
+    logger.info('安全设置已更新');
+    res.json({ success: true, message: '设置已保存' });
+  } catch (error) {
+    logger.error('保存安全设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '保存安全设置失败' },
+    });
+  }
+};
+
+/**
+ * 获取界面设置
+ */
+export const getAppearanceSettings = async (_req: Request, res: Response) => {
+  try {
+    const config = await prisma.systemSettings.findUnique({
+      where: { id: 'default' },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        theme: config?.theme ?? 'system',
+        primaryColor: config?.primaryColor ?? 'blue',
+        sidebarCollapsed: config?.sidebarCollapsed ?? false,
+        denseMode: config?.denseMode ?? false,
+        language: config?.language ?? 'zh-CN',
+        timezone: config?.timezone ?? 'Asia/Shanghai',
+        dateFormat: config?.dateFormat ?? 'YYYY-MM-DD',
+        timeFormat: config?.timeFormat ?? '24h',
+      },
+    });
+  } catch (error) {
+    logger.error('获取界面设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '获取界面设置失败' },
+    });
+  }
+};
+
+/**
+ * 保存界面设置
+ */
+export const saveAppearanceSettings = async (req: Request, res: Response) => {
+  try {
+    const settings = req.body;
+
+    await prisma.systemSettings.upsert({
+      where: { id: 'default' },
+      update: {
+        theme: settings.theme,
+        primaryColor: settings.primaryColor,
+        sidebarCollapsed: settings.sidebarCollapsed,
+        denseMode: settings.denseMode,
+        language: settings.language,
+        timezone: settings.timezone,
+        dateFormat: settings.dateFormat,
+        timeFormat: settings.timeFormat,
+      },
+      create: {
+        id: 'default',
+        ...settings,
+      },
+    });
+
+    logger.info('界面设置已更新');
+    res.json({ success: true, message: '设置已保存' });
+  } catch (error) {
+    logger.error('保存界面设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '保存界面设置失败' },
+    });
+  }
+};
+
+/**
+ * 获取通知设置
+ */
+export const getNotificationSettings = async (_req: Request, res: Response) => {
+  try {
+    const config = await prisma.systemSettings.findUnique({
+      where: { id: 'default' },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        enableInApp: config?.enableInApp ?? true,
+        enableSound: config?.enableSound ?? true,
+        enableDesktop: config?.enableDesktop ?? false,
+        taskReminder: config?.taskReminder ?? true,
+        meetingReminder: config?.meetingReminder ?? true,
+        approvalNotification: config?.approvalNotification ?? true,
+        announcementNotification: config?.announcementNotification ?? true,
+        mentionNotification: config?.mentionNotification ?? true,
+      },
+    });
+  } catch (error) {
+    logger.error('获取通知设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '获取通知设置失败' },
+    });
+  }
+};
+
+/**
+ * 保存通知设置
+ */
+export const saveNotificationSettings = async (req: Request, res: Response) => {
+  try {
+    const settings = req.body;
+
+    await prisma.systemSettings.upsert({
+      where: { id: 'default' },
+      update: {
+        enableInApp: settings.enableInApp,
+        enableSound: settings.enableSound,
+        enableDesktop: settings.enableDesktop,
+        taskReminder: settings.taskReminder,
+        meetingReminder: settings.meetingReminder,
+        approvalNotification: settings.approvalNotification,
+        announcementNotification: settings.announcementNotification,
+        mentionNotification: settings.mentionNotification,
+      },
+      create: {
+        id: 'default',
+        ...settings,
+      },
+    });
+
+    logger.info('通知设置已更新');
+    res.json({ success: true, message: '设置已保存' });
+  } catch (error) {
+    logger.error('保存通知设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '保存通知设置失败' },
+    });
+  }
+};
+
+/**
+ * 获取存储设置
+ */
+export const getStorageSettings = async (_req: Request, res: Response) => {
+  try {
+    const config = await prisma.systemSettings.findUnique({
+      where: { id: 'default' },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        maxFileSize: config?.maxFileSize ?? 50,
+        allowedFileTypes: config?.allowedFileTypes ?? ['pdf', 'doc', 'docx', 'jpg', 'png'],
+        autoCleanupEnabled: config?.autoCleanupEnabled ?? true,
+        cleanupDays: config?.cleanupDays ?? 30,
+        storageLimit: config?.storageLimit ?? 1024,
+        compressImages: config?.compressImages ?? true,
+      },
+    });
+  } catch (error) {
+    logger.error('获取存储设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '获取存储设置失败' },
+    });
+  }
+};
+
+/**
+ * 保存存储设置
+ */
+export const saveStorageSettings = async (req: Request, res: Response) => {
+  try {
+    const settings = req.body;
+
+    await prisma.systemSettings.upsert({
+      where: { id: 'default' },
+      update: {
+        maxFileSize: settings.maxFileSize,
+        allowedFileTypes: settings.allowedFileTypes,
+        autoCleanupEnabled: settings.autoCleanupEnabled,
+        cleanupDays: settings.cleanupDays,
+        storageLimit: settings.storageLimit,
+        compressImages: settings.compressImages,
+      },
+      create: {
+        id: 'default',
+        ...settings,
+      },
+    });
+
+    logger.info('存储设置已更新');
+    res.json({ success: true, message: '设置已保存' });
+  } catch (error) {
+    logger.error('保存存储设置失败', { error });
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: '保存存储设置失败' },
+    });
+  }
+};
+
 // 辅助函数
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
