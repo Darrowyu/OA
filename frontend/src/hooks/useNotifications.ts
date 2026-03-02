@@ -261,9 +261,13 @@ export function useNotifications(): UseNotificationsReturn {
 
     return () => {
       clearInterval(heartbeatInterval);
-      // React StrictMode 双重挂载时，重置标志让第二次挂载能正常工作
-      // 实际的 socket 断开由组件真正卸载时处理
       isMountedRef.current = false;
+      // 延迟断开：StrictMode 重新挂载时 connectSocket 会先清理旧连接；真正卸载时 isMountedRef 保持 false，触发断开
+      setTimeout(() => {
+        if (!isMountedRef.current) {
+          disconnectSocket();
+        }
+      }, 100);
     };
   }, [connectSocket, disconnectSocket, fetchNotifications, fetchUnreadCount]);
 

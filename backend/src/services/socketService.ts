@@ -35,7 +35,7 @@ export function initializeSocket(httpServer: HttpServer): SocketIOServer {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
         // 无 origin（如移动端）自动通过
         if (!origin) {
-          return callback(null, '*');
+          return callback(null, true);
         }
 
         // 开发环境：允许 localhost、127.0.0.1 和所有内网 IP (192.168.x.x, 10.x.x.x 等)
@@ -213,26 +213,7 @@ export async function sendNotificationToUsers(
 }
 
 /**
- * 广播通知给所有在线用户
- */
-export async function broadcastNotification(notification: Notification): Promise<number> {
-  try {
-    const ioInstance = getIO();
-    const clientNotification = toClientNotification(notification);
-
-    ioInstance.emit('notification:broadcast', clientNotification);
-
-    const onlineCount = Array.from(onlineUsers.values()).flat().length;
-    logger.info(`广播通知已发送`, { onlineCount });
-    return onlineCount;
-  } catch (error) {
-    logger.error('广播通知失败', { error });
-    return 0;
-  }
-}
-
-/**
- * 仅向所有在线用户广播通知（不通过数据库）
+ * 向所有在线用户广播通知（不通过数据库）
  * 用于系统广播等实时通知场景
  */
 export async function broadcastToAllOnlineUsers(notification: Notification): Promise<number> {

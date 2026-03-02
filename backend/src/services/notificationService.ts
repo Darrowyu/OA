@@ -382,7 +382,7 @@ export async function notifyHighAmountApproval(
     const financeUsers = await prisma.user.findMany({
       where: {
         OR: [
-          { role: 'FINANCE' as any },
+          { role: 'FINANCE' },
           { id: 'E10015' }
         ],
         isActive: true
