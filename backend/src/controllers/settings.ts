@@ -27,6 +27,54 @@ const BackupIdSchema = z.object({
   id: z.string().min(1),
 });
 
+// 安全设置验证 Schema
+const SecuritySettingsSchema = z.object({
+  passwordMinLength: z.number().int().min(6).max(32),
+  passwordRequireUppercase: z.boolean(),
+  passwordRequireLowercase: z.boolean(),
+  passwordRequireNumbers: z.boolean(),
+  passwordRequireSymbols: z.boolean(),
+  passwordExpiryDays: z.number().int().min(0).max(365),
+  maxLoginAttempts: z.number().int().min(1).max(10),
+  lockoutDurationMinutes: z.number().int().min(1),
+  sessionTimeoutMinutes: z.number().int().min(1),
+  enable2FA: z.boolean(),
+});
+
+// 界面设置验证 Schema
+const AppearanceSettingsSchema = z.object({
+  theme: z.enum(['light', 'dark', 'system']),
+  primaryColor: z.enum(['blue', 'emerald', 'purple', 'orange', 'rose']),
+  sidebarCollapsed: z.boolean(),
+  denseMode: z.boolean(),
+  language: z.string(),
+  timezone: z.string(),
+  dateFormat: z.string(),
+  timeFormat: z.enum(['12h', '24h']),
+});
+
+// 通知设置验证 Schema
+const NotificationSettingsSchema = z.object({
+  enableInApp: z.boolean(),
+  enableSound: z.boolean(),
+  enableDesktop: z.boolean(),
+  taskReminder: z.boolean(),
+  meetingReminder: z.boolean(),
+  approvalNotification: z.boolean(),
+  announcementNotification: z.boolean(),
+  mentionNotification: z.boolean(),
+});
+
+// 存储设置验证 Schema
+const StorageSettingsSchema = z.object({
+  maxFileSize: z.number().int().min(1).max(500),
+  allowedFileTypes: z.array(z.string()),
+  autoCleanupEnabled: z.boolean(),
+  cleanupDays: z.number().int().min(1).max(365),
+  storageLimit: z.number().int().min(1),
+  compressImages: z.boolean(),
+});
+
 /**
  * 获取系统信息
  */
@@ -545,7 +593,18 @@ export const getSecuritySettings = async (_req: Request, res: Response) => {
  */
 export const saveSecuritySettings = async (req: Request, res: Response) => {
   try {
-    const settings = req.body;
+    const validationResult = SecuritySettingsSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '参数验证失败: ' + validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '),
+        },
+      });
+      return;
+    }
+    const settings = validationResult.data;
 
     await prisma.systemSettings.upsert({
       where: { id: 'default' },
@@ -614,7 +673,18 @@ export const getAppearanceSettings = async (_req: Request, res: Response) => {
  */
 export const saveAppearanceSettings = async (req: Request, res: Response) => {
   try {
-    const settings = req.body;
+    const validationResult = AppearanceSettingsSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '参数验证失败: ' + validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '),
+        },
+      });
+      return;
+    }
+    const settings = validationResult.data;
 
     await prisma.systemSettings.upsert({
       where: { id: 'default' },
@@ -681,7 +751,18 @@ export const getNotificationSettings = async (_req: Request, res: Response) => {
  */
 export const saveNotificationSettings = async (req: Request, res: Response) => {
   try {
-    const settings = req.body;
+    const validationResult = NotificationSettingsSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '参数验证失败: ' + validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '),
+        },
+      });
+      return;
+    }
+    const settings = validationResult.data;
 
     await prisma.systemSettings.upsert({
       where: { id: 'default' },
@@ -746,7 +827,18 @@ export const getStorageSettings = async (_req: Request, res: Response) => {
  */
 export const saveStorageSettings = async (req: Request, res: Response) => {
   try {
-    const settings = req.body;
+    const validationResult = StorageSettingsSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '参数验证失败: ' + validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '),
+        },
+      });
+      return;
+    }
+    const settings = validationResult.data;
 
     await prisma.systemSettings.upsert({
       where: { id: 'default' },

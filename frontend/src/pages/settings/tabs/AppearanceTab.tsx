@@ -30,6 +30,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAppearanceSettings } from '../hooks/useAppearanceSettings';
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -70,7 +71,7 @@ const dateFormats = [
   { value: 'YYYY年MM月DD日', label: '2024年01月15日' },
 ];
 
-export function AppearanceTab() {
+export const AppearanceTab = memo(function AppearanceTab() {
   const { settings, loading, saving, error, themeColors, updateSetting, saveSettings } =
     useAppearanceSettings();
 
@@ -298,4 +299,4 @@ export function AppearanceTab() {
       </motion.div>
     </motion.div>
   );
-}
+});

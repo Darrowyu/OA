@@ -102,8 +102,8 @@ export function useAppearanceSettings() {
         const parsed = JSON.parse(saved);
         setSettings((prev) => ({ ...prev, ...parsed }));
         applyThemeSettings({ ...defaultSettings, ...parsed });
-      } catch {
-        // 忽略解析错误
+      } catch (err) {
+        console.error('解析本地外观设置失败:', err);
       }
     }
   }, [loadSettings, applyThemeSettings]);

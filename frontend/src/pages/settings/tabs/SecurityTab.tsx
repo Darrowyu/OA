@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSecuritySettings } from '../hooks/useSecuritySettings';
+import { memo } from 'react';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -32,7 +33,7 @@ const itemVariants = {
   },
 };
 
-export function SecurityTab() {
+export const SecurityTab = memo(function SecurityTab() {
   const { settings, loading, saving, error, updateSetting, saveSettings } =
     useSecuritySettings();
 
@@ -225,4 +226,4 @@ export function SecurityTab() {
       </motion.div>
     </motion.div>
   );
-}
+});

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
 
@@ -57,7 +57,7 @@ const defaultSettings: NotificationSettings = {
   mentionNotification: true,
 };
 
-export function NotificationTab() {
+export const NotificationTab = memo(function NotificationTab() {
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -286,4 +286,4 @@ export function NotificationTab() {
       </motion.div>
     </motion.div>
   );
-}
+});

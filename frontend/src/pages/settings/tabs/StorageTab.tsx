@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
 
@@ -56,7 +56,7 @@ const defaultSettings: StorageSettings = {
   compressImages: true,
 };
 
-export function StorageTab() {
+export const StorageTab = memo(function StorageTab() {
   const [settings, setSettings] = useState<StorageSettings>(defaultSettings);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -293,4 +293,4 @@ export function StorageTab() {
       </motion.div>
     </motion.div>
   );
-}
+});
