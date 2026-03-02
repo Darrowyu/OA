@@ -1,6 +1,6 @@
 {
   "name": "oa-system",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "OA办公自动化系统 - 重构版",
   "private": true,
   "workspaces": [
@@ -26,7 +26,10 @@
     "db:reset": "cd backend && npm run db:migrate reset",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
-    "type-check": "cd backend && npm run type-check && cd ../frontend && npm run type-check"
+    "type-check": "cd backend && npm run type-check && cd ../frontend && npm run type-check",
+    "version:show": "node scripts/version-manager.mjs show",
+    "version:sync": "node scripts/version-manager.mjs sync",
+    "version:bump": "node scripts/version-manager.mjs"
   },
   "devDependencies": {
     "@types/dagre": "^0.7.53",

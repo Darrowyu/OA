@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Monitor, Cpu, Database, Clock, Server, HardDrive, AlertCircle } from 'lucide-react';
+import { Monitor, Cpu, Database, Clock, Server, HardDrive, AlertCircle, Tag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSystemInfo } from '../hooks/useSystemInfo';
+import apiClient from '@/lib/api';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -19,9 +20,21 @@ const itemVariants = {
 
 export function SystemTab() {
   const { info, loading, error, loadInfo } = useSystemInfo();
+  const [frontendVersion, setFrontendVersion] = useState({ version: '-', codename: '' });
 
   useEffect(() => {
     loadInfo();
+    // 获取前端版本（通过 /health 端点）
+    apiClient.get<{ version: string; codename: string }>('/health')
+      .then((data) => {
+        setFrontendVersion({
+          version: data.version || '-',
+          codename: data.codename || '',
+        });
+      })
+      .catch(() => {
+        setFrontendVersion({ version: '-', codename: '' });
+      });
   }, [loadInfo]);
 
   if (loading) {
@@ -56,7 +69,7 @@ export function SystemTab() {
       )}
 
       {/* 核心指标 */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -64,8 +77,23 @@ export function SystemTab() {
                 <Server className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">系统版本</p>
+                <p className="text-sm font-medium text-gray-500">后端版本</p>
                 <p className="text-xl font-bold text-gray-900">{info.version}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 rounded-lg">
+                <Tag className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">前端版本</p>
+                <p className="text-xl font-bold text-gray-900">{frontendVersion.version}</p>
+                <p className="text-xs text-gray-400">{frontendVersion.codename}</p>
               </div>
             </div>
           </CardContent>

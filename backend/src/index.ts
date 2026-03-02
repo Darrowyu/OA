@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import * as fs from 'fs';
+import * as path from 'path';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -107,12 +109,26 @@ if (config.nodeEnv === 'production') {
   app.use('/api/auth/register', authLimiter);
 }
 
+// 读取版本信息
+const versionInfo = (() => {
+  try {
+    const versionPath = path.join(__dirname, '..', '..', 'version.json');
+    const content = fs.readFileSync(versionPath, 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return { version: 'unknown', name: 'OA System', codename: 'unknown' };
+  }
+})();
+
 // 健康检查端点
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
+    version: versionInfo.version,
+    name: versionInfo.name,
+    codename: versionInfo.codename,
   });
 });
 
