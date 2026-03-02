@@ -120,7 +120,19 @@ const versionInfo = (() => {
   }
 })();
 
-// 健康检查端点
+// 健康检查端点（支持 /api/health 和 /health）
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: config.nodeEnv,
+    version: versionInfo.version,
+    name: versionInfo.name,
+    codename: versionInfo.codename,
+  });
+});
+
+// 保留旧的 /health 端点（向后兼容）
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
