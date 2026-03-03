@@ -97,21 +97,21 @@ export const SubMenu = memo(function SubMenu({
           <Icon className={cn(nestedLevel > 0 ? 'h-4 w-4' : 'h-5 w-5')} />
         </div>
 
-        {/* 文字容器 */}
+        {/* 文字容器 - 使用max-width避免展开时跳动 */}
         <div
           className={cn(
-            'overflow-hidden transition-all duration-200 ease-out text-left',
-            isCollapsed ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-3 flex-1'
+            'overflow-hidden transition-all duration-200 ease-out text-left flex-1',
+            isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[200px] opacity-100 ml-3'
           )}
         >
           <span className="whitespace-nowrap">{title}</span>
         </div>
 
-        {/* 展开箭头 */}
+        {/* 展开箭头 - 使用max-width避免展开时跳动 */}
         <div
           className={cn(
             'overflow-hidden transition-all duration-200 ease-out flex-shrink-0',
-            isCollapsed ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-2'
+            isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[20px] opacity-100 ml-2'
           )}
         >
           <motion.div
@@ -126,11 +126,11 @@ export const SubMenu = memo(function SubMenu({
           </motion.div>
         </div>
 
-        {/* 徽章 */}
+        {/* 徽章 - 使用max-width避免展开时跳动 */}
         <div
           className={cn(
             'overflow-hidden transition-all duration-200 ease-out flex-shrink-0',
-            isCollapsed || totalBadge <= 0 ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-2'
+            isCollapsed || totalBadge <= 0 ? 'max-w-0 opacity-0 ml-0' : 'max-w-[60px] opacity-100 ml-2'
           )}
         >
           {totalBadge > 0 && (

@@ -53,21 +53,21 @@ export const NavItem = memo(function NavItem({
         <Icon className={cn(isNested ? 'h-4 w-4' : 'h-5 w-5')} />
       </div>
 
-      {/* 文字容器 - 宽度动画实现平滑展开/收起 */}
+      {/* 文字容器 - 使用max-width动画避免跳动 */}
       <div
         className={cn(
-          'overflow-hidden transition-all duration-200 ease-out',
-          isCollapsed ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-3'
+          'overflow-hidden transition-all duration-200 ease-out flex-1',
+          isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[200px] opacity-100 ml-3'
         )}
       >
         <span className="whitespace-nowrap">{item.name}</span>
       </div>
 
-      {/* 徽章 - 仅展开时显示 */}
+      {/* 徽章 - 仅展开时显示，使用max-width避免跳动 */}
       <div
         className={cn(
           'overflow-hidden transition-all duration-200 ease-out flex-shrink-0',
-          isCollapsed || !item.badge || item.badge <= 0 ? 'w-0 opacity-0 ml-0' : 'w-auto opacity-100 ml-2'
+          isCollapsed || !item.badge || item.badge <= 0 ? 'max-w-0 opacity-0 ml-0' : 'max-w-[60px] opacity-100 ml-2'
         )}
       >
         {item.badge !== undefined && item.badge > 0 && (
