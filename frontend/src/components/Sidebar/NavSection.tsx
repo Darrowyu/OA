@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { NavItem } from './NavItem';
 import type { NavItem as NavItemType } from './types';
@@ -12,14 +11,6 @@ interface NavSectionProps {
   className?: string;
   showTitle?: boolean;
 }
-
-// 动画配置
-const titleAnimation = {
-  initial: { opacity: 0, y: -4 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -4 },
-  transition: { duration: 0.15 }
-};
 
 // 导航区块组件
 export const NavSection = memo(function NavSection({
@@ -36,24 +27,18 @@ export const NavSection = memo(function NavSection({
 
   return (
     <div className={cn('mt-6', className)}>
-      {/* 区块标题 - 固定高度，折叠时保持占位 */}
-      <div className="h-5 px-3 mb-2">
-        <AnimatePresence mode="wait" initial={false}>
-          {!isCollapsed && showTitle && title && (
-            <motion.div
-              key={`section-title-${title}`}
-              variants={titleAnimation}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="flex items-center justify-between"
-            >
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                {title}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 区块标题 - 使用CSS transition代替framer-motion，避免闪烁 */}
+      <div
+        className={cn(
+          'px-3 mb-2 overflow-hidden transition-all duration-200 ease-out',
+          isCollapsed || !showTitle || !title ? 'h-0 opacity-0' : 'h-5 opacity-100'
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            {title}
+          </span>
+        </div>
       </div>
 
       {/* 导航项列表 */}

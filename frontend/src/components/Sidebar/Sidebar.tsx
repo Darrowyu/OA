@@ -184,8 +184,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
         >
           <div className="flex items-center justify-between flex-1">
             <div>
-              <p className="text-lg font-bold text-gray-900 whitespace-nowrap">智慧OA</p>
-              <p className="text-xs text-gray-500 whitespace-nowrap">企业办公系统</p>
+              <p className="text-lg font-bold text-gray-900 whitespace-nowrap">Makrite OA</p>
             </div>
             {/* 移动端关闭按钮 */}
             {isMobile && (
