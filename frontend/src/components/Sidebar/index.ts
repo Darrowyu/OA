@@ -6,6 +6,7 @@ export { NavItem as SidebarNavItem } from './NavItem';
 export { SubMenu as SidebarSubMenu } from './SubMenu';
 export { NavSection as SidebarNavSection } from './NavSection';
 export { CreateButton as SidebarCreateButton } from './CreateButton';
+export { QuickLinksSection } from './QuickLinksSection';
 
 // 工具
 export { iconMap, getIcon } from './iconMap';

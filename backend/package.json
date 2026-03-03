@@ -1,6 +1,6 @@
 {
   "name": "oa-system-backend",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "OA系统后端API服务",
   "main": "dist/index.js",
   "scripts": {

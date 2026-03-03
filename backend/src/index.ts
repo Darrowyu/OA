@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import * as fs from 'fs';
+import * as path from 'path';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -39,6 +41,7 @@ import productDevelopmentRoutes from './routes/productDevelopment';
 import settingsRoutes from './routes/settings';
 import configRoutes from './routes/config';
 import dashboardRoutes from './routes/dashboard';
+import quickLinksRoutes from './routes/quickLinks';
 import { createServer } from 'http';
 import * as logger from './lib/logger';
 
@@ -106,12 +109,50 @@ if (config.nodeEnv === 'production') {
   app.use('/api/auth/register', authLimiter);
 }
 
-// 健康检查端点
+// 读取版本信息（尝试多个路径，兼容开发和生产环境）
+const versionInfo = (() => {
+  const possiblePaths = [
+    path.join(__dirname, '..', '..', 'version.json'),     // dist -> backend -> root
+    path.join(__dirname, '..', '..', '..', 'version.json'), // src -> backend -> root
+    path.join(process.cwd(), 'version.json'),              // 当前工作目录
+  ];
+
+  for (const versionPath of possiblePaths) {
+    try {
+      if (fs.existsSync(versionPath)) {
+        const content = fs.readFileSync(versionPath, 'utf-8');
+        return JSON.parse(content);
+      }
+    } catch {
+      // 继续尝试下一个路径
+    }
+  }
+
+  logger.warn('无法读取 version.json，使用默认版本');
+  return { version: 'unknown', name: 'OA System', codename: 'unknown' };
+})();
+
+// 健康检查端点（支持 /api/health 和 /health）
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: config.nodeEnv,
+    version: versionInfo.version,
+    name: versionInfo.name,
+    codename: versionInfo.codename,
+  });
+});
+
+// 保留旧的 /health 端点（向后兼容）
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
+    version: versionInfo.version,
+    name: versionInfo.name,
+    codename: versionInfo.codename,
   });
 });
 
@@ -145,6 +186,7 @@ app.use('/api/product-development', productDevelopmentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/quick-links', quickLinksRoutes);
 
 // 404处理
 app.use(notFoundHandler);

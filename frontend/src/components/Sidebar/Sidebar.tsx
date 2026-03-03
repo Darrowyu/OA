@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { CreateButton } from './CreateButton';
 import { NavItem } from './NavItem';
 import { SubMenu } from './SubMenu';
-import { NavSection } from './NavSection';
+import { QuickLinksSection } from './QuickLinksSection';
 // 移除未使用的iconMap导入
 import type { NavItem as NavItemType, SubMenuItem } from './types';
 
@@ -144,15 +144,6 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
       { path: '/meetings/booking', name: '预订会议室', icon: 'Calendar' },
       { path: '/meetings?tab=organized', name: '我组织的', icon: 'Users' },
       { path: '/meetings?tab=attending', name: '我参与的', icon: 'Users' },
-    ],
-    []
-  );
-
-  // 快捷入口
-  const favouriteItems: NavItemType[] = useMemo(
-    () => [
-      { path: '/approval/new?type=reimbursement', name: '报销申请', icon: 'Receipt', show: true },
-      { path: '/approval/new?type=leave', name: '请假申请', icon: 'Calendar', show: true },
     ],
     []
   );
@@ -397,11 +388,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
         </ul>
 
         {/* 快捷入口 */}
-        <NavSection
-          title="快捷入口"
-          items={favouriteItems}
-          isCollapsed={!showExpanded}
-        />
+        <QuickLinksSection isCollapsed={!showExpanded} />
 
         {/* 系统管理 */}
         {isAdmin && (
