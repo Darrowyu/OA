@@ -80,9 +80,9 @@ export const NavItem = memo(function NavItem({
         )}
       </div>
 
-      {/* 折叠状态下的tooltip */}
+      {/* 折叠状态下的tooltip - z-index与其他导航项保持一致 */}
       {isCollapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-40 pointer-events-none">
           {item.name}
         </div>
       )}

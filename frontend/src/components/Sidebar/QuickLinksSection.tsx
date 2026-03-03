@@ -79,15 +79,23 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
   }));
 
   if (navItems.length === 0 && !isEditing) {
+    // 收起时完全隐藏该区域，避免突变
+    if (isCollapsed) {
+      return (
+        <AddQuickLinkDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          onSubmit={(data) => createMutation.mutate(data)}
+          currentCount={quickLinks.length}
+          isPending={createMutation.isPending}
+        />
+      );
+    }
+
     return (
       <div className="mt-6 px-3">
         {/* 标题区域 - 使用CSS transition代替framer-motion */}
-        <div
-          className={cn(
-            'flex items-center justify-between mb-2 overflow-hidden transition-all duration-200 ease-out',
-            isCollapsed ? 'h-0 opacity-0' : 'h-5 opacity-100'
-          )}
-        >
+        <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
             快捷入口
           </span>
@@ -99,11 +107,9 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
             <Plus className="h-4 w-4" />
           </button>
         </div>
-        {!isCollapsed && (
-          <div className="text-xs text-gray-400 py-2 px-3">
-            点击 + 添加常用功能
-          </div>
-        )}
+        <div className="text-xs text-gray-400 py-2 px-3">
+          点击 + 添加常用功能
+        </div>
         <AddQuickLinkDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
@@ -160,8 +166,8 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
         </div>
       </div>
 
-      {/* 导航项列表 */}
-      <ul className="space-y-1 px-2">
+      {/* 导航项列表 - 收起时使用 px-3 与其他导航项保持一致 */}
+      <ul className={cn('space-y-1', isCollapsed ? 'px-3' : 'px-2')}>
         {navItems.map((item, index) => (
           <QuickLinkItem
             key={item.path}
