@@ -8,6 +8,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -95,7 +97,7 @@ export function AddQuickLinkDialog({
         <DialogHeader>
           <DialogTitle>添加快捷入口 ({currentCount}/{maxCount})</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
+        <DialogBody className="space-y-4">
           <div>
             <label className="text-sm font-medium">选择常用功能</label>
             <Select onValueChange={handlePredefinedSelect}>
@@ -150,14 +152,22 @@ export function AddQuickLinkDialog({
               </SelectContent>
             </Select>
           </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            取消
+          </Button>
           <Button
             onClick={handleSubmit}
             disabled={!newLink.name || !newLink.path || isPending}
-            className="w-full"
           >
             {isPending ? '添加中...' : '添加'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
