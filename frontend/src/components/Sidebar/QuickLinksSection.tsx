@@ -6,7 +6,6 @@ import { quickLinkApi } from '@/services/quickLinkApi';
 import type { NavItem as NavItemType } from './types';
 import { QuickLinkItem } from './QuickLinkItem';
 import { AddQuickLinkDialog } from './AddQuickLinkDialog';
-import { cn } from '@/lib/utils';
 
 const MAX_QUICK_LINKS = 10;
 
@@ -123,51 +122,48 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
 
   return (
     <div className="mt-6">
-      {/* 区块标题 - 使用CSS transition代替framer-motion，避免闪烁 */}
-      <div
-        className={cn(
-          'px-3 mb-2 overflow-hidden transition-all duration-200 ease-out',
-          isCollapsed ? 'h-0 opacity-0' : 'h-5 opacity-100'
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-            快捷入口
-          </span>
-          <div className="flex items-center gap-1">
-            {!isEditing ? (
-              <>
+      {/* 区块标题 - 使用条件渲染替代动画，避免收起时的突变 */}
+      {!isCollapsed && (
+        <div className="px-3 mb-2 h-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              快捷入口
+            </span>
+            <div className="flex items-center gap-1">
+              {!isEditing ? (
+                <>
+                  <button
+                    onClick={() => setIsAddDialogOpen(true)}
+                    className="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
+                    title="添加快捷入口"
+                    disabled={quickLinks.length >= MAX_QUICK_LINKS}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
+                    title="管理快捷入口"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => setIsAddDialogOpen(true)}
+                  onClick={() => setIsEditing(false)}
                   className="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
-                  title="添加快捷入口"
-                  disabled={quickLinks.length >= MAX_QUICK_LINKS}
+                  title="完成"
                 >
-                  <Plus className="h-4 w-4" />
+                  <span className="text-xs">完成</span>
                 </button>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
-                  title="管理快捷入口"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditing(false)}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
-                title="完成"
-              >
-                <span className="text-xs">完成</span>
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 导航项列表 - 收起时使用 px-3 与其他导航项保持一致 */}
-      <ul className={cn('space-y-1', isCollapsed ? 'px-3' : 'px-2')}>
+      {/* 导航项列表 - 统一使用 px-3 */}
+      <ul className="space-y-1 px-3">
         {navItems.map((item, index) => (
           <QuickLinkItem
             key={item.path}
