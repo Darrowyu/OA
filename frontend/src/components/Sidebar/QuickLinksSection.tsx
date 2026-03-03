@@ -57,7 +57,7 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
     },
   });
 
-// 重新排序快捷入口
+  // 重新排序快捷入口
   const handleReorder = (fromIndex: number, toIndex: number) => {
     if (toIndex < 0 || toIndex >= quickLinks.length) return;
     const newItems = Array.from(quickLinks);
@@ -162,8 +162,8 @@ export function QuickLinksSection({ isCollapsed }: QuickLinksSectionProps) {
         </div>
       )}
 
-      {/* 导航项列表 - 统一使用 px-3 */}
-      <ul className="space-y-1 px-3">
+      {/* 导航项列表 - 与常规导航保持一致，不额外添加 px-3 */}
+      <ul className="space-y-1">
         {navItems.map((item, index) => (
           <QuickLinkItem
             key={item.path}

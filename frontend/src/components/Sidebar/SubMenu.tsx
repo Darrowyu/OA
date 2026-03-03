@@ -54,12 +54,24 @@ export const SubMenu = memo(function SubMenu({
   const totalBadge = items.reduce((sum, item) => sum + (item.badge || 0), 0);
 
   const handleClick = useCallback(() => {
-    if (isCollapsed) {
-      openPopup();
-    } else {
+    if (!isCollapsed) {
       onToggle();
     }
-  }, [isCollapsed, onToggle, openPopup]);
+  }, [isCollapsed, onToggle]);
+
+  // 处理鼠标进入按钮 - 折叠时打开弹出菜单
+  const handleButtonMouseEnter = useCallback(() => {
+    if (isCollapsed) {
+      openPopup();
+    }
+  }, [isCollapsed, openPopup]);
+
+  // 处理鼠标离开按钮 - 延迟关闭弹出菜单
+  const handleButtonMouseLeave = useCallback(() => {
+    if (isCollapsed) {
+      scheduleClose();
+    }
+  }, [isCollapsed, scheduleClose]);
 
   const handleItemClick = useCallback((path: string) => {
     setIsPopupOpen(false);
@@ -81,8 +93,8 @@ export const SubMenu = memo(function SubMenu({
       <button
         ref={buttonRef}
         onClick={handleClick}
-        onMouseEnter={() => isCollapsed && openPopup()}
-        onMouseLeave={() => isCollapsed && scheduleClose()}
+        onMouseEnter={handleButtonMouseEnter}
+        onMouseLeave={handleButtonMouseLeave}
         className={cn(
           'w-full flex items-center rounded-lg text-sm transition-colors duration-150 group relative',
           isActive
@@ -143,12 +155,6 @@ export const SubMenu = memo(function SubMenu({
           )}
         </div>
 
-        {/* 折叠状态tooltip */}
-        {isCollapsed && !isPopupOpen && (
-          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-40 pointer-events-none">
-            {title}
-          </div>
-        )}
       </button>
 
       {/* 折叠状态弹出菜单 - Portal渲染到body，脱离nav的overflow裁剪 */}
