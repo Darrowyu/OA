@@ -385,6 +385,73 @@ Hook 的职责：判断是否推荐 Skill
 
 ---
 
+## Git Worktree 团队开发规范
+
+> 支持多人并行开发的标准化工作流
+
+### 目录结构
+
+```
+OA-runningVersion-v1.0.1/
+├── .worktrees/                    # 所有功能分支worktree目录
+│   ├── feature/user-auth/         # 用户认证功能
+│   ├── feature/dashboard/         # 仪表盘功能
+│   └── hotfix/login-error/        # 紧急修复
+├── backend/
+├── frontend/
+├── .gitignore                     # 已添加 .worktrees/ 忽略
+└── ...
+```
+
+### 快速开始
+
+```bash
+# 1. 创建功能分支worktree
+git worktree add .worktrees/feature/xxx -b feature/xxx
+
+# 2. 进入开发环境
+cd .worktrees/feature/xxx
+npm install
+npm run dev
+
+# 3. 开发完成后推送
+git push origin feature/xxx
+gh pr create --title "feat: xxx"
+
+# 4. PR合并后清理
+git worktree remove .worktrees/feature/xxx
+git branch -D feature/xxx
+```
+
+### 分支命名规范
+
+| 类型 | 前缀 | 示例 |
+|------|------|------|
+| 新功能 | `feature/` | `feature/user-permissions` |
+| Bug修复 | `bugfix/` / `hotfix/` | `hotfix/login-crash` |
+| 重构 | `refactor/` | `refactor/api-types` |
+| 文档 | `docs/` | `docs/api-guide` |
+
+### 常用命令
+
+```bash
+# 查看所有worktree
+git worktree list
+
+# 清理已删除的worktree记录
+git worktree prune
+
+# 强制删除worktree（Windows权限问题时）
+rm -rf .worktrees/feature/xxx
+git worktree prune
+```
+
+### 详细文档
+
+完整的工作流文档：`docs/plans/2026-03-03-team-worktree-workflow.md`
+
+---
+
 ## Hook 机制说明
 
 Skills自动触发由以下机制保证：
