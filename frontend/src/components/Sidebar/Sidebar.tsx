@@ -87,6 +87,7 @@ export const Sidebar = memo(function Sidebar({ pendingCount = 0 }: SidebarProps)
   const equipmentSubItems: SubMenuItem[] = useMemo(
     () => [
       { path: '/equipment', name: '设备信息', icon: 'Monitor' },
+      { path: '/equipment/factories', name: '厂区管理', icon: 'Building2' },
       { path: '/equipment/health', name: '设备健康度评估', icon: 'Gauge' },
       { path: '/equipment/capacity', name: '设备产能管理', icon: 'Zap' },
     ],

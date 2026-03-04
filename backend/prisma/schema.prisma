@@ -303,32 +303,53 @@ model ArchiveRecord {
   @@index([applicationNo])
 }
 
+model Factory {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  code         String?
+  address      String?
+  manager      String?
+  contactPhone String?
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  equipments Equipment[]
+
+  @@map("factories")
+}
+
 model Equipment {
-  id                 String              @id @default(cuid())
-  code               String              @unique
+  id                 String                   @id @default(cuid())
+  code               String                   @unique
   name               String
   model              String
   category           String
   manufacturer       String?
   location           String
-  status             EquipmentStatus     @default(RUNNING)
-  healthScore        Int?                @db.SmallInt
+  status             EquipmentStatus          @default(RUNNING)
+  healthScore        Int?                     @db.SmallInt
   purchaseDate       DateTime?
   warrantyDate       DateTime?
-  purchasePrice      Decimal?            @db.Decimal(15, 2)
+  purchasePrice      Decimal?                 @db.Decimal(15, 2)
   serialNumber       String?
   description        String?
   lastMaintenanceAt  DateTime?
   nextMaintenanceAt  DateTime?
-  totalWorkHours     Int?                @default(0)
+  totalWorkHours     Int?                     @default(0)
   createdBy          String
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
   healthMetrics      Json?
   deletedAt          DateTime?
+  factoryId          String?                  @map("factory_id")
+  factory            Factory?                 @relation(fields: [factoryId], references: [id])
   maintenancePlans   MaintenancePlan[]
   maintenanceRecords MaintenanceRecord[]
   partUsages         PartUsage[]
+  healthHistories    EquipmentHealthHistory[]
+  capabilities       EquipmentCapability[]
+  operatorSkills     OperatorSkill[]
 
   @@index([status])
   @@index([code])
@@ -336,6 +357,30 @@ model Equipment {
   @@index([location])
   @@index([deletedAt])
   @@index([nextMaintenanceAt])
+  @@index([factoryId])
+}
+
+model EquipmentHealthHistory {
+  id                   String    @id @default(cuid())
+  equipmentId          String    @map("equipment_id")
+  totalScore           Float     @map("total_score")
+  healthLevel          String    @map("health_level")
+  ageScore             Float?    @map("age_score")
+  repairFrequencyScore Float?    @map("repair_frequency_score")
+  faultSeverityScore   Float?    @map("fault_severity_score")
+  maintenanceScore     Float?    @map("maintenance_score")
+  assessmentDate       DateTime  @map("assessment_date")
+  assessor             String
+  failureProbability   Float?    @map("failure_probability")
+  nextMaintenanceDate  DateTime? @map("next_maintenance_date")
+  recommendations      Json?
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([assessmentDate])
+  @@map("equipment_health_history")
 }
 
 model MaintenanceRecord {
@@ -356,6 +401,7 @@ model MaintenanceRecord {
   result            String?
   beforeImages      String[]
   afterImages       String[]
+  severity          String? // 故障严重度: low/moderate/high/critical
   createdBy         String
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
@@ -370,29 +416,36 @@ model MaintenanceRecord {
 }
 
 model MaintenancePlan {
-  id           String                   @id @default(cuid())
-  code         String                   @unique
-  equipmentId  String
-  planName     String
-  frequency    MaintenancePlanFrequency
-  intervalDays Int
-  nextDate     DateTime
-  responsible  String
-  reminderDays Int?                     @default(7)
-  status       MaintenancePlanStatus    @default(ACTIVE)
-  templateId   String?
-  description  String?
-  createdBy    String
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-  equipment    Equipment                @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  template     MaintenanceTemplate?     @relation(fields: [templateId], references: [id])
+  id                  String                   @id @default(cuid())
+  code                String                   @unique
+  equipmentId         String
+  planName            String
+  frequency           MaintenancePlanFrequency
+  intervalDays        Int
+  nextDate            DateTime
+  responsible         String
+  reminderDays        Int?                     @default(7)
+  status              MaintenancePlanStatus    @default(ACTIVE)
+  templateId          String?
+  description         String?
+  createdBy           String
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  scheduleType        String?                  @map("schedule_type")
+  scheduleRule        Json?                    @map("schedule_rule")
+  reminderDaysJson    Json?                    @default("[7,3,1]") @map("reminder_days_json")
+  autoCreateRecord    Boolean                  @default(false) @map("auto_create_record")
+  lastExecutedAt      DateTime?                @map("last_executed_at")
+  nextMaintenanceDate DateTime?                @map("next_maintenance_date")
+  equipment           Equipment                @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  template            MaintenanceTemplate?     @relation(fields: [templateId], references: [id])
 
   @@index([equipmentId])
   @@index([status])
   @@index([nextDate])
   @@index([status, nextDate])
   @@index([templateId])
+  @@map("maintenance_plans")
 }
 
 model MaintenanceTemplate {
@@ -414,34 +467,80 @@ model MaintenanceTemplate {
   @@index([category])
 }
 
+model SparePartCategory {
+  id          String   @id @default(cuid())
+  name        String
+  parentId    String?  @map("parent_id")
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent   SparePartCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children SparePartCategory[] @relation("CategoryTree")
+  parts    Part[]
+
+  @@index([parentId])
+  @@map("spare_part_categories")
+}
+
 model Part {
-  id             String         @id @default(cuid())
-  code           String         @unique
-  name           String
-  model          String
-  category       String
-  unit           String
-  stock          Int            @default(0)
-  minStock       Int            @default(0)
-  maxStock       Int            @default(0)
-  location       String?
-  supplier       String?
-  status         PartStatus     @default(NORMAL)
-  unitPrice      Decimal?       @db.Decimal(15, 2)
-  description    String?
-  createdBy      String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  version        Int            @default(0)
-  partLifecycles PartLifecycle?
-  partScraps     PartScrap[]
-  stockRecords   PartStock[]
-  partUsages     PartUsage[]
+  id                   String             @id @default(cuid())
+  code                 String             @unique
+  name                 String
+  model                String
+  category             String
+  unit                 String
+  stock                Int                @default(0)
+  minStock             Int                @default(0)
+  maxStock             Int                @default(0)
+  location             String?
+  supplier             String?
+  status               PartStatus         @default(NORMAL)
+  unitPrice            Decimal?           @db.Decimal(15, 2)
+  description          String?
+  createdBy            String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  version              Int                @default(0)
+  categoryId           String?            @map("category_id")
+  sparePartCategory    SparePartCategory? @relation(fields: [categoryId], references: [id])
+  defaultLifespanDays  Int?               @default(180) @map("default_lifespan_days")
+  warningThresholdDays Int?               @default(15) @map("warning_threshold_days")
+  lastStockInAt        DateTime?          @map("last_stock_in_at")
+  lastStockOutAt       DateTime?          @map("last_stock_out_at")
+  partLifecycles       PartLifecycle?
+  partScraps           PartScrap[]
+  stockRecords         PartStock[]
+  partUsages           PartUsage[]
+  inventoryLogs        PartInventoryLog[]
 
   @@index([status])
   @@index([code])
   @@index([category])
   @@index([status, stock])
+  @@index([categoryId])
+  @@map("parts")
+}
+
+model PartInventoryLog {
+  id             String   @id @default(cuid())
+  partId         String   @map("part_id")
+  type           String
+  quantity       Int
+  beforeQuantity Int      @map("before_quantity")
+  afterQuantity  Int      @map("after_quantity")
+  referenceType  String?  @map("reference_type")
+  referenceId    String?  @map("reference_id")
+  operator       String?
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([createdAt])
+  @@map("part_inventory_logs")
 }
 
 model PartUsage {
@@ -536,6 +635,46 @@ model PartLifecycle {
   @@index([status])
   @@index([expectedEndDate])
   @@index([status, expectedEndDate])
+}
+
+model EquipmentCapability {
+  id               String    @id @default(cuid())
+  equipmentId      String    @map("equipment_id")
+  productName      String    @map("product_name")
+  processName      String?   @map("process_name")
+  capacityPerHour  Float     @map("capacity_per_hour")
+  efficiencyFactor Float     @default(1.0) @map("efficiency_factor")
+  setupTime        Int       @default(0) @map("setup_time") // 分钟
+  unit             String    @default("件")
+  status           String    @default("active")
+  remark           String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([productName])
+  @@map("equipment_capabilities")
+}
+
+model OperatorSkill {
+  id                String    @id @default(cuid())
+  operatorName      String    @map("operator_name")
+  equipmentId       String    @map("equipment_id")
+  skillLevel        String    @default("intermediate") @map("skill_level") // beginner/intermediate/advanced/expert
+  efficiencyFactor  Float     @default(1.0) @map("efficiency_factor")
+  certificationDate DateTime? @map("certification_date")
+  isPrimary         Boolean   @default(false) @map("is_primary")
+  remark            String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([operatorName])
+  @@map("operator_skills")
 }
 
 model UserPreference {
@@ -1156,49 +1295,49 @@ model EmailSettings {
 }
 
 model SystemSettings {
-  id                       String   @id @default("default")
-  autoBackupEnabled        Boolean  @default(false)
-  updatedAt                DateTime @updatedAt
+  id                String   @id @default("default")
+  autoBackupEnabled Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
 
   // 安全设置
-  passwordMinLength        Int      @default(8)
-  passwordRequireUppercase Boolean  @default(true)
-  passwordRequireLowercase Boolean  @default(true)
-  passwordRequireNumbers   Boolean  @default(true)
-  passwordRequireSymbols   Boolean  @default(false)
-  passwordExpiryDays       Int      @default(90)
-  maxLoginAttempts         Int      @default(5)
-  lockoutDurationMinutes   Int      @default(30)
-  sessionTimeoutMinutes    Int      @default(30)
-  enable2FA                Boolean  @default(false)
+  passwordMinLength        Int     @default(8)
+  passwordRequireUppercase Boolean @default(true)
+  passwordRequireLowercase Boolean @default(true)
+  passwordRequireNumbers   Boolean @default(true)
+  passwordRequireSymbols   Boolean @default(false)
+  passwordExpiryDays       Int     @default(90)
+  maxLoginAttempts         Int     @default(5)
+  lockoutDurationMinutes   Int     @default(30)
+  sessionTimeoutMinutes    Int     @default(30)
+  enable2FA                Boolean @default(false)
 
   // 界面设置
-  theme                    String   @default("system")
-  primaryColor             String   @default("blue")
-  sidebarCollapsed         Boolean  @default(false)
-  denseMode                Boolean  @default(false)
-  language                 String   @default("zh-CN")
-  timezone                 String   @default("Asia/Shanghai")
-  dateFormat               String   @default("YYYY-MM-DD")
-  timeFormat               String   @default("24h")
+  theme            String  @default("system")
+  primaryColor     String  @default("blue")
+  sidebarCollapsed Boolean @default(false)
+  denseMode        Boolean @default(false)
+  language         String  @default("zh-CN")
+  timezone         String  @default("Asia/Shanghai")
+  dateFormat       String  @default("YYYY-MM-DD")
+  timeFormat       String  @default("24h")
 
   // 通知设置
-  enableInApp              Boolean  @default(true)
-  enableSound              Boolean  @default(true)
-  enableDesktop            Boolean  @default(false)
-  taskReminder             Boolean  @default(true)
-  meetingReminder          Boolean  @default(true)
-  approvalNotification     Boolean  @default(true)
-  announcementNotification Boolean  @default(true)
-  mentionNotification      Boolean  @default(true)
+  enableInApp              Boolean @default(true)
+  enableSound              Boolean @default(true)
+  enableDesktop            Boolean @default(false)
+  taskReminder             Boolean @default(true)
+  meetingReminder          Boolean @default(true)
+  approvalNotification     Boolean @default(true)
+  announcementNotification Boolean @default(true)
+  mentionNotification      Boolean @default(true)
 
   // 存储设置
-  maxFileSize              Int      @default(50)
-  allowedFileTypes         String[] @default(["pdf", "doc", "docx", "jpg", "png"])
-  autoCleanupEnabled       Boolean  @default(true)
-  cleanupDays              Int      @default(30)
-  storageLimit             Int      @default(1024)
-  compressImages           Boolean  @default(true)
+  maxFileSize        Int      @default(50)
+  allowedFileTypes   String[] @default(["pdf", "doc", "docx", "jpg", "png"])
+  autoCleanupEnabled Boolean  @default(true)
+  cleanupDays        Int      @default(30)
+  storageLimit       Int      @default(1024)
+  compressImages     Boolean  @default(true)
 
   @@map("system_settings")
 }

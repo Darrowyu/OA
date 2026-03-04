@@ -1,29 +1,42 @@
 import { prisma } from '../lib/prisma'
+import * as XLSX from 'xlsx'
 import type {
   EquipmentCreateInput,
   EquipmentUpdateInput,
   EquipmentQueryParams,
   PaginatedResponse,
   EquipmentStatistics,
-  EquipmentStatus,
 } from '../types/equipment'
+import { EquipmentStatus } from '../types/equipment'
 
-const HEALTH_THRESHOLD_RUNNING = 80   // 正常运行阈值
-const HEALTH_THRESHOLD_WARNING = 60   // 告警阈值
-const HEALTH_THRESHOLD_CRITICAL = 30  // 严重告警阈值
+const HEALTH_THRESHOLD_RUNNING = 80
+const HEALTH_THRESHOLD_WARNING = 60
+const HEALTH_THRESHOLD_CRITICAL = 30
+
+const STATUS_LABELS: Record<string, string> = {
+  RUNNING: '运行中',
+  WARNING: '告警',
+  STOPPED: '停机',
+  MAINTENANCE: '维修中',
+  SCRAPPED: '报废',
+}
+
+const STATUS_MAP: Record<string, EquipmentStatus> = {
+  运行中: EquipmentStatus.RUNNING,
+  正常: EquipmentStatus.RUNNING,
+  告警: EquipmentStatus.WARNING,
+  停机: EquipmentStatus.STOPPED,
+  维修中: EquipmentStatus.MAINTENANCE,
+  报废: EquipmentStatus.SCRAPPED,
+  RUNNING: EquipmentStatus.RUNNING,
+  WARNING: EquipmentStatus.WARNING,
+  STOPPED: EquipmentStatus.STOPPED,
+  MAINTENANCE: EquipmentStatus.MAINTENANCE,
+  SCRAPPED: EquipmentStatus.SCRAPPED,
+}
 
 export class EquipmentService {
-  // 创建设备
-  async create(data: EquipmentCreateInput, userId: string): Promise<{
-    id: string
-    code: string
-    name: string
-    model: string
-    category: string
-    location: string
-    status: EquipmentStatus
-    createdAt: Date
-  }> {
+  async create(data: EquipmentCreateInput, userId: string) {
     const equipment = await prisma.equipment.create({
       data: {
         ...data,
@@ -49,23 +62,10 @@ export class EquipmentService {
     }
   }
 
-  // 更新设备
-  async update(id: string, data: EquipmentUpdateInput): Promise<{
-    id: string
-    code: string
-    name: string
-    status: EquipmentStatus
-    updatedAt: Date
-  }> {
-    const updateData: Record<string, unknown> = { ...data }
-
-    if (data.purchasePrice !== undefined) {
-      updateData.purchasePrice = data.purchasePrice
-    }
-
+  async update(id: string, data: EquipmentUpdateInput) {
     const equipment = await prisma.equipment.update({
       where: { id },
-      data: updateData,
+      data,
       select: {
         id: true,
         code: true,
@@ -82,39 +82,11 @@ export class EquipmentService {
     }
   }
 
-  // 删除设备
   async delete(id: string): Promise<void> {
-    await prisma.equipment.delete({
-      where: { id },
-    })
+    await prisma.equipment.delete({ where: { id } })
   }
 
-  // 获取设备详情
-  async getById(id: string): Promise<{
-    id: string
-    code: string
-    name: string
-    model: string
-    category: string
-    manufacturer: string | null
-    location: string
-    status: EquipmentStatus
-    healthScore: number | null
-    purchaseDate: Date | null
-    warrantyDate: Date | null
-    purchasePrice: number | null
-    serialNumber: string | null
-    description: string | null
-    lastMaintenanceAt: Date | null
-    nextMaintenanceAt: Date | null
-    totalWorkHours: number | null
-    createdAt: Date
-    updatedAt: Date
-    _count: {
-      maintenanceRecords: number
-      maintenancePlans: number
-    }
-  } | null> {
+  async getById(id: string) {
     const equipment = await prisma.equipment.findUnique({
       where: { id },
       include: {
@@ -142,7 +114,6 @@ export class EquipmentService {
     }
   }
 
-  // 分页查询设备
   async findMany(params: EquipmentQueryParams): Promise<PaginatedResponse<{
     id: string
     code: string
@@ -154,29 +125,13 @@ export class EquipmentService {
     healthScore: number | null
     lastMaintenanceAt: Date | null
     nextMaintenanceAt: Date | null
-    _count: {
-      maintenanceRecords: number
-    }
+    _count: { maintenanceRecords: number }
   }>> {
-    // 分页参数校验和限制
     const page = Math.max(1, params.page || 1)
-    const pageSize = Math.min(100, Math.max(1, params.pageSize || 10)) // 最大100条
+    const pageSize = Math.min(100, Math.max(1, params.pageSize || 10))
     const skip = (page - 1) * pageSize
 
-    const where: Record<string, unknown> = {
-      deletedAt: null, // 软删除过滤
-    }
-
-    if (params.status) where.status = params.status
-    if (params.category) where.category = params.category
-    if (params.location) where.location = { contains: params.location }
-    if (params.keyword) {
-      where.OR = [
-        { name: { contains: params.keyword, mode: 'insensitive' } },
-        { code: { contains: params.keyword, mode: 'insensitive' } },
-        { model: { contains: params.keyword, mode: 'insensitive' } },
-      ]
-    }
+    const where = this.buildWhereClause(params)
 
     const [total, data] = await Promise.all([
       prisma.equipment.count({ where }),
@@ -196,11 +151,7 @@ export class EquipmentService {
           healthScore: true,
           lastMaintenanceAt: true,
           nextMaintenanceAt: true,
-          _count: {
-            select: {
-              maintenanceRecords: true,
-            },
-          },
+          _count: { select: { maintenanceRecords: true } },
         },
       }),
     ])
@@ -218,21 +169,13 @@ export class EquipmentService {
         pageSize,
         totalPages: Math.ceil(total / pageSize),
       },
-}
+    }
   }
 
-  // 获取设备统计（排除已删除）
   async getStatistics(): Promise<EquipmentStatistics> {
     const baseWhere = { deletedAt: null }
 
-    const [
-      total,
-      running,
-      warning,
-      stopped,
-      maintenance,
-      scrapped,
-    ] = await Promise.all([
+    const [total, running, warning, stopped, maintenance, scrapped] = await Promise.all([
       prisma.equipment.count({ where: baseWhere }),
       prisma.equipment.count({ where: { ...baseWhere, status: 'RUNNING' } }),
       prisma.equipment.count({ where: { ...baseWhere, status: 'WARNING' } }),
@@ -241,17 +184,9 @@ export class EquipmentService {
       prisma.equipment.count({ where: { ...baseWhere, status: 'SCRAPPED' } }),
     ])
 
-    return {
-      total,
-      running,
-      warning,
-      stopped,
-      maintenance,
-      scrapped,
-    }
+    return { total, running, warning, stopped, maintenance, scrapped }
   }
 
-  // 获取所有分类（排除已删除）
   async getCategories(): Promise<string[]> {
     const result = await prisma.equipment.groupBy({
       by: ['category'],
@@ -261,7 +196,6 @@ export class EquipmentService {
     return result.map(item => item.category)
   }
 
-  // 获取所有位置（排除已删除）
   async getLocations(): Promise<string[]> {
     const result = await prisma.equipment.groupBy({
       by: ['location'],
@@ -271,27 +205,24 @@ export class EquipmentService {
     return result.map(item => item.location)
   }
 
-  // 更新设备健康度（支持多维指标）
   async updateHealth(
     id: string,
     metrics: {
-      vibration?: number      // 振动指标 0-100
-      temperature?: number    // 温度指标 0-100
-      power?: number          // 功率指标 0-100
-      runtime?: number        // 运行时长指标 0-100
-      maintenance?: number    // 维护状况 0-100
+      vibration?: number
+      temperature?: number
+      power?: number
+      runtime?: number
+      maintenance?: number
     }
   ): Promise<void> {
-    // 权重配置
     const weights = {
-      vibration: 0.25,   // 振动权重25%
-      temperature: 0.20, // 温度权重20%
-      power: 0.20,       // 功率权重20%
-      runtime: 0.15,     // 运行时长权重15%
-      maintenance: 0.20, // 维护状况权重20%
+      vibration: 0.25,
+      temperature: 0.20,
+      power: 0.20,
+      runtime: 0.15,
+      maintenance: 0.20,
     }
 
-    // 计算加权健康度
     let healthScore = 100
     let totalWeight = 0
 
@@ -303,47 +234,180 @@ export class EquipmentService {
       }
     }
 
-    // 归一化（如果部分指标缺失）
     if (totalWeight > 0 && totalWeight < 1) {
       healthScore = 100 - (100 - healthScore) / totalWeight
     }
 
-    // 确保在0-100范围内
     healthScore = Math.max(0, Math.min(100, Math.round(healthScore)))
 
-    // 根据健康度确定状态
-    let status: EquipmentStatus
-    if (healthScore >= HEALTH_THRESHOLD_RUNNING) {
-      status = 'RUNNING' as EquipmentStatus
-    } else if (healthScore >= HEALTH_THRESHOLD_WARNING) {
-      status = 'WARNING' as EquipmentStatus
-    } else if (healthScore >= HEALTH_THRESHOLD_CRITICAL) {
-      status = 'STOPPED' as EquipmentStatus
-    } else {
-      status = 'SCRAPPED' as EquipmentStatus
-    }
+    const status = this.getStatusByHealthScore(healthScore)
 
     await prisma.equipment.update({
       where: { id },
-      data: {
-        healthScore,
-        status,
-        healthMetrics: metrics, // 存储详细指标
-      },
+      data: { healthScore, status, healthMetrics: metrics },
     })
   }
 
-  // 检查并更新逾期保养计划
+  private getStatusByHealthScore(score: number): EquipmentStatus {
+    if (score >= HEALTH_THRESHOLD_RUNNING) return 'RUNNING' as EquipmentStatus
+    if (score >= HEALTH_THRESHOLD_WARNING) return 'WARNING' as EquipmentStatus
+    if (score >= HEALTH_THRESHOLD_CRITICAL) return 'STOPPED' as EquipmentStatus
+    return 'SCRAPPED' as EquipmentStatus
+  }
+
   async checkOverduePlans(): Promise<number> {
-    const now = new Date()
     const result = await prisma.maintenancePlan.updateMany({
       where: {
-        nextDate: { lt: now },
+        nextDate: { lt: new Date() },
         status: { in: ['ACTIVE', 'WARNING'] },
       },
       data: { status: 'OVERDUE' },
     })
     return result.count
+  }
+
+  async batchDelete(ids: string[]): Promise<number> {
+    const result = await prisma.equipment.updateMany({
+      where: { id: { in: ids } },
+      data: { deletedAt: new Date() },
+    })
+    return result.count
+  }
+
+  async exportToExcel(filter: EquipmentQueryParams): Promise<Buffer> {
+    const where = this.buildWhereClause(filter)
+
+    const equipments = await prisma.equipment.findMany({
+      where,
+      include: { factory: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const data = equipments.map(eq => ({
+      设备编号: eq.code,
+      设备名称: eq.name,
+      型号: eq.model,
+      分类: eq.category,
+      厂区: eq.factory?.name || '',
+      位置: eq.location,
+      制造商: eq.manufacturer || '',
+      状态: STATUS_LABELS[eq.status] || eq.status,
+      健康度: eq.healthScore || '',
+      购买日期: eq.purchaseDate ? eq.purchaseDate.toISOString().split('T')[0] : '',
+      保修到期: eq.warrantyDate ? eq.warrantyDate.toISOString().split('T')[0] : '',
+      序列号: eq.serialNumber || '',
+      描述: eq.description || '',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '设备清单')
+
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+  }
+
+  async importFromExcel(buffer: Buffer, userId: string): Promise<{ success: number; failed: number; errors: string[] }> {
+    const wb = XLSX.read(buffer, { type: 'buffer' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const data = XLSX.utils.sheet_to_json(ws) as Array<Record<string, string | number | undefined>>
+
+    let success = 0
+    let failed = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i]
+      try {
+        const code = String(row['设备编号'] || '').trim()
+        const name = String(row['设备名称'] || '').trim()
+
+        if (!code) throw new Error('设备编号不能为空')
+        if (!name) throw new Error('设备名称不能为空')
+
+        const existing = await prisma.equipment.findUnique({ where: { code } })
+        if (existing) throw new Error(`设备编号 ${code} 已存在`)
+
+        const statusText = String(row['状态'] || '运行中')
+        const status = STATUS_MAP[statusText] || 'RUNNING'
+
+        await prisma.equipment.create({
+          data: {
+            code,
+            name,
+            model: String(row['型号'] || ''),
+            category: String(row['分类'] || ''),
+            location: String(row['位置'] || ''),
+            manufacturer: String(row['制造商'] || '') || null,
+            status,
+            serialNumber: String(row['序列号'] || '') || null,
+            description: String(row['描述'] || '') || null,
+            purchaseDate: row['购买日期'] ? new Date(String(row['购买日期'])) : null,
+            warrantyDate: row['保修到期'] ? new Date(String(row['保修到期'])) : null,
+            createdBy: userId,
+          },
+        })
+        success++
+      } catch (error) {
+        failed++
+        errors.push(`第 ${i + 2} 行: ${(error as Error).message}`)
+      }
+    }
+
+    return { success, failed, errors }
+  }
+
+  async getFilterOptions(): Promise<{
+    categories: string[]
+    locations: string[]
+    factories: Array<{ id: string; name: string }>
+    statuses: Array<{ value: string; label: string }>
+  }> {
+    const [categories, locations, factories] = await Promise.all([
+      prisma.equipment.findMany({
+        where: { deletedAt: null },
+        select: { category: true },
+        distinct: ['category'],
+      }),
+      prisma.equipment.findMany({
+        where: { deletedAt: null },
+        select: { location: true },
+        distinct: ['location'],
+      }),
+      prisma.factory.findMany({
+        where: { status: 'active' },
+        select: { id: true, name: true },
+      }),
+    ])
+
+    return {
+      categories: categories.map(c => c.category).filter(Boolean),
+      locations: locations.map(l => l.location).filter(Boolean),
+      factories,
+      statuses: [
+        { value: 'RUNNING', label: '运行中' },
+        { value: 'WARNING', label: '告警' },
+        { value: 'STOPPED', label: '停机' },
+        { value: 'MAINTENANCE', label: '维修中' },
+        { value: 'SCRAPPED', label: '报废' },
+      ],
+    }
+  }
+
+  private buildWhereClause(params: EquipmentQueryParams): Record<string, unknown> {
+    const where: Record<string, unknown> = { deletedAt: null }
+
+    if (params.status) where.status = params.status
+    if (params.category) where.category = params.category
+    if (params.location) where.location = { contains: params.location }
+    if (params.keyword) {
+      where.OR = [
+        { name: { contains: params.keyword, mode: 'insensitive' } },
+        { code: { contains: params.keyword, mode: 'insensitive' } },
+        { model: { contains: params.keyword, mode: 'insensitive' } },
+      ]
+    }
+
+    return where
   }
 }
 

@@ -32,6 +32,7 @@ import {
   UserCog,
   HelpCircle,
   ChevronDown,
+  Building2,
   type LucideIcon,
 } from 'lucide-react';
 import type { IconMap } from './types';
@@ -71,6 +72,7 @@ export const iconMap: IconMap = {
   UserCog,
   HelpCircle,
   ChevronDown,
+  Building2,
 };
 
 // 获取图标组件

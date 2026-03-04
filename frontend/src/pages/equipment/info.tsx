@@ -161,15 +161,15 @@ export function EquipmentInfo() {
                           <div className="flex items-center gap-2">
                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full ${item.health >= 80 ? "bg-green-500" : item.health >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
-                                style={{ width: `${item.health}%` }}
+                                className={`h-full rounded-full ${(item.healthScore || 0) >= 80 ? "bg-green-500" : (item.healthScore || 0) >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
+                                style={{ width: `${item.healthScore || 0}%` }}
                               />
                             </div>
-                            <span className="text-sm text-gray-600">{item.health}%</span>
+                            <span className="text-sm text-gray-600">{item.healthScore || 0}%</span>
                           </div>
                         </TableCell>
-                        <TableCell>{item.lastMaintenance}</TableCell>
-                        <TableCell>{item.nextMaintenance}</TableCell>
+                        <TableCell>{item.lastMaintenanceAt}</TableCell>
+                        <TableCell>{item.nextMaintenanceAt}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                         </TableCell>

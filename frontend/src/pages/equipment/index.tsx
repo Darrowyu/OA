@@ -12,6 +12,7 @@ import { PartsStock } from "./parts/stock"
 import { PartsStatistics } from "./parts/statistics"
 import { EquipmentHealth } from "./health"
 import { EquipmentCapacity } from "./capacity"
+import { FactoriesPage } from "./factories"
 
 export function EquipmentModule() {
   return (
@@ -38,6 +39,9 @@ export function EquipmentModule() {
 
         {/* 设备产能管理 */}
         <Route path="capacity" element={<EquipmentCapacity />} />
+
+        {/* 厂区管理 */}
+        <Route path="factories" element={<FactoriesPage />} />
 
         {/* 默认重定向 */}
         <Route path="*" element={<Navigate to="/equipment" replace />} />

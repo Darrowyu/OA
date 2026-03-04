@@ -5,6 +5,7 @@ import { maintenanceRecordService } from '../services/maintenanceRecordService'
 import { maintenancePlanService } from '../services/maintenancePlanService'
 import { maintenanceTemplateService } from '../services/maintenanceTemplateService'
 import { partService } from '../services/partService'
+import { sparePartCategoryService } from '../services/sparePartCategoryService'
 import { partLifecycleService } from '../services/partLifecycleService'
 import type {
   StockSource,
@@ -29,7 +30,8 @@ type AuthRequest = Request & {
   }
 }
 
-// 统一响应辅助函数
+// ============ 响应辅助函数 ============
+
 function successResponse<T>(res: Response, data: T, message?: string, status = 200): void {
   res.status(status).json({ success: true, data, message })
 }
@@ -38,7 +40,18 @@ function notFoundResponse(res: Response, resource: string): void {
   res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: `${resource}不存在` } })
 }
 
-// 解析分页参数
+function badRequestResponse(res: Response, message: string): void {
+  res.status(400).json({ success: false, error: { message } })
+}
+
+function sendExcelResponse(res: Response, buffer: Buffer, filename: string): void {
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
+  res.send(buffer)
+}
+
+// ============ 参数解析辅助函数 ============
+
 function parsePagination(query: Record<string, unknown>): { page: number; pageSize: number } {
   return {
     page: query.page ? parseInt(query.page as string, 10) : 1,
@@ -46,12 +59,45 @@ function parsePagination(query: Record<string, unknown>): { page: number; pageSi
   }
 }
 
-// 解析日期参数
 function parseDate(value: string | undefined): Date | undefined {
   return value ? new Date(value) : undefined
 }
 
-// ============ Schema Definitions ============
+function getUserId(req: AuthRequest): string {
+  return req.user!.id
+}
+
+function getOptionalUserId(req: AuthRequest): string {
+  return req.user?.id || 'system'
+}
+
+async function handleGetById<T>(
+  res: Response,
+  serviceCall: () => Promise<T | null>,
+  resourceName: string
+): Promise<void> {
+  const result = await serviceCall()
+  if (!result) {
+    notFoundResponse(res, resourceName)
+    return
+  }
+  successResponse(res, result)
+}
+
+async function handleImportExcel(
+  req: AuthRequest,
+  res: Response,
+  importFn: (buffer: Buffer, userId: string) => Promise<unknown>
+): Promise<void> {
+  if (!req.file?.buffer) {
+    badRequestResponse(res, '请上传文件')
+    return
+  }
+  const result = await importFn(req.file.buffer, getUserId(req))
+  successResponse(res, result)
+}
+
+// ============ Schema 定义 ============
 
 const createEquipmentSchema = z.object({
   code: z.string().min(1, '设备编号不能为空'),
@@ -203,28 +249,33 @@ const createPartLifecycleSchema = z.object({
   equipmentId: z.string().optional(),
 })
 
+const createCategorySchema = z.object({
+  name: z.string().min(1, '分类名称不能为空'),
+  parentId: z.string().optional(),
+  description: z.string().optional(),
+  sortOrder: z.number().optional(),
+})
+
 // ============ Equipment Controller ============
 
 export const equipmentController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const data = createEquipmentSchema.parse(req.body)
-    const userId = req.user!.id
 
     const equipment = await equipmentService.create({
       ...data,
       status: data.status as EquipmentStatus | undefined,
       purchaseDate: parseDate(data.purchaseDate ?? undefined),
       warrantyDate: parseDate(data.warrantyDate ?? undefined),
-    }, userId)
+    }, getUserId(req))
 
     successResponse(res, equipment, '设备创建成功', 201)
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = updateEquipmentSchema.parse(req.body)
 
-    const equipment = await equipmentService.update(id, {
+    const equipment = await equipmentService.update(req.params.id, {
       ...data,
       status: data.status as EquipmentStatus | undefined,
       purchaseDate: parseDate(data.purchaseDate ?? undefined),
@@ -235,21 +286,12 @@ export const equipmentController = {
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await equipmentService.delete(id)
+    await equipmentService.delete(req.params.id)
     successResponse(res, null, '设备删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const equipment = await equipmentService.getById(id)
-
-    if (!equipment) {
-      notFoundResponse(res, '设备')
-      return
-    }
-
-    successResponse(res, equipment)
+    await handleGetById(res, () => equipmentService.getById(req.params.id), '设备')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -269,18 +311,40 @@ export const equipmentController = {
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await equipmentService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await equipmentService.getStatistics())
   },
 
   async getCategories(_req: Request, res: Response): Promise<void> {
-    const categories = await equipmentService.getCategories()
-    successResponse(res, categories)
+    successResponse(res, await equipmentService.getCategories())
   },
 
   async getLocations(_req: Request, res: Response): Promise<void> {
-    const locations = await equipmentService.getLocations()
-    successResponse(res, locations)
+    successResponse(res, await equipmentService.getLocations())
+  },
+
+  async batchDelete(req: Request, res: Response): Promise<void> {
+    const { ids } = z.object({ ids: z.array(z.string()) }).parse(req.body)
+    const count = await equipmentService.batchDelete(ids)
+    successResponse(res, { count }, `成功删除 ${count} 台设备`)
+  },
+
+  async exportExcel(req: Request, res: Response): Promise<void> {
+    const query = paginationSchema.parse(req.query)
+    const buffer = await equipmentService.exportToExcel({
+      status: query.status as EquipmentStatus | undefined,
+      category: query.category,
+      location: query.location,
+      keyword: query.keyword,
+    })
+    sendExcelResponse(res, buffer, 'equipments.xlsx')
+  },
+
+  async importExcel(req: AuthRequest, res: Response): Promise<void> {
+    await handleImportExcel(req, res, equipmentService.importFromExcel.bind(equipmentService))
+  },
+
+  async getFilterOptions(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await equipmentService.getFilterOptions())
   },
 }
 
@@ -289,23 +353,21 @@ export const equipmentController = {
 export const maintenanceRecordController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const data = createMaintenanceRecordSchema.parse(req.body)
-    const userId = req.user!.id
 
     const record = await maintenanceRecordService.create({
       ...data,
       type: data.type as MaintenanceType,
       startTime: new Date(data.startTime),
       endTime: parseDate(data.endTime ?? undefined),
-    }, userId)
+    }, getUserId(req))
 
     successResponse(res, record, '记录创建成功', 201)
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = createMaintenanceRecordSchema.partial().parse(req.body)
 
-    const record = await maintenanceRecordService.update(id, {
+    const record = await maintenanceRecordService.update(req.params.id, {
       ...data,
       type: data.type as MaintenanceType | undefined,
       startTime: data.startTime ? new Date(data.startTime) : undefined,
@@ -316,10 +378,9 @@ export const maintenanceRecordController = {
   },
 
   async complete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = completeMaintenanceSchema.parse(req.body)
 
-    await maintenanceRecordService.complete(id, {
+    await maintenanceRecordService.complete(req.params.id, {
       ...data,
       endTime: new Date(data.endTime),
     })
@@ -328,21 +389,12 @@ export const maintenanceRecordController = {
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await maintenanceRecordService.delete(id)
+    await maintenanceRecordService.delete(req.params.id)
     successResponse(res, null, '记录删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const record = await maintenanceRecordService.getById(id)
-
-    if (!record) {
-      notFoundResponse(res, '记录')
-      return
-    }
-
-    successResponse(res, record)
+    await handleGetById(res, () => maintenanceRecordService.getById(req.params.id), '记录')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -364,32 +416,93 @@ export const maintenanceRecordController = {
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await maintenanceRecordService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await maintenanceRecordService.getStatistics())
+  },
+
+  async exportExcel(req: Request, res: Response): Promise<void> {
+    const query = req.query
+    const buffer = await maintenanceRecordService.exportToExcel({
+      equipmentId: query.equipmentId as string | undefined,
+      type: query.type as MaintenanceType | undefined,
+      status: query.status as MaintenanceRecordStatus | undefined,
+      startDate: parseDate(query.startDate as string),
+      endDate: parseDate(query.endDate as string),
+    })
+    sendExcelResponse(res, buffer, 'maintenance_records.xlsx')
+  },
+
+  async importExcel(req: AuthRequest, res: Response): Promise<void> {
+    await handleImportExcel(req, res, maintenanceRecordService.importFromExcel.bind(maintenanceRecordService))
+  },
+
+  async getOptions(_req: Request, res: Response): Promise<void> {
+    successResponse(res, maintenanceRecordService.getOptions())
+  },
+
+  async getMaintenanceParts(req: Request, res: Response): Promise<void> {
+    const parts = await maintenanceRecordService.getMaintenanceParts(req.params.maintenanceId)
+    successResponse(res, parts)
+  },
+
+  async addMaintenancePart(req: Request, res: Response): Promise<void> {
+    const partData = z.object({
+      partId: z.string().min(1, '配件ID不能为空'),
+      partName: z.string().min(1, '配件名称不能为空'),
+      quantity: z.number().min(1, '数量必须大于0'),
+      unit: z.string().min(1, '单位不能为空'),
+      unitPrice: z.number().optional(),
+    }).parse(req.body)
+
+    const parts = await maintenanceRecordService.addMaintenancePart(req.params.maintenanceId, partData)
+    successResponse(res, parts, '配件添加成功')
+  },
+
+  async removeMaintenancePart(req: Request, res: Response): Promise<void> {
+    const parts = await maintenanceRecordService.removeMaintenancePart(req.params.maintenanceId, req.params.partId)
+    successResponse(res, parts, '配件移除成功')
+  },
+
+  async getMaintenanceCost(req: Request, res: Response): Promise<void> {
+    const cost = await maintenanceRecordService.getMaintenanceCost(req.params.maintenanceId)
+    successResponse(res, cost)
   },
 }
 
 // ============ Maintenance Plan Controller ============
 
+const PLAN_FREQUENCIES = [
+  { value: 'DAILY', label: '每日' },
+  { value: 'WEEKLY', label: '每周' },
+  { value: 'MONTHLY', label: '每月' },
+  { value: 'QUARTERLY', label: '每季度' },
+  { value: 'HALF_YEARLY', label: '每半年' },
+  { value: 'YEARLY', label: '每年' },
+] as const
+
+const PLAN_STATUSES = [
+  { value: 'ACTIVE', label: '进行中' },
+  { value: 'WARNING', label: '即将到期' },
+  { value: 'OVERDUE', label: '已逾期' },
+  { value: 'PAUSED', label: '已暂停' },
+] as const
+
 export const maintenancePlanController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const data = createMaintenancePlanSchema.parse(req.body)
-    const userId = req.user!.id
 
     const plan = await maintenancePlanService.create({
       ...data,
       frequency: data.frequency as MaintenancePlanFrequency,
       nextDate: new Date(data.nextDate),
-    }, userId)
+    }, getUserId(req))
 
     successResponse(res, plan, '计划创建成功', 201)
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = updateMaintenancePlanSchema.parse(req.body)
 
-    const plan = await maintenancePlanService.update(id, {
+    const plan = await maintenancePlanService.update(req.params.id, {
       ...data,
       frequency: data.frequency as MaintenancePlanFrequency | undefined,
       nextDate: parseDate(data.nextDate ?? undefined),
@@ -399,21 +512,12 @@ export const maintenancePlanController = {
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await maintenancePlanService.delete(id)
+    await maintenancePlanService.delete(req.params.id)
     successResponse(res, null, '计划删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const plan = await maintenancePlanService.getById(id)
-
-    if (!plan) {
-      notFoundResponse(res, '计划')
-      return
-    }
-
-    successResponse(res, plan)
+    await handleGetById(res, () => maintenancePlanService.getById(req.params.id), '计划')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -431,21 +535,41 @@ export const maintenancePlanController = {
     successResponse(res, result)
   },
 
-  async execute(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await maintenancePlanService.executePlan(id)
-    successResponse(res, null, '计划执行成功')
+  async execute(req: AuthRequest, res: Response): Promise<void> {
+    const result = await maintenancePlanService.executePlanWithRecord(req.params.id, getUserId(req))
+    successResponse(res, result, '计划执行成功，已创建保养记录')
   },
 
   async getUpcoming(req: Request, res: Response): Promise<void> {
     const days = parseInt(req.query.days as string, 10) || 7
-    const plans = await maintenancePlanService.getUpcomingPlans(days)
-    successResponse(res, plans)
+    successResponse(res, await maintenancePlanService.getUpcomingPlans(days))
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await maintenancePlanService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await maintenancePlanService.getStatistics())
+  },
+
+  async getCalendar(req: Request, res: Response): Promise<void> {
+    const year = parseInt(req.query.year as string) || new Date().getFullYear()
+    const month = parseInt(req.query.month as string) || new Date().getMonth() + 1
+    successResponse(res, await maintenancePlanService.getCalendarData(year, month))
+  },
+
+  async checkReminders(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await maintenancePlanService.checkReminders())
+  },
+
+  async getOptions(_req: Request, res: Response): Promise<void> {
+    successResponse(res, { frequencies: PLAN_FREQUENCIES, statuses: PLAN_STATUSES })
+  },
+
+  async markReminderRead(req: Request, res: Response): Promise<void> {
+    const plan = await maintenancePlanService.getById(req.params.id)
+    if (!plan) {
+      notFoundResponse(res, '保养计划')
+      return
+    }
+    successResponse(res, { id: req.params.id, readAt: new Date() }, '提醒已标记为已读')
   },
 }
 
@@ -454,36 +578,23 @@ export const maintenancePlanController = {
 export const maintenanceTemplateController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const data = createMaintenanceTemplateSchema.parse(req.body)
-    const userId = req.user!.id
-
-    const template = await maintenanceTemplateService.create(data, userId)
+    const template = await maintenanceTemplateService.create(data, getUserId(req))
     successResponse(res, template, '模板创建成功', 201)
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = createMaintenanceTemplateSchema.partial().parse(req.body)
-
-    const template = await maintenanceTemplateService.update(id, data)
+    const template = await maintenanceTemplateService.update(req.params.id, data)
     successResponse(res, template, '模板更新成功')
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await maintenanceTemplateService.delete(id)
+    await maintenanceTemplateService.delete(req.params.id)
     successResponse(res, null, '模板删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const template = await maintenanceTemplateService.getById(id)
-
-    if (!template) {
-      notFoundResponse(res, '模板')
-      return
-    }
-
-    successResponse(res, template)
+    await handleGetById(res, () => maintenanceTemplateService.getById(req.params.id), '模板')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -502,51 +613,47 @@ export const maintenanceTemplateController = {
   },
 
   async getCategories(_req: Request, res: Response): Promise<void> {
-    const categories = await maintenanceTemplateService.getCategories()
-    successResponse(res, categories)
+    successResponse(res, await maintenanceTemplateService.getCategories())
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await maintenanceTemplateService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await maintenanceTemplateService.getStatistics())
+  },
+
+  async getEquipmentTypes(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await equipmentService.getCategories())
   },
 }
 
 // ============ Part Controller ============
 
+const PART_STATUSES = [
+  { value: 'NORMAL', label: '正常' },
+  { value: 'LOW', label: '库存不足' },
+  { value: 'HIGH', label: '库存过高' },
+  { value: 'DISCONTINUED', label: '已停用' },
+] as const
+
 export const partController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const data = createPartSchema.parse(req.body)
-    const userId = req.user!.id
-
-    const part = await partService.create(data, userId)
+    const part = await partService.create(data, getUserId(req))
     successResponse(res, part, '配件创建成功', 201)
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = createPartSchema.partial().parse(req.body)
-
-    const part = await partService.update(id, data)
+    const part = await partService.update(req.params.id, data)
     successResponse(res, part, '配件更新成功')
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await partService.delete(id)
+    await partService.delete(req.params.id)
     successResponse(res, null, '配件删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const part = await partService.getById(id)
-
-    if (!part) {
-      notFoundResponse(res, '配件')
-      return
-    }
-
-    successResponse(res, part)
+    await handleGetById(res, () => partService.getById(req.params.id), '配件')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -567,24 +674,22 @@ export const partController = {
 
   async stockIn(req: AuthRequest, res: Response): Promise<void> {
     const data = stockOperationSchema.parse(req.body)
-    const userId = req.user?.id || 'system'
     await partService.stockIn({
       ...data,
       type: 'IN' as StockType,
       source: data.source as StockSource,
-    }, userId)
+    }, getOptionalUserId(req))
 
     successResponse(res, null, '入库成功')
   },
 
   async stockOut(req: AuthRequest, res: Response): Promise<void> {
     const data = stockOperationSchema.parse(req.body)
-    const userId = req.user?.id || 'system'
     await partService.stockOut({
       ...data,
       type: 'OUT' as StockType,
       source: data.source as StockSource,
-    }, userId)
+    }, getOptionalUserId(req))
 
     successResponse(res, null, '出库成功')
   },
@@ -619,11 +724,8 @@ export const partController = {
   },
 
   async approveUsage(req: AuthRequest, res: Response): Promise<void> {
-    const { id } = req.params
     const data = approveSchema.parse(req.body)
-    const approverId = req.user!.id
-
-    await partService.approveUsage(id, data, approverId)
+    await partService.approveUsage(req.params.id, data, getUserId(req))
     successResponse(res, null, data.approved ? '领用已批准' : '领用已驳回')
   },
 
@@ -657,11 +759,8 @@ export const partController = {
   },
 
   async approveScrap(req: AuthRequest, res: Response): Promise<void> {
-    const { id } = req.params
     const data = approveSchema.parse(req.body)
-    const approverId = req.user!.id
-
-    await partService.approveScrap(id, data, approverId)
+    await partService.approveScrap(req.params.id, data, getUserId(req))
     successResponse(res, null, data.approved ? '报废已批准' : '报废已驳回')
   },
 
@@ -684,28 +783,82 @@ export const partController = {
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await partService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await partService.getStatistics())
   },
 
   async getUsageStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await partService.getUsageStatistics()
-    successResponse(res, stats)
+    successResponse(res, await partService.getUsageStatistics())
   },
 
   async getScrapStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await partService.getScrapStatistics()
-    successResponse(res, stats)
+    successResponse(res, await partService.getScrapStatistics())
   },
 
   async getStockStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await partService.getStockStatistics()
-    successResponse(res, stats)
+    successResponse(res, await partService.getStockStatistics())
   },
 
   async getCategories(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await partService.getCategories())
+  },
+
+  async getStockAlerts(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await partService.getStockAlerts())
+  },
+
+  async generateRequisition(req: Request, res: Response): Promise<void> {
+    const lowStockOnly = req.query.lowStockOnly !== 'false'
+    successResponse(res, await partService.generateRequisition(lowStockOnly))
+  },
+
+  async getInventoryLogs(req: Request, res: Response): Promise<void> {
+    const query = req.query
+    const { page, pageSize } = parsePagination(query as Record<string, unknown>)
+
+    const result = await partService.getInventoryLogs({
+      page,
+      pageSize,
+      partId: query.partId as string,
+      type: query.type as 'IN' | 'OUT' | undefined,
+      startDate: parseDate(query.startDate as string),
+      endDate: parseDate(query.endDate as string),
+    })
+
+    successResponse(res, result)
+  },
+
+  async getOptions(_req: Request, res: Response): Promise<void> {
     const categories = await partService.getCategories()
-    successResponse(res, categories)
+    successResponse(res, { categories, statuses: PART_STATUSES })
+  },
+}
+
+// ============ Spare Part Category Controller ============
+
+export const sparePartCategoryController = {
+  async getAll(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await sparePartCategoryService.findAll())
+  },
+
+  async getTree(_req: Request, res: Response): Promise<void> {
+    successResponse(res, await sparePartCategoryService.findTree())
+  },
+
+  async create(req: Request, res: Response): Promise<void> {
+    const data = createCategorySchema.parse(req.body)
+    const category = await sparePartCategoryService.create(data)
+    successResponse(res, category, '分类创建成功', 201)
+  },
+
+  async update(req: Request, res: Response): Promise<void> {
+    const data = createCategorySchema.partial().parse(req.body)
+    const category = await sparePartCategoryService.update(req.params.id, data)
+    successResponse(res, category, '分类更新成功')
+  },
+
+  async delete(req: Request, res: Response): Promise<void> {
+    await sparePartCategoryService.delete(req.params.id)
+    successResponse(res, null, '分类已删除')
   },
 }
 
@@ -725,10 +878,9 @@ export const partLifecycleController = {
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
     const data = createPartLifecycleSchema.partial().parse(req.body)
 
-    const lifecycle = await partLifecycleService.update(id, {
+    const lifecycle = await partLifecycleService.update(req.params.id, {
       ...data,
       installedAt: parseDate(data.installedAt ?? undefined),
       expectedEndDate: parseDate(data.expectedEndDate ?? undefined),
@@ -738,33 +890,16 @@ export const partLifecycleController = {
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    await partLifecycleService.delete(id)
+    await partLifecycleService.delete(req.params.id)
     successResponse(res, null, '生命周期记录删除成功')
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params
-    const lifecycle = await partLifecycleService.getById(id)
-
-    if (!lifecycle) {
-      notFoundResponse(res, '生命周期记录')
-      return
-    }
-
-    successResponse(res, lifecycle)
+    await handleGetById(res, () => partLifecycleService.getById(req.params.id), '生命周期记录')
   },
 
   async getByPartId(req: Request, res: Response): Promise<void> {
-    const { partId } = req.params
-    const lifecycle = await partLifecycleService.getByPartId(partId)
-
-    if (!lifecycle) {
-      notFoundResponse(res, '生命周期记录')
-      return
-    }
-
-    successResponse(res, lifecycle)
+    await handleGetById(res, () => partLifecycleService.getByPartId(req.params.partId), '生命周期记录')
   },
 
   async findMany(req: Request, res: Response): Promise<void> {
@@ -783,15 +918,12 @@ export const partLifecycleController = {
   },
 
   async updateUsage(req: Request, res: Response): Promise<void> {
-    const { partId } = req.params
     const { cycles } = z.object({ cycles: z.number().min(0) }).parse(req.body)
-
-    await partLifecycleService.updateUsage(partId, cycles)
+    await partLifecycleService.updateUsage(req.params.partId, cycles)
     successResponse(res, null, '使用周期更新成功')
   },
 
   async getStatistics(_req: Request, res: Response): Promise<void> {
-    const stats = await partLifecycleService.getStatistics()
-    successResponse(res, stats)
+    successResponse(res, await partLifecycleService.getStatistics())
   },
 }
