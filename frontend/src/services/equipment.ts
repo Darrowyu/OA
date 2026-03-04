@@ -1,5 +1,4 @@
 import apiClient from '@/lib/api';
-import { axiosInstance } from '@/lib/api';
 
 export interface PaginationParams {
   page?: number;
@@ -57,7 +56,7 @@ export interface MaintenanceRecord {
   id: string;
   equipmentId: string;
   equipmentName: string;
-  type: '保养' | '维修';
+  type: 'MAINTENANCE' | 'REPAIR';
   content: string;
   operator: string;
   startTime: string;
@@ -65,6 +64,26 @@ export interface MaintenanceRecord {
   duration: string | null;
   status: 'completed' | 'in_progress' | 'pending';
   cost: number | null;
+}
+
+export interface MaintenancePlan {
+  id: string;
+  code: string;
+  equipmentId: string;
+  equipment: { name: string; code: string };
+  planName: string;
+  frequency: string;
+  nextDate: string;
+  responsible: string;
+  reminderDays: number | null;
+  status: 'ACTIVE' | 'WARNING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED';
+}
+
+export interface MaintenancePlanStatistics {
+  total: number;
+  active: number;
+  warning: number;
+  overdue: number;
 }
 
 export interface Part {
@@ -130,6 +149,66 @@ export interface Requisition {
   items: RequisitionItem[];
 }
 
+// 产能数据类型
+export interface EquipmentUtilization {
+  equipmentId: string;
+  equipmentName: string;
+  equipmentCode: string;
+  status: string;
+  category: string | null;
+  capabilityCount: number;
+  operatorCount: number;
+  avgEfficiency: number;
+  products: string[];
+}
+
+export interface AnalysisReport {
+  summary: {
+    totalCapabilities: number;
+    activeCapabilities: number;
+    totalOperatorSkills: number;
+    totalEquipment: number;
+    equipmentWithCapabilities: number;
+    equipmentWithoutCapabilities: number;
+    coverageRate: number;
+  };
+  productDistribution: Array<{
+    productName: string;
+    equipmentCount: number;
+    avgCapacityPerHour: number;
+    avgEfficiency: number;
+  }>;
+  skillLevelDistribution: Array<{
+    level: string;
+    count: number;
+  }>;
+}
+
+// 配件生命周期
+export interface PartLifecycle {
+  id: string;
+  partId: string;
+  partName: string;
+  partModel: string;
+  totalCycles: number;
+  installedCycles: number;
+  remainingCycles: number;
+  avgUsage: number;
+  status: 'active' | 'warning' | 'critical' | 'expired';
+  expectedEndDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LifecycleStatistics {
+  total: number;
+  active: number;
+  warning: number;
+  critical: number;
+  expired: number;
+  averageUsage: number;
+}
+
 export const equipmentApi = {
   getEquipmentList: (params?: PaginationParams & { category?: string; location?: string; factoryId?: string; status?: string; keyword?: string }): Promise<PaginatedResponse<Equipment>> =>
     apiClient.get<PaginatedResponse<Equipment>>('/equipment', { params }),
@@ -150,11 +229,11 @@ export const equipmentApi = {
 
   // Excel导出
   exportExcel: async (filter?: object): Promise<void> => {
-    const response = await axiosInstance.get('/equipment/export', {
+    const data = await apiClient.get<Blob>('/equipment/export', {
       params: filter,
       responseType: 'blob',
     });
-    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -216,4 +295,26 @@ export const equipmentApi = {
   // 执行保养计划
   executeMaintenancePlan: (planId: string): Promise<{ success: boolean; message: string; data: { recordId: string } }> =>
     apiClient.post<{ success: boolean; message: string; data: { recordId: string } }>(`/equipment/maintenance-plans/${planId}/execute`),
+
+  // 保养计划列表
+  getMaintenancePlans: (params?: PaginationParams & { equipmentId?: string; status?: string; keyword?: string }): Promise<PaginatedResponse<MaintenancePlan>> =>
+    apiClient.get<PaginatedResponse<MaintenancePlan>>('/equipment/maintenance-plans', { params }),
+
+  // 保养计划统计
+  getMaintenancePlanStatistics: (): Promise<{ success: boolean; data: MaintenancePlanStatistics }> =>
+    apiClient.get<{ success: boolean; data: MaintenancePlanStatistics }>('/equipment/maintenance-plans/statistics'),
+
+  // 产能管理API
+  getEquipmentUtilization: (): Promise<{ success: boolean; data: EquipmentUtilization[] }> =>
+    apiClient.get<{ success: boolean; data: EquipmentUtilization[] }>('/equipment/capacity/equipment-utilization'),
+
+  getAnalysisReport: (): Promise<{ success: boolean; data: AnalysisReport }> =>
+    apiClient.get<{ success: boolean; data: AnalysisReport }>('/equipment/capacity/analysis-report'),
+
+  // 配件生命周期
+  getPartLifecycle: (params?: PaginationParams): Promise<PaginatedResponse<PartLifecycle>> =>
+    apiClient.get<PaginatedResponse<PartLifecycle>>('/equipment/part-lifecycle', { params }),
+
+  getPartLifecycleStatistics: (): Promise<{ success: boolean; data: LifecycleStatistics }> =>
+    apiClient.get<{ success: boolean; data: LifecycleStatistics }>('/equipment/part-lifecycle/statistics'),
 };

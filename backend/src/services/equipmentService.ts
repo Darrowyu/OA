@@ -9,9 +9,11 @@ import type {
 } from '../types/equipment'
 import { EquipmentStatus } from '../types/equipment'
 
-const HEALTH_THRESHOLD_RUNNING = 80
-const HEALTH_THRESHOLD_WARNING = 60
-const HEALTH_THRESHOLD_CRITICAL = 30
+const HEALTH_THRESHOLDS = {
+  RUNNING: 80,
+  WARNING: 60,
+  CRITICAL: 30,
+} as const
 
 const STATUS_LABELS: Record<string, string> = {
   RUNNING: '运行中',
@@ -249,10 +251,10 @@ export class EquipmentService {
   }
 
   private getStatusByHealthScore(score: number): EquipmentStatus {
-    if (score >= HEALTH_THRESHOLD_RUNNING) return 'RUNNING' as EquipmentStatus
-    if (score >= HEALTH_THRESHOLD_WARNING) return 'WARNING' as EquipmentStatus
-    if (score >= HEALTH_THRESHOLD_CRITICAL) return 'STOPPED' as EquipmentStatus
-    return 'SCRAPPED' as EquipmentStatus
+    if (score >= HEALTH_THRESHOLDS.RUNNING) return EquipmentStatus.RUNNING
+    if (score >= HEALTH_THRESHOLDS.WARNING) return EquipmentStatus.WARNING
+    if (score >= HEALTH_THRESHOLDS.CRITICAL) return EquipmentStatus.STOPPED
+    return EquipmentStatus.SCRAPPED
   }
 
   async checkOverduePlans(): Promise<number> {

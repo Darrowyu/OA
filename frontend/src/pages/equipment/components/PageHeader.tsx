@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { LucideIcon } from "lucide-react"
@@ -10,7 +11,7 @@ interface PageHeaderProps {
   onButtonClick?: () => void
 }
 
-export function PageHeader({
+function PageHeaderComponent({
   title,
   description,
   buttonText,
@@ -32,3 +33,5 @@ export function PageHeader({
     </div>
   )
 }
+
+export const PageHeader = memo(PageHeaderComponent)

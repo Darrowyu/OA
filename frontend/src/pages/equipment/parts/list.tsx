@@ -174,38 +174,6 @@ const mockAlerts = [
   },
 ]
 
-// 模拟请购单（注释掉未使用的变量）
-/*
-const mockRequisition: Requisition = {
-  requisitionNo: `RQ${Date.now()}`,
-  createdAt: new Date().toISOString(),
-  items: [
-    {
-      partId: "P001",
-      partCode: "P001",
-      partName: "轴承 6204",
-      specification: "20x47x14mm",
-      currentStock: 5,
-      minStock: 10,
-      suggestedQuantity: 15,
-      unit: "个",
-      category: "轴承",
-    },
-    {
-      partId: "P003",
-      partCode: "P003",
-      partName: "齿轮 M2Z30",
-      specification: "模数2，齿数30",
-      currentStock: 3,
-      minStock: 8,
-      suggestedQuantity: 13,
-      unit: "个",
-      category: "齿轮",
-    },
-  ],
-}
-*/
-
 export function PartsList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -294,44 +262,30 @@ export function PartsList() {
     }
   }, [])
 
-  // 获取库存日志
-  const fetchInventoryLogs = useCallback(async () => {
-    try {
-      const response = await equipmentApi.getInventoryLogs({ page: 1, pageSize: 50 })
-      if (response.success) {
-        // setInventoryLogs(response.data.items)
-        console.log('库存日志:', response.data.items)
-      }
-    } catch (error) {
-      toast.error("获取库存日志失败")
-    }
-  }, [])
-
-  // 获取库存预警
-  const fetchStockAlerts = useCallback(async () => {
-    try {
-      const response = await equipmentApi.getStockAlerts()
-      if (response.success) {
-        // setAlerts(response.data)
-        console.log('库存预警:', response.data)
-      }
-    } catch (error) {
-      toast.error("获取库存预警失败")
-    }
-  }, [])
-
   useEffect(() => {
     fetchCategories()
-    fetchInventoryLogs()
-    fetchStockAlerts()
-  }, [fetchCategories, fetchInventoryLogs, fetchStockAlerts])
+  }, [fetchCategories])
+
+  // 验证分类表单
+  const validateCategoryForm = (form: { name: string; description: string }): boolean => {
+    if (!form.name) {
+      toast.error("分类名称不能为空")
+      return false
+    }
+    if (form.name.length < 2 || form.name.length > 50) {
+      toast.error("分类名称长度应在2-50字符之间")
+      return false
+    }
+    if (form.description && form.description.length > 200) {
+      toast.error("分类描述长度不能超过200字符")
+      return false
+    }
+    return true
+  }
 
   // 创建分类
   const handleCreateCategory = async () => {
-    if (!categoryForm.name) {
-      toast.error("分类名称不能为空")
-      return
-    }
+    if (!validateCategoryForm(categoryForm)) return
 
     try {
       const response = await equipmentApi.createPartCategory(categoryForm)

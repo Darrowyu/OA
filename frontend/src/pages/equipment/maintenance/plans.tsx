@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import {
   Repeat,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from "lucide-react"
 import {
   containerVariants,
@@ -26,27 +27,79 @@ import {
   PageHeader,
   SearchToolbar,
 } from "../components"
-
-const maintenancePlans = [
-  { id: "MP001", equipmentId: "EQ001", equipmentName: "数控机床 A型", planName: "月度定期保养", frequency: "每月一次", nextDate: "2026-02-15", responsible: "张师傅", status: "active", reminderDays: 7 },
-  { id: "MP002", equipmentId: "EQ002", equipmentName: "注塑机 B型", planName: "季度深度保养", frequency: "每季度一次", nextDate: "2026-03-20", responsible: "李师傅", status: "active", reminderDays: 14 },
-  { id: "MP003", equipmentId: "EQ003", equipmentName: "激光切割机", planName: "半年度专业保养", frequency: "每半年一次", nextDate: "2026-02-10", responsible: "王师傅", status: "warning", reminderDays: 2 },
-  { id: "MP004", equipmentId: "EQ004", equipmentName: "自动焊接机器人", planName: "月度定期保养", frequency: "每月一次", nextDate: "2026-02-25", responsible: "张师傅", status: "active", reminderDays: 7 },
-  { id: "MP005", equipmentId: "EQ005", equipmentName: "冲压机 C型", planName: "周度检查保养", frequency: "每周一次", nextDate: "2026-02-08", responsible: "赵师傅", status: "overdue", reminderDays: 0 },
-]
+import { equipmentApi, MaintenancePlan, MaintenancePlanStatistics } from "@/services/equipment"
 
 const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  active: { label: "正常", color: "bg-green-100 text-green-700", icon: <CheckCircle2 className="h-3 w-3" /> },
-  warning: { label: "即将到期", color: "bg-yellow-100 text-yellow-700", icon: <Bell className="h-3 w-3" /> },
-  overdue: { label: "已逾期", color: "bg-red-100 text-red-700", icon: <AlertCircle className="h-3 w-3" /> },
+  ACTIVE: { label: "正常", color: "bg-green-100 text-green-700", icon: <CheckCircle2 className="h-3 w-3" /> },
+  WARNING: { label: "即将到期", color: "bg-yellow-100 text-yellow-700", icon: <Bell className="h-3 w-3" /> },
+  OVERDUE: { label: "已逾期", color: "bg-red-100 text-red-700", icon: <AlertCircle className="h-3 w-3" /> },
+  COMPLETED: { label: "已完成", color: "bg-blue-100 text-blue-700", icon: <CheckCircle2 className="h-3 w-3" /> },
+  CANCELLED: { label: "已取消", color: "bg-gray-100 text-gray-700", icon: <AlertCircle className="h-3 w-3" /> },
 }
 
 export function MaintenancePlans() {
   const [searchQuery, setSearchQuery] = useState("")
-  const filteredPlans = maintenancePlans.filter(
-    (item) =>
-      item.equipmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.planName.toLowerCase().includes(searchQuery.toLowerCase())
+  const [plans, setPlans] = useState<MaintenancePlan[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [statistics, setStatistics] = useState<MaintenancePlanStatistics>({
+    total: 0,
+    active: 0,
+    warning: 0,
+    overdue: 0,
+  })
+
+  const fetchPlans = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await equipmentApi.getMaintenancePlans({
+        page: 1,
+        pageSize: 100,
+        keyword: searchQuery || undefined,
+      })
+      if (response.success) {
+        setPlans(response.data.items)
+      } else {
+        setError("获取保养计划失败")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "获取保养计划失败")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStatistics = async () => {
+    try {
+      const response = await equipmentApi.getMaintenancePlanStatistics()
+      if (response.success) {
+        setStatistics(response.data)
+      }
+    } catch (err) {
+      console.error("获取统计数据失败:", err)
+    }
+  }
+
+  useEffect(() => {
+    fetchPlans()
+    fetchStatistics()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchPlans()
+    }, 500) // 防抖500ms，避免频繁请求
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const filteredPlans = useMemo(() =>
+    plans.filter(
+      (item) =>
+        item.equipment?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.planName?.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [plans, searchQuery]
   )
 
   return (
@@ -60,10 +113,10 @@ export function MaintenancePlans() {
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="计划总数" value={15} icon={CalendarDays} color="blue" />
-        <StatCard label="正常" value={10} icon={CheckCircle2} color="green" />
-        <StatCard label="即将到期" value={3} icon={Bell} color="yellow" />
-        <StatCard label="已逾期" value={2} icon={AlertCircle} color="red" />
+        <StatCard label="计划总数" value={statistics.total} icon={CalendarDays} color="blue" />
+        <StatCard label="正常" value={statistics.active} icon={CheckCircle2} color="green" />
+        <StatCard label="即将到期" value={statistics.warning} icon={Bell} color="yellow" />
+        <StatCard label="已逾期" value={statistics.overdue} icon={AlertCircle} color="red" />
       </motion.div>
 
       <motion.div variants={itemVariants}>
@@ -79,53 +132,73 @@ export function MaintenancePlans() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>计划编号</TableHead>
-                  <TableHead>设备名称</TableHead>
-                  <TableHead>计划名称</TableHead>
-                  <TableHead>保养频率</TableHead>
-                  <TableHead>下次保养日期</TableHead>
-                  <TableHead>负责人</TableHead>
-                  <TableHead>提前提醒</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPlans.map((item) => {
-                  const status = statusMap[item.status]
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.id}</TableCell>
-                      <TableCell>{item.equipmentName}</TableCell>
-                      <TableCell>{item.planName}</TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <Repeat className="h-3 w-3 text-gray-400" />
-                          {item.frequency}
-                        </span>
-                      </TableCell>
-                      <TableCell>{item.nextDate}</TableCell>
-                      <TableCell>{item.responsible}</TableCell>
-                      <TableCell>{item.reminderDays}天</TableCell>
-                      <TableCell>
-                        <Badge className={status.color}>
-                          <span className="flex items-center gap-1">
-                            {status.icon}
-                            {status.label}
-                          </span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <span className="ml-2 text-gray-500">加载中...</span>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-8 text-red-500">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                {error}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>计划编号</TableHead>
+                    <TableHead>设备名称</TableHead>
+                    <TableHead>计划名称</TableHead>
+                    <TableHead>保养频率</TableHead>
+                    <TableHead>下次保养日期</TableHead>
+                    <TableHead>负责人</TableHead>
+                    <TableHead>提前提醒</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPlans.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                        暂无保养计划数据
                       </TableCell>
                     </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredPlans.map((item) => {
+                      const status = statusMap[item.status] || statusMap.ACTIVE
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.code}</TableCell>
+                          <TableCell>{item.equipment?.name || '-'}</TableCell>
+                          <TableCell>{item.planName}</TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-1">
+                              <Repeat className="h-3 w-3 text-gray-400" />
+                              {item.frequency}
+                            </span>
+                          </TableCell>
+                          <TableCell>{item.nextDate?.split('T')[0] || '-'}</TableCell>
+                          <TableCell>{item.responsible}</TableCell>
+                          <TableCell>{item.reminderDays ?? 0}天</TableCell>
+                          <TableCell>
+                            <Badge className={status.color}>
+                              <span className="flex items-center gap-1">
+                                {status.icon}
+                                {status.label}
+                              </span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </motion.div>

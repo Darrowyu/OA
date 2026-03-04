@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { LucideIcon } from "lucide-react"
 
@@ -18,7 +19,7 @@ const colorMap = {
   orange: "bg-orange-100 text-orange-600",
 }
 
-export function StatCard({ label, value, icon: Icon, color = "blue", subtext }: StatCardProps) {
+function StatCardComponent({ label, value, icon: Icon, color = "blue", subtext }: StatCardProps) {
   return (
     <Card>
       <CardContent className="p-6">
@@ -36,3 +37,5 @@ export function StatCard({ label, value, icon: Icon, color = "blue", subtext }: 
     </Card>
   )
 }
+
+export const StatCard = memo(StatCardComponent)

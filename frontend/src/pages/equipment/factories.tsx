@@ -170,12 +170,26 @@ export function FactoriesPage() {
     setIsDeleteDialogOpen(true)
   }
 
+  // 验证厂区表单
+  const validateFactoryForm = (data: CreateFactoryInput): boolean => {
+    if (!data.name) {
+      toast.error("厂区名称不能为空")
+      return false
+    }
+    if (data.contactPhone && !/^1[3-9]\d{9}$/.test(data.contactPhone)) {
+      toast.error("联系电话格式不正确")
+      return false
+    }
+    if (data.code && !/^[A-Z0-9]{2,10}$/.test(data.code)) {
+      toast.error("厂区编号格式不正确")
+      return false
+    }
+    return true
+  }
+
   // 创建厂区
   const handleCreate = async () => {
-    if (!formData.name) {
-      toast.error("厂区名称不能为空")
-      return
-    }
+    if (!validateFactoryForm(formData)) return
 
     try {
       const response = await factoryApi.createFactory(formData)
@@ -191,10 +205,8 @@ export function FactoriesPage() {
 
   // 更新厂区
   const handleUpdate = async () => {
-    if (!selectedFactory || !formData.name) {
-      toast.error("厂区名称不能为空")
-      return
-    }
+    if (!selectedFactory) return
+    if (!validateFactoryForm(formData)) return
 
     try {
       const response = await factoryApi.updateFactory(selectedFactory.id, formData)

@@ -6,7 +6,7 @@ interface SearchToolbarProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  extraButton?: { icon: LucideIcon; onClick: () => void }
+  extraButton?: { icon: LucideIcon; onClick: () => void; disabled?: boolean }
 }
 
 export function SearchToolbar({
@@ -30,7 +30,7 @@ export function SearchToolbar({
         <Filter className="h-4 w-4" />
       </Button>
       {extraButton && (
-        <Button variant="outline" size="icon" onClick={extraButton.onClick}>
+        <Button variant="outline" size="icon" onClick={extraButton.onClick} disabled={extraButton.disabled}>
           <extraButton.icon className="h-4 w-4" />
         </Button>
       )}

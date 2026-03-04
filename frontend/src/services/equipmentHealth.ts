@@ -46,6 +46,29 @@ export interface BatchCalculateResult {
   failed: number;
 }
 
+export interface HealthStatisticsResult {
+  totalAssessed: number;
+  averageScore: number;
+  excellentCount: number;
+  goodCount: number;
+  averageCount: number;
+  poorCount: number;
+  dangerousCount: number;
+}
+
+// 设备健康度列表项（从设备列表转换）
+export interface EquipmentHealthItem {
+  id: string;
+  name: string;
+  health: number;
+  status: 'healthy' | 'warning' | 'critical';
+  lastCheck: string;
+  nextCheck: string;
+  vibration: number;
+  temperature: number;
+  power: number;
+}
+
 export const equipmentHealthApi = {
   // 计算设备健康度
   calculateHealth: (equipmentId: string): Promise<{ success: boolean; data: HealthHistory }> =>
@@ -70,4 +93,8 @@ export const equipmentHealthApi = {
   // 获取所有设备健康度列表
   getAllEquipmentHealth: (): Promise<{ success: boolean; data: EquipmentHealth[] }> =>
     apiClient.get<{ success: boolean; data: EquipmentHealth[] }>('/equipment/health/all'),
+
+  // 获取健康度统计
+  getHealthStatistics: (): Promise<{ success: boolean; data: HealthStatisticsResult }> =>
+    apiClient.get<{ success: boolean; data: HealthStatisticsResult }>('/equipment/health/statistics'),
 };
