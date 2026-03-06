@@ -44,7 +44,7 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* 左侧品牌区域 */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
         {/* 装饰性背景元素 */}
         <div className="absolute inset-0">
           <div className="absolute top-20 left-20 w-72 h-72 bg-orange-500/20 rounded-full blur-3xl" />
